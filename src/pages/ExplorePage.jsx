@@ -3,6 +3,8 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import { getProfile } from "../lib/profile";
 import InterestsPrompt from "../features/auth/InterestsPrompt";
+import PlaceGrid from "../features/places/PlaceGrid";
+import PlaceSheet from "../features/places/PlaceSheet";
 import Button from "../components/ui/Button";
 
 export default function ExplorePage() {
@@ -10,6 +12,7 @@ export default function ExplorePage() {
   const navigate = useNavigate();
   const [profile, setProfile] = useState(null);
   const [dismissedPrompt, setDismissedPrompt] = useState(false);
+  const [selectedPlace, setSelectedPlace] = useState(null);
 
   useEffect(() => {
     if (user) getProfile(user.id).then(setProfile).catch(() => {});
@@ -68,18 +71,10 @@ export default function ExplorePage() {
           </p>
         )}
 
-        <div
-          style={{
-            textAlign: "center",
-            color: "#6b6360",
-            padding: "80px 20px",
-            border: "1px dashed rgba(43, 38, 34, 0.15)",
-            borderRadius: "var(--radius-card)",
-          }}
-        >
-          Aquí irá la cuadrícula de lugares de Cuenca (próxima fase).
-        </div>
+        <PlaceGrid onSelectPlace={setSelectedPlace} />
       </main>
+
+      <PlaceSheet place={selectedPlace} onClose={() => setSelectedPlace(null)} />
     </div>
   );
 }
