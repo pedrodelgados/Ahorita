@@ -1,8 +1,9 @@
 import { supabase } from "./supabaseClient";
 
-export async function listPlaces({ area } = {}) {
+export async function listPlaces({ area, channel } = {}) {
   let query = supabase.from("places").select("*").order("name");
   if (area) query = query.eq("area", area);
+  if (channel) query = query.eq("channel_default", channel);
 
   const { data, error } = await query;
   if (error) throw error;

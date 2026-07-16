@@ -5,6 +5,8 @@ import { getProfile } from "../lib/profile";
 import InterestsPrompt from "../features/auth/InterestsPrompt";
 import PlaceGrid from "../features/places/PlaceGrid";
 import PlaceSheet from "../features/places/PlaceSheet";
+import StoriesBar from "../features/stories/StoriesBar";
+import EditorialCard from "../features/editorial/EditorialCard";
 import Button from "../components/ui/Button";
 
 export default function ExplorePage() {
@@ -71,6 +73,8 @@ export default function ExplorePage() {
           </p>
         )}
 
+        <StoriesBar onSelectPlace={setSelectedPlace} />
+        <EditorialCard />
         <PlaceGrid onSelectPlace={setSelectedPlace} />
       </main>
 

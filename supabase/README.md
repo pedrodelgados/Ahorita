@@ -23,3 +23,4 @@ supabase db push
 - `channels` viene pre-poblado con los 10 canales del sistema de diseño.
 - `0002_storage.sql` crea el bucket público `media` (fotos/videos de estados) con lectura pública y escritura solo para usuarios autenticados.
 - `0003_seed_places.sql` precarga ~10 lugares reales del Centro Histórico de Cuenca para evitar el "arranque en frío". Las imágenes son placeholders (`picsum.photos`) — reemplázalas por fotos reales antes de lanzar.
+- `0004_seed_editorial.sql` precarga una tarjeta editorial de ejemplo ("Este fin de semana"). Edítala o crea una nueva fila en `editorial_posts` para actualizar el contenido curado.

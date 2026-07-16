@@ -34,3 +34,8 @@ Para crear el esquema de base de datos, ve a `supabase/README.md`.
 - Crear pregunta / crear estado con foto o video (Supabase Storage), responder preguntas, dar like a respuestas
 - Todas las acciones de escritura piden cuenta solo al usarlas (`AuthGate`), no de entrada
 - Datos semilla de ~10 lugares reales del Centro Histórico de Cuenca en `supabase/migrations/0003_seed_places.sql`
+
+**Fase 3**
+- Barra de stories con anillos de color por canal, mostrando el estado más reciente de cada lugar (`src/features/stories/StoriesBar.jsx`)
+- Tarjeta editorial curada "Este fin de semana" (`src/features/editorial/EditorialCard.jsx`)
+- Filtro por canal/categoría en la cuadrícula, combinable con el filtro de zona (`src/features/places/ChannelFilter.jsx`)

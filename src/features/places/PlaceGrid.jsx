@@ -2,10 +2,12 @@ import { useEffect, useState } from "react";
 import { listAreas, listPlaces } from "../../lib/places";
 import PlaceCard from "./PlaceCard";
 import ZoneFilter from "./ZoneFilter";
+import ChannelFilter from "./ChannelFilter";
 
 export default function PlaceGrid({ onSelectPlace }) {
   const [areas, setAreas] = useState([]);
   const [selectedArea, setSelectedArea] = useState(null);
+  const [selectedChannel, setSelectedChannel] = useState(null);
   const [places, setPlaces] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -17,14 +19,16 @@ export default function PlaceGrid({ onSelectPlace }) {
   useEffect(() => {
     setLoading(true);
     setError(null);
-    listPlaces({ area: selectedArea })
+    listPlaces({ area: selectedArea, channel: selectedChannel })
       .then(setPlaces)
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false));
-  }, [selectedArea]);
+  }, [selectedArea, selectedChannel]);
 
   return (
     <div>
+      <ChannelFilter selected={selectedChannel} onSelect={setSelectedChannel} />
+
       {areas.length > 0 && (
         <ZoneFilter areas={areas} selected={selectedArea} onSelect={setSelectedArea} />
       )}
@@ -39,7 +43,7 @@ export default function PlaceGrid({ onSelectPlace }) {
 
       {!loading && !error && places.length === 0 && (
         <p style={{ color: "#6b6360", fontSize: 14 }}>
-          Todavía no hay lugares cargados para esta zona.
+          Todavía no hay lugares cargados con estos filtros.
         </p>
       )}
 
