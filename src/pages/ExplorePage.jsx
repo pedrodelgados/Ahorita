@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import { User } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
 import { getProfile } from "../lib/profile";
 import InterestsPrompt from "../features/auth/InterestsPrompt";
@@ -46,9 +47,26 @@ export default function ExplorePage() {
           <h1 style={{ fontSize: 22 }}>Ahorita</h1>
 
           {user ? (
-            <Button variant="ghost" style={{ padding: "8px 14px", fontSize: 14 }} onClick={signOut}>
-              Cerrar sesión
-            </Button>
+            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              <Link
+                to="/perfil"
+                aria-label="Mi perfil"
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  width: 36,
+                  height: 36,
+                  borderRadius: "50%",
+                  background: "rgba(43, 38, 34, 0.06)",
+                }}
+              >
+                <User size={17} />
+              </Link>
+              <Button variant="ghost" style={{ padding: "8px 14px", fontSize: 14 }} onClick={signOut}>
+                Cerrar sesión
+              </Button>
+            </div>
           ) : (
             <Button
               style={{ padding: "8px 14px", fontSize: 14 }}

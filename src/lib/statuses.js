@@ -4,7 +4,7 @@ import { uploadMedia } from "./storage";
 export async function listStatuses(placeId) {
   const { data, error } = await supabase
     .from("statuses")
-    .select("*")
+    .select("*, author:profiles(id, username, avatar_url)")
     .eq("place_id", placeId)
     .order("created_at", { ascending: false });
   if (error) throw error;
@@ -44,7 +44,7 @@ export async function createStatus({ placeId, channel, text, authorId, mediaFile
   const { data, error } = await supabase
     .from("statuses")
     .insert({ place_id: placeId, channel, text, author_id: authorId, media_url, media_type })
-    .select()
+    .select("*, author:profiles(id, username, avatar_url)")
     .single();
   if (error) throw error;
   return data;

@@ -1,4 +1,5 @@
 import { formatRelativeTime } from "../../lib/time";
+import AuthorTag from "../social/AuthorTag";
 
 export default function StatusCard({ status }) {
   return (
@@ -25,7 +26,8 @@ export default function StatusCard({ status }) {
         <p style={{ fontSize: 12, color: "#4FA383", fontWeight: 600, margin: "0 0 4px" }}>
           En vivo · {formatRelativeTime(status.created_at)}
         </p>
-        {status.text && <p style={{ fontSize: 15, margin: 0 }}>{status.text}</p>}
+        {status.text && <p style={{ fontSize: 15, margin: "0 0 6px" }}>{status.text}</p>}
+        <AuthorTag author={status.author} />
       </div>
     </div>
   );

@@ -25,3 +25,9 @@ export async function getPlace(id) {
   if (error) throw error;
   return data;
 }
+
+export async function createPlace(payload) {
+  const { data, error } = await supabase.from("places").insert(payload).select().single();
+  if (error) throw error;
+  return data;
+}

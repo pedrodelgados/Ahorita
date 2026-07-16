@@ -1,20 +1,23 @@
 import { CHANNEL_COLORS } from "../../styles/theme";
+import SaveButton from "./SaveButton";
 
 export default function PlaceCard({ place, onClick }) {
   const channelColor = CHANNEL_COLORS[place.channel_default] ?? "#E8785C";
 
   return (
-    <button
+    <div
+      role="button"
+      tabIndex={0}
       onClick={onClick}
+      onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && onClick()}
       style={{
         position: "relative",
         aspectRatio: "1 / 1",
         borderRadius: "var(--radius-card)",
         overflow: "hidden",
-        border: "none",
-        padding: 0,
         background: "#EEE",
         boxShadow: "var(--shadow-card)",
+        cursor: "pointer",
       }}
     >
       <img
@@ -47,6 +50,7 @@ export default function PlaceCard({ place, onClick }) {
           boxShadow: "0 0 0 2px rgba(255,255,255,0.8)",
         }}
       />
+      <SaveButton placeId={place.id} style={{ position: "absolute", top: 8, right: 8 }} />
       <div
         style={{
           position: "absolute",
@@ -63,6 +67,6 @@ export default function PlaceCard({ place, onClick }) {
           {place.area}
         </p>
       </div>
-    </button>
+    </div>
   );
 }

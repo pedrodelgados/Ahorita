@@ -8,6 +8,7 @@ import AuthGate from "../../components/ui/AuthGate";
 import Composer from "./Composer";
 import QuestionCard from "./QuestionCard";
 import StatusCard from "./StatusCard";
+import SaveButton from "./SaveButton";
 import GuideChat from "../ai/GuideChat";
 
 function mergeTimeline(questions, statuses) {
@@ -65,13 +66,14 @@ export default function PlaceSheet({ place, onClose }) {
               alt=""
               style={{ width: 56, height: 56, borderRadius: 14, objectFit: "cover" }}
             />
-            <div>
+            <div style={{ flex: 1 }}>
               <h2 style={{ fontSize: 19 }}>{place.name}</h2>
               <p style={{ fontSize: 13, color: "#6b6360", margin: 0 }}>
                 {place.area}
                 {channel && ` · ${channel.label}`}
               </p>
             </div>
+            <SaveButton placeId={place.id} style={{ background: "var(--color-bg)" }} />
           </div>
 
           {showGuide ? (

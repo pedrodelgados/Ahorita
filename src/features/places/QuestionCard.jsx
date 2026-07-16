@@ -4,6 +4,7 @@ import { useAuth } from "../../contexts/AuthContext";
 import { createAnswer, likeAnswer } from "../../lib/questions";
 import { formatRelativeTime } from "../../lib/time";
 import AuthGate from "../../components/ui/AuthGate";
+import AuthorTag from "../social/AuthorTag";
 
 export default function QuestionCard({ question, onUpdate }) {
   const { user } = useAuth();
@@ -45,7 +46,10 @@ export default function QuestionCard({ question, onUpdate }) {
       <p style={{ fontSize: 12, color: "#E8785C", fontWeight: 600, margin: "0 0 4px" }}>
         Pregunta · {formatRelativeTime(question.created_at)}
       </p>
-      <p style={{ fontSize: 15, margin: "0 0 10px" }}>{question.text}</p>
+      <p style={{ fontSize: 15, margin: "0 0 6px" }}>{question.text}</p>
+      <div style={{ marginBottom: 10 }}>
+        <AuthorTag author={question.author} />
+      </div>
 
       {answers.length > 0 && (
         <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 8 }}>
@@ -63,7 +67,7 @@ export default function QuestionCard({ question, onUpdate }) {
               }}
             >
               <div>
-                <p style={{ fontSize: 14, margin: 0 }}>
+                <p style={{ fontSize: 14, margin: "0 0 4px" }}>
                   {answer.text}
                   {answer.verified && (
                     <span style={{ color: "#4FA383", fontSize: 12, fontWeight: 600, marginLeft: 6 }}>
@@ -71,6 +75,7 @@ export default function QuestionCard({ question, onUpdate }) {
                     </span>
                   )}
                 </p>
+                <AuthorTag author={answer.author} />
               </div>
               <AuthGate prompt="Inicia sesión para dar like">
                 <button

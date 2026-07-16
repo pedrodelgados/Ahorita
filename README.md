@@ -44,3 +44,10 @@ Para crear el esquema de base de datos, ve a `supabase/README.md`.
 - Edge Function de Supabase (`supabase/functions/ai-guide`) que llama a la API de Claude con el contexto real de la base de datos — la API key nunca se expone al cliente
 - Barra fija de "Guía IA" debajo del encabezado, visible al hacer scroll (`src/features/ai/GuideBar.jsx`)
 - IA contextual dentro de cada ficha de lugar: botón "Preguntar a la Guía IA" que responde usando el contexto de ese lugar (`src/features/places/PlaceSheet.jsx`)
+
+**Fase 5 — pulido y lanzamiento**
+- Perfil de usuario (`src/pages/ProfilePage.jsx`): editar nombre e intereses, lugares guardados, negocios registrados
+- Guardar lugares (ícono en `PlaceCard`/`PlaceSheet`) y seguir a otros usuarios (botón junto a cada pregunta/respuesta/estado), con estado compartido vía contexto (`SavedPlacesContext`, `FollowContext`)
+- Registro de negocios (`src/pages/BusinessRegisterPage.jsx`) con estado "en revisión" hasta que un admin lo aprueba
+- Panel de administración simple en `/admin` (`src/pages/AdminPage.jsx`): aprobar/rechazar negocios, verificar respuestas, cargar lugares nuevos sin tocar código
+- PWA instalable: manifest, service worker (`vite-plugin-pwa`) e íconos en `public/icons/`
