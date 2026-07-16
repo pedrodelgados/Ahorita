@@ -1,12 +1,14 @@
 import { useEffect, useState } from "react";
+import { Sparkles } from "lucide-react";
 import { listQuestions } from "../../lib/questions";
 import { listStatuses } from "../../lib/statuses";
-import { CHANNELS } from "../../styles/theme";
+import { CHANNELS, COLORS } from "../../styles/theme";
 import BottomSheet from "../../components/layout/BottomSheet";
 import AuthGate from "../../components/ui/AuthGate";
 import Composer from "./Composer";
 import QuestionCard from "./QuestionCard";
 import StatusCard from "./StatusCard";
+import GuideChat from "../ai/GuideChat";
 
 function mergeTimeline(questions, statuses) {
   return [
@@ -18,9 +20,11 @@ function mergeTimeline(questions, statuses) {
 export default function PlaceSheet({ place, onClose }) {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [showGuide, setShowGuide] = useState(false);
 
   useEffect(() => {
     if (!place) return;
+    setShowGuide(false);
     setLoading(true);
     Promise.all([listQuestions(place.id), listStatuses(place.id)])
       .then(([questions, statuses]) => setItems(mergeTimeline(questions, statuses)))
@@ -69,6 +73,63 @@ export default function PlaceSheet({ place, onClose }) {
               </p>
             </div>
           </div>
+
+          {showGuide ? (
+            <div
+              style={{
+                background: "#FFFFFF",
+                borderRadius: "var(--radius-card)",
+                boxShadow: "var(--shadow-card)",
+                padding: 16,
+                marginBottom: 20,
+              }}
+            >
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  marginBottom: 12,
+                }}
+              >
+                <h3 style={{ fontSize: 15 }}>Guía IA sobre {place.name}</h3>
+                <button
+                  onClick={() => setShowGuide(false)}
+                  style={{ background: "none", border: "none", color: "#6b6360", fontSize: 13 }}
+                >
+                  Cerrar
+                </button>
+              </div>
+              <GuideChat
+                placeId={place.id}
+                placeholder={`Pregunta sobre ${place.name}…`}
+                suggestions={[
+                  "¿Qué lugar parecido hay cerca?",
+                  "Hazme una ruta desde aquí",
+                ]}
+              />
+            </div>
+          ) : (
+            <button
+              onClick={() => setShowGuide(true)}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
+                width: "100%",
+                padding: "10px 16px",
+                borderRadius: "var(--radius-full)",
+                border: "1px solid rgba(43, 38, 34, 0.1)",
+                background: "#FFFFFF",
+                color: "#6b6360",
+                fontSize: 14,
+                marginBottom: 16,
+              }}
+            >
+              <Sparkles size={16} color={COLORS.accent} />
+              Preguntar a la Guía IA
+            </button>
+          )}
 
           <AuthGate prompt="Inicia sesión para preguntar o publicar un estado">
             <Composer place={place} onCreated={handleCreated} />

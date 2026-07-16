@@ -39,3 +39,8 @@ Para crear el esquema de base de datos, ve a `supabase/README.md`.
 - Barra de stories con anillos de color por canal, mostrando el estado más reciente de cada lugar (`src/features/stories/StoriesBar.jsx`)
 - Tarjeta editorial curada "Este fin de semana" (`src/features/editorial/EditorialCard.jsx`)
 - Filtro por canal/categoría en la cuadrícula, combinable con el filtro de zona (`src/features/places/ChannelFilter.jsx`)
+
+**Fase 4**
+- Edge Function de Supabase (`supabase/functions/ai-guide`) que llama a la API de Claude con el contexto real de la base de datos — la API key nunca se expone al cliente
+- Barra fija de "Guía IA" debajo del encabezado, visible al hacer scroll (`src/features/ai/GuideBar.jsx`)
+- IA contextual dentro de cada ficha de lugar: botón "Preguntar a la Guía IA" que responde usando el contexto de ese lugar (`src/features/places/PlaceSheet.jsx`)

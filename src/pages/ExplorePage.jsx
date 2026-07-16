@@ -7,6 +7,7 @@ import PlaceGrid from "../features/places/PlaceGrid";
 import PlaceSheet from "../features/places/PlaceSheet";
 import StoriesBar from "../features/stories/StoriesBar";
 import EditorialCard from "../features/editorial/EditorialCard";
+import GuideBar from "../features/ai/GuideBar";
 import Button from "../components/ui/Button";
 
 export default function ExplorePage() {
@@ -25,30 +26,43 @@ export default function ExplorePage() {
 
   return (
     <div style={{ minHeight: "100svh" }}>
-      <header
+      <div
         style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          padding: "16px 24px",
+          position: "sticky",
+          top: 0,
+          zIndex: 10,
+          background: "var(--color-bg)",
           borderBottom: "1px solid rgba(43, 38, 34, 0.08)",
         }}
       >
-        <h1 style={{ fontSize: 22 }}>Ahorita</h1>
+        <header
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            padding: "16px 24px",
+          }}
+        >
+          <h1 style={{ fontSize: 22 }}>Ahorita</h1>
 
-        {user ? (
-          <Button variant="ghost" style={{ padding: "8px 14px", fontSize: 14 }} onClick={signOut}>
-            Cerrar sesión
-          </Button>
-        ) : (
-          <Button
-            style={{ padding: "8px 14px", fontSize: 14 }}
-            onClick={() => navigate("/login")}
-          >
-            Crear cuenta
-          </Button>
-        )}
-      </header>
+          {user ? (
+            <Button variant="ghost" style={{ padding: "8px 14px", fontSize: 14 }} onClick={signOut}>
+              Cerrar sesión
+            </Button>
+          ) : (
+            <Button
+              style={{ padding: "8px 14px", fontSize: 14 }}
+              onClick={() => navigate("/login")}
+            >
+              Crear cuenta
+            </Button>
+          )}
+        </header>
+
+        <div style={{ padding: "0 24px 16px", maxWidth: 720, margin: "0 auto" }}>
+          <GuideBar />
+        </div>
+      </div>
 
       <main style={{ maxWidth: 720, margin: "0 auto", padding: 24 }}>
         {showInterestsPrompt && (

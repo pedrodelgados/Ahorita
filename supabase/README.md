@@ -14,6 +14,17 @@ supabase link --project-ref <tu-project-ref>
 supabase db push
 ```
 
+## Guía IA (Edge Function)
+
+La app llama a la API de Claude solo desde `supabase/functions/ai-guide`, nunca directo desde el navegador, para no exponer la API key.
+
+```bash
+supabase secrets set ANTHROPIC_API_KEY=tu-api-key-de-anthropic
+supabase functions deploy ai-guide
+```
+
+La función usa `claude-sonnet-5`. Recibe `{ messages, placeId? }`: sin `placeId` arma contexto de toda la ciudad (lugares + tarjeta editorial); con `placeId` arma contexto de ese lugar específico (preguntas, respuestas, estados recientes y lugares cercanos en la misma zona).
+
 ## Notas sobre el esquema
 
 - `profiles` extiende `auth.users` (Supabase Auth ya maneja email/contraseña y OAuth). Un trigger crea el perfil automáticamente al registrarse.
