@@ -1,0 +1,31 @@
+/* Ahorita — tokens de diseño. Fuente de verdad visual del sistema.
+   Mantener sincronizado con src/theme.js para el lado JS. */
+:root {
+  /* Base */
+  --color-bg: #fbf8f4;
+  --color-ink: #2b2622;
+  --color-accent: #e8785c;
+
+  /* Categorías / canales */
+  --color-gastronomia: #e8785c;
+  --color-cultura: #8b7ce0;
+  --color-vida-nocturna: #e0669a;
+  --color-deportes: #4fa383;
+  --color-naturaleza: #4fa3a0;
+  --color-glamping: #b8875a;
+  --color-hoteles: #5b94c9;
+  --color-musica: #d9a83f;
+  --color-familiar: #e0966a;
+  --color-pet-friendly: #7bae8c;
+
+  /* Tipografía */
+  --font-display: "Fraunces", Georgia, serif;
+  --font-body: "Inter", -apple-system, BlinkMacSystemFont, sans-serif;
+
+  /* Radios y sombras */
+  --radius-card: 20px;
+  --radius-sm: 12px;
+  --radius-full: 999px;
+  --shadow-card: 0 4px 20px rgba(43, 38, 34, 0.06);
+  --shadow-sheet: 0 -8px 30px rgba(43, 38, 34, 0.12);
+}
