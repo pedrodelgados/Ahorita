@@ -1,4 +1,5 @@
-import { CHANNEL_COLORS } from "../../styles/theme";
+import { CHANNEL_COLORS, photoOverlay } from "../../styles/theme";
+import ImageWithFallback from "../../components/ui/ImageWithFallback";
 import SaveButton from "./SaveButton";
 
 export default function PlaceCard({ place, onClick }) {
@@ -20,10 +21,11 @@ export default function PlaceCard({ place, onClick }) {
         cursor: "pointer",
       }}
     >
-      <img
+      <ImageWithFallback
         src={place.image_url}
         alt={place.name}
         loading="lazy"
+        iconSize={22}
         style={{
           width: "100%",
           height: "100%",
@@ -31,13 +33,7 @@ export default function PlaceCard({ place, onClick }) {
           display: "block",
         }}
       />
-      <div
-        style={{
-          position: "absolute",
-          inset: 0,
-          background: "linear-gradient(to top, rgba(0,0,0,0.55), transparent 55%)",
-        }}
-      />
+      <div style={{ position: "absolute", inset: 0, background: photoOverlay({ strong: 0.6, soft: 0, mid: 0 }) }} />
       <span
         style={{
           position: "absolute",

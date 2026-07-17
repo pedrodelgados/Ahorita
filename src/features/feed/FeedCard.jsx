@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useAuth } from "../../contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { useSavedEvents } from "../../contexts/SavedEventsContext";
-import { CHANNEL_COLORS, CHANNELS, COLORS, textStyle, TYPE } from "../../styles/theme";
+import { CHANNEL_COLORS, CHANNELS, COLORS, photoOverlay, textStyle, TYPE } from "../../styles/theme";
 import { googleMapsDirectionsUrl } from "../../lib/directions";
 import { formatEventDateTime } from "../../lib/time";
 import ImageWithFallback from "../../components/ui/ImageWithFallback";
@@ -101,14 +101,7 @@ export default function FeedCard({ item, liked, likeCount, isOpen, onToggleLike,
         />
       )}
 
-      <div
-        style={{
-          position: "absolute",
-          inset: 0,
-          background:
-            "linear-gradient(to top, rgba(0,0,0,0.78) 0%, rgba(0,0,0,0.1) 42%, rgba(0,0,0,0.3) 100%)",
-        }}
-      />
+      <div style={{ position: "absolute", inset: 0, background: photoOverlay() }} />
 
       {item.tag && (
         <span
