@@ -101,6 +101,24 @@ export const CHANNEL_COLORS = Object.fromEntries(
   CHANNELS.map((c) => [c.id, c.color])
 );
 
+// Estados del ciclo de vida editorial (panel de administración, ver
+// PROJECT.md "Administración completa de eventos y lugares"). Places usa
+// solo los tres primeros — no tiene semántica de "finalizado"/"cancelado"
+// porque es un lugar permanente, no un evento con fecha.
+export const EVENT_STATUSES = [
+  { id: "borrador", label: "Borrador", color: COLORS.inkSoft },
+  { id: "publicado", label: "Publicado", color: COLORS.success },
+  { id: "oculto", label: "Oculto", color: COLORS.warning },
+  { id: "finalizado", label: "Finalizado", color: COLORS.inkSoft },
+  { id: "cancelado", label: "Cancelado", color: COLORS.error },
+];
+
+export const PLACE_STATUSES = [
+  { id: "borrador", label: "Borrador", color: COLORS.inkSoft },
+  { id: "publicado", label: "Publicado", color: COLORS.success },
+  { id: "oculto", label: "Oculto", color: COLORS.warning },
+];
+
 export const FONTS = {
   display: "'Fraunces', Georgia, serif",
   body: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",

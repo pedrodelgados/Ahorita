@@ -67,3 +67,8 @@ Para crear el esquema de base de datos, ve a `supabase/README.md`.
 - Píldoras de categoría en Inicio filtran solo por canales de evento (Música, Gastronómico, Cultural, Deportivo, Nocturno), no por toda la taxonomía de lugares
 - Migración `supabase/migrations/0010_events.sql`: tabla `events` (reemplaza `editorial_posts`), `event_comments`, `saved_events`, triggers que mantienen `likes_count`/`comments_count` sincronizados; datos semilla en `0012_seed_events.sql`
 - Panel de administración (`/admin`): sección "Cargar un evento nuevo" para publicar eventos sin tocar código, siguiendo el mismo patrón que "Cargar un lugar nuevo"
+
+**Administración completa de eventos y lugares**
+- `/admin` es ahora un dashboard con acceso a `/admin/eventos` y `/admin/lugares`: listar, buscar por nombre, filtrar por categoría/estado/fecha, crear, editar, duplicar, ocultar/mostrar y eliminar (con confirmación) — sin tocar código ni la base de datos manualmente
+- Editor de evento/lugar (`src/pages/admin/`) como una sola página con 7 secciones progresivas: información principal, fotografías, fecha y disponibilidad (horario en lugares), ubicación (mapa Leaflet con clic para ubicar, `src/components/ui/LocationPicker.jsx`), entradas y contacto, publicación y visibilidad (estado, "Selección del editor", programar publicación/expiración), y vista previa real con `FeedCard`/`PlaceCard`
+- `events`/`places` ganan un ciclo de vida editorial completo (`status`, y en eventos también `organizer`/`publish_at`/`expires_at`) vía `supabase/migrations/0013_admin_lifecycle.sql`

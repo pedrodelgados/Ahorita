@@ -42,3 +42,32 @@ export async function createPlace(payload) {
   if (error) throw error;
   return data;
 }
+
+// --- Administración (/admin/lugares) -----------------------------------------
+
+export async function listAllPlacesForAdmin({ search, channel, status } = {}) {
+  let query = supabase.from("places").select("*").order("name");
+  if (search) query = query.ilike("name", `%${search}%`);
+  if (channel) query = query.eq("channel_default", channel);
+  if (status) query = query.eq("status", status);
+
+  const { data, error } = await query;
+  if (error) throw error;
+  return data;
+}
+
+export async function updatePlace(id, payload) {
+  const { data, error } = await supabase
+    .from("places")
+    .update(payload)
+    .eq("id", id)
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+export async function deletePlace(id) {
+  const { error } = await supabase.from("places").delete().eq("id", id);
+  if (error) throw error;
+}

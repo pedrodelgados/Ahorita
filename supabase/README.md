@@ -61,6 +61,7 @@ supabase functions deploy send-push
 - `0009_push_subscriptions.sql` agrega `push_subscriptions` (una fila por dispositivo suscrito a notificaciones push).
 - `0010_events.sql` — **corrección de producto**: Inicio pasa a ser un feed solo de eventos. Elimina `editorial_posts` y agrega `events` (con `likes_count`/`comments_count` desnormalizados, mantenidos por trigger), `event_comments` y `saved_events`. Solo administradores o el dueño de un negocio ya aprobado pueden crear eventos.
 - `0012_seed_events.sql` precarga 4 eventos de ejemplo (festival, concierto, feria gastronómica, carrera) con fechas relativas a "ahora" para que siempre aparezcan como próximos.
+- `0013_admin_lifecycle.sql` — administración completa de eventos y lugares (`/admin/eventos`, `/admin/lugares`): agrega `events.status/organizer/publish_at/expires_at` y `places.status`, políticas UPDATE/DELETE para `places` (antes solo tenía INSERT admin), y ajusta el SELECT público de ambas tablas a `status = 'publicado' OR is_admin()`.
 
 ## Convertir tu cuenta en administradora
 

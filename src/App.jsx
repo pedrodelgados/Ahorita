@@ -9,6 +9,10 @@ import SearchPage from "./pages/SearchPage";
 import NotificationsPage from "./pages/NotificationsPage";
 import BusinessRegisterPage from "./pages/BusinessRegisterPage";
 import AdminPage from "./pages/AdminPage";
+import AdminEventsListPage from "./pages/admin/AdminEventsListPage";
+import AdminEventEditorPage from "./pages/admin/AdminEventEditorPage";
+import AdminPlacesListPage from "./pages/admin/AdminPlacesListPage";
+import AdminPlaceEditorPage from "./pages/admin/AdminPlaceEditorPage";
 import MainLayout from "./components/layout/MainLayout";
 
 function RequireAccess({ children }) {
@@ -102,6 +106,54 @@ export default function App() {
         element={
           <RequireAuth>
             <AdminPage />
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/admin/eventos"
+        element={
+          <RequireAuth>
+            <AdminEventsListPage />
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/admin/eventos/nuevo"
+        element={
+          <RequireAuth>
+            <AdminEventEditorPage />
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/admin/eventos/:id"
+        element={
+          <RequireAuth>
+            <AdminEventEditorPage />
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/admin/lugares"
+        element={
+          <RequireAuth>
+            <AdminPlacesListPage />
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/admin/lugares/nuevo"
+        element={
+          <RequireAuth>
+            <AdminPlaceEditorPage />
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/admin/lugares/:id"
+        element={
+          <RequireAuth>
+            <AdminPlaceEditorPage />
           </RequireAuth>
         }
       />

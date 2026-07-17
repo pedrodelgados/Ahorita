@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Calendar, MapPin } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
 import { getProfile } from "../lib/profile";
 import {
@@ -8,39 +8,9 @@ import {
   setBusinessStatus,
   deleteBusiness,
 } from "../lib/businesses";
-import { createPlace } from "../lib/places";
-import { createEvent } from "../lib/events";
 import { listUnverifiedAnswers, setAnswerVerified } from "../lib/questions";
-import { CHANNELS } from "../styles/theme";
 import Button from "../components/ui/Button";
 import Card from "../components/ui/Card";
-
-const emptyPlace = { name: "", area: "", channel_default: CHANNELS[0].id, image_url: "", lat: "", lng: "" };
-
-const EVENT_TAGS = [
-  { id: "", label: "Sin etiqueta" },
-  { id: "nuevo", label: "Nuevo" },
-  { id: "gratis", label: "Gratis" },
-  { id: "hoy", label: "Hoy" },
-  { id: "imperdible", label: "Imperdible" },
-  { id: "promocion", label: "Promoción" },
-];
-
-const emptyEvent = {
-  title: "",
-  description: "",
-  category: CHANNELS[0].id,
-  image_url: "",
-  location_name: "",
-  lat: "",
-  lng: "",
-  start_at: "",
-  end_at: "",
-  price: "",
-  ticket_url: "",
-  tag: "",
-  editor_pick: false,
-};
 
 export default function AdminPage() {
   const { user } = useAuth();
@@ -49,10 +19,6 @@ export default function AdminPage() {
   const [profile, setProfile] = useState(null);
   const [pendingBusinesses, setPendingBusinesses] = useState([]);
   const [unverifiedAnswers, setUnverifiedAnswers] = useState([]);
-  const [placeForm, setPlaceForm] = useState(emptyPlace);
-  const [savingPlace, setSavingPlace] = useState(false);
-  const [eventForm, setEventForm] = useState(emptyEvent);
-  const [savingEvent, setSavingEvent] = useState(false);
 
   useEffect(() => {
     getProfile(user.id).then(setProfile);
@@ -77,52 +43,6 @@ export default function AdminPage() {
   async function verifyAnswer(id) {
     await setAnswerVerified(id, true);
     setUnverifiedAnswers((prev) => prev.filter((a) => a.id !== id));
-  }
-
-  async function submitPlace(e) {
-    e.preventDefault();
-    if (!placeForm.name.trim()) return;
-    setSavingPlace(true);
-    try {
-      await createPlace({
-        name: placeForm.name.trim(),
-        area: placeForm.area.trim() || null,
-        channel_default: placeForm.channel_default,
-        image_url: placeForm.image_url.trim() || null,
-        lat: placeForm.lat ? Number(placeForm.lat) : null,
-        lng: placeForm.lng ? Number(placeForm.lng) : null,
-      });
-      setPlaceForm(emptyPlace);
-    } finally {
-      setSavingPlace(false);
-    }
-  }
-
-  async function submitEvent(e) {
-    e.preventDefault();
-    if (!eventForm.title.trim() || !eventForm.start_at) return;
-    setSavingEvent(true);
-    try {
-      await createEvent({
-        title: eventForm.title.trim(),
-        description: eventForm.description.trim() || null,
-        category: eventForm.category,
-        image_url: eventForm.image_url.trim() || null,
-        location_name: eventForm.location_name.trim() || null,
-        lat: eventForm.lat ? Number(eventForm.lat) : null,
-        lng: eventForm.lng ? Number(eventForm.lng) : null,
-        start_at: new Date(eventForm.start_at).toISOString(),
-        end_at: eventForm.end_at ? new Date(eventForm.end_at).toISOString() : null,
-        price: eventForm.price ? Number(eventForm.price) : null,
-        ticket_url: eventForm.ticket_url.trim() || null,
-        tag: eventForm.tag || null,
-        editor_pick: eventForm.editor_pick,
-        created_by: user.id,
-      });
-      setEventForm(emptyEvent);
-    } finally {
-      setSavingEvent(false);
-    }
   }
 
   if (profile && !profile.is_admin) {
@@ -160,6 +80,30 @@ export default function AdminPage() {
       </header>
 
       <main style={{ maxWidth: 720, margin: "0 auto", padding: 24 }}>
+        <h2 style={{ fontSize: 16, marginBottom: 12 }}>Contenido</h2>
+        <div style={{ display: "flex", gap: 10, marginBottom: 28 }}>
+          <Card
+            style={{ flex: 1, display: "flex", alignItems: "center", gap: 12, cursor: "pointer" }}
+            onClick={() => navigate("/admin/eventos")}
+          >
+            <Calendar size={20} color="#E8785C" />
+            <div>
+              <p style={{ fontWeight: 600, fontSize: 14, margin: 0 }}>Eventos</p>
+              <p style={{ fontSize: 12.5, color: "#948A80", margin: 0 }}>Ver, crear y editar</p>
+            </div>
+          </Card>
+          <Card
+            style={{ flex: 1, display: "flex", alignItems: "center", gap: 12, cursor: "pointer" }}
+            onClick={() => navigate("/admin/lugares")}
+          >
+            <MapPin size={20} color="#4FA3A0" />
+            <div>
+              <p style={{ fontWeight: 600, fontSize: 14, margin: 0 }}>Lugares</p>
+              <p style={{ fontSize: 12.5, color: "#948A80", margin: 0 }}>Ver, crear y editar</p>
+            </div>
+          </Card>
+        </div>
+
         <h2 style={{ fontSize: 16, marginBottom: 12 }}>Negocios en revisión</h2>
         {pendingBusinesses.length === 0 ? (
           <p style={{ color: "#948A80", fontSize: 14, marginBottom: 28 }}>
@@ -192,11 +136,11 @@ export default function AdminPage() {
 
         <h2 style={{ fontSize: 16, marginBottom: 12 }}>Respuestas sin verificar</h2>
         {unverifiedAnswers.length === 0 ? (
-          <p style={{ color: "#948A80", fontSize: 14, marginBottom: 28 }}>
+          <p style={{ color: "#948A80", fontSize: 14 }}>
             No hay respuestas pendientes de verificar.
           </p>
         ) : (
-          <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 28 }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
             {unverifiedAnswers.map((a) => (
               <Card key={a.id}>
                 <p style={{ fontSize: 13, color: "#948A80", marginBottom: 4 }}>
@@ -210,189 +154,7 @@ export default function AdminPage() {
             ))}
           </div>
         )}
-
-        <h2 style={{ fontSize: 16, marginBottom: 12 }}>Cargar un lugar nuevo</h2>
-        <Card>
-          <form onSubmit={submitPlace} style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-            <input
-              placeholder="Nombre"
-              value={placeForm.name}
-              onChange={(e) => setPlaceForm({ ...placeForm, name: e.target.value })}
-              style={inputStyle}
-            />
-            <input
-              placeholder="Zona (ej. Centro Histórico)"
-              value={placeForm.area}
-              onChange={(e) => setPlaceForm({ ...placeForm, area: e.target.value })}
-              style={inputStyle}
-            />
-            <select
-              value={placeForm.channel_default}
-              onChange={(e) => setPlaceForm({ ...placeForm, channel_default: e.target.value })}
-              style={inputStyle}
-            >
-              {CHANNELS.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.label}
-                </option>
-              ))}
-            </select>
-            <input
-              placeholder="URL de la imagen"
-              value={placeForm.image_url}
-              onChange={(e) => setPlaceForm({ ...placeForm, image_url: e.target.value })}
-              style={inputStyle}
-            />
-            <div style={{ display: "flex", gap: 10 }}>
-              <input
-                placeholder="Latitud"
-                type="number"
-                step="any"
-                value={placeForm.lat}
-                onChange={(e) => setPlaceForm({ ...placeForm, lat: e.target.value })}
-                style={{ ...inputStyle, flex: 1 }}
-              />
-              <input
-                placeholder="Longitud"
-                type="number"
-                step="any"
-                value={placeForm.lng}
-                onChange={(e) => setPlaceForm({ ...placeForm, lng: e.target.value })}
-                style={{ ...inputStyle, flex: 1 }}
-              />
-            </div>
-            <Button type="submit" disabled={savingPlace} style={{ padding: "10px 18px", fontSize: 14 }}>
-              {savingPlace ? "Guardando…" : "Crear lugar"}
-            </Button>
-          </form>
-        </Card>
-
-        <h2 style={{ fontSize: 16, margin: "28px 0 12px" }}>Cargar un evento nuevo</h2>
-        <Card>
-          <form onSubmit={submitEvent} style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-            <input
-              placeholder="Título"
-              value={eventForm.title}
-              onChange={(e) => setEventForm({ ...eventForm, title: e.target.value })}
-              style={inputStyle}
-            />
-            <textarea
-              placeholder="Descripción"
-              value={eventForm.description}
-              onChange={(e) => setEventForm({ ...eventForm, description: e.target.value })}
-              rows={3}
-              style={{ ...inputStyle, resize: "vertical" }}
-            />
-            <select
-              value={eventForm.category}
-              onChange={(e) => setEventForm({ ...eventForm, category: e.target.value })}
-              style={inputStyle}
-            >
-              {CHANNELS.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.label}
-                </option>
-              ))}
-            </select>
-            <select
-              value={eventForm.tag}
-              onChange={(e) => setEventForm({ ...eventForm, tag: e.target.value })}
-              style={inputStyle}
-            >
-              {EVENT_TAGS.map((t) => (
-                <option key={t.id} value={t.id}>
-                  {t.label}
-                </option>
-              ))}
-            </select>
-            <input
-              placeholder="URL de la imagen"
-              value={eventForm.image_url}
-              onChange={(e) => setEventForm({ ...eventForm, image_url: e.target.value })}
-              style={inputStyle}
-            />
-            <input
-              placeholder="Lugar (ej. Parque Calderón)"
-              value={eventForm.location_name}
-              onChange={(e) => setEventForm({ ...eventForm, location_name: e.target.value })}
-              style={inputStyle}
-            />
-            <div style={{ display: "flex", gap: 10 }}>
-              <input
-                placeholder="Latitud"
-                type="number"
-                step="any"
-                value={eventForm.lat}
-                onChange={(e) => setEventForm({ ...eventForm, lat: e.target.value })}
-                style={{ ...inputStyle, flex: 1 }}
-              />
-              <input
-                placeholder="Longitud"
-                type="number"
-                step="any"
-                value={eventForm.lng}
-                onChange={(e) => setEventForm({ ...eventForm, lng: e.target.value })}
-                style={{ ...inputStyle, flex: 1 }}
-              />
-            </div>
-            <label style={{ fontSize: 12, color: "#948A80" }}>
-              Inicio
-              <input
-                type="datetime-local"
-                value={eventForm.start_at}
-                onChange={(e) => setEventForm({ ...eventForm, start_at: e.target.value })}
-                style={{ ...inputStyle, marginTop: 4 }}
-              />
-            </label>
-            <label style={{ fontSize: 12, color: "#948A80" }}>
-              Fin (opcional)
-              <input
-                type="datetime-local"
-                value={eventForm.end_at}
-                onChange={(e) => setEventForm({ ...eventForm, end_at: e.target.value })}
-                style={{ ...inputStyle, marginTop: 4 }}
-              />
-            </label>
-            <div style={{ display: "flex", gap: 10 }}>
-              <input
-                placeholder="Precio (vacío = gratis)"
-                type="number"
-                step="any"
-                value={eventForm.price}
-                onChange={(e) => setEventForm({ ...eventForm, price: e.target.value })}
-                style={{ ...inputStyle, flex: 1 }}
-              />
-              <input
-                placeholder="URL de entradas"
-                value={eventForm.ticket_url}
-                onChange={(e) => setEventForm({ ...eventForm, ticket_url: e.target.value })}
-                style={{ ...inputStyle, flex: 1 }}
-              />
-            </div>
-            <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13 }}>
-              <input
-                type="checkbox"
-                checked={eventForm.editor_pick}
-                onChange={(e) => setEventForm({ ...eventForm, editor_pick: e.target.checked })}
-              />
-              Incluir en "Selección del editor"
-            </label>
-            <Button type="submit" disabled={savingEvent} style={{ padding: "10px 18px", fontSize: 14 }}>
-              {savingEvent ? "Guardando…" : "Crear evento"}
-            </Button>
-          </form>
-        </Card>
       </main>
     </div>
   );
 }
-
-const inputStyle = {
-  width: "100%",
-  border: "1px solid rgba(43, 38, 34, 0.15)",
-  borderRadius: "var(--radius-sm)",
-  padding: "10px 14px",
-  fontSize: 14,
-  background: "#FFFFFF",
-  boxSizing: "border-box",
-};
