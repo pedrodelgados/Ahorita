@@ -2,6 +2,25 @@
 
 Registro de cambios notables de Ahorita (Cuenca Viva). Formato libre, en español, más cercano a un registro de fases de producto que a versiones semánticas — ver `PROJECT.md` para el plan completo y el estado real de la implementación.
 
+## 2026-07-17 — Fase 1, Bloque 3: contenido (separa datos de eventos hacia event_details)
+
+Tercer bloque de la Fase 1 del `MASTERPLAN.md`: primer caso real de datos fluyendo por el patrón "núcleo genérico + tabla de detalle" de Publicación. Sin cambio de comportamiento visible para el usuario.
+
+### Agregado
+- `supabase/migrations/0017_bloque3_contenido.sql` (nuevo): copia `start_at`/`end_at`/`price`/`ticket_url`/`organizer` de cada `event` existente hacia `event_details` (backfill, protegido con `where not exists`). `events` conserva todas sus columnas intactas — separación deliberadamente aditiva, no física.
+
+### Verificado
+- Las 17 migraciones (`0001`-`0017`) ejecutadas contra un Postgres 16 real, con 6 eventos de prueba incluyendo el caso límite `end_at IS NULL` + `organizer` distinto de nulo.
+- Copia exacta campo por campo, verificada con `diff` contra una foto de `events` capturada antes de migrar — coincidencia total en las 6 filas.
+- `events` queda byte a byte idéntica antes/después (mismo `diff`, cero diferencias).
+- Idempotencia confirmada: reaplicar la migración inserta 0 filas nuevas.
+- RLS de `event_details` sigue cascadeando correctamente la visibilidad de `events` (probado con un rol de bajo privilegio real): el detalle de un evento en `borrador` queda oculto, igual que el propio evento.
+- Estrategia de reversión ejecutada de verdad: `delete from event_details` restaura la tabla vacía sin tocar `events`.
+- Build y lint del frontend sin cambios; `git status` confirma que solo se agregó el archivo de migración.
+
+### Nota
+Dos bifurcaciones arquitectónicas se presentaron y resolvieron antes de escribir la migración (detalle completo en `PROJECT.md`): (1) separación aditiva vs. física — se optó por aditiva, para no romper el código de la aplicación que hoy lee/escribe directamente `events`; (2) fotografía puntual vs. sincronización en vivo — se optó por fotografía puntual, igual criterio que `actors.display_name` en el Bloque 2, para no agregar costo de escritura permanente a la tabla de mayor tráfico del sistema por sincronizar un dato que nada lee todavía. Ambas quedan como deuda técnica documentada (no urgente) a resolver el día que una fase futura conecte código de verdad a `event_details`.
+
 ## 2026-07-17 — Fase 1, Bloque 2: identidad (vincula profiles/businesses con actors)
 
 Segundo bloque de la Fase 1 del `MASTERPLAN.md`, con alcance estrictamente acotado a vincular identidad — sin tocar events, interacciones, zonas, privacidad ni la interfaz.

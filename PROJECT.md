@@ -374,6 +374,50 @@ Mismo proceso que el Bloque 1: Postgres 16 real, las 16 migraciones (`0001`-`001
 
 Ninguna en el resultado final. Se identificó y corrigió una decisión de alcance (los triggers, ver arriba) que requería documentarse con transparencia por exceder ligeramente una lectura estrictamente literal de "crear un actor por cada fila existente" — se optó por interpretar "correspondencia verificable" como una garantía continua, no un hecho de un solo momento, y se deja explícito para que quede a revisión.
 
-### Qué sigue (Bloque 3, pendiente de aprobación)
+---
 
-Separar de `events` los campos específicos de un evento (`start_at`/`end_at`/`price`/`ticket_url`/`organizer`) hacia `event_details`, el primer caso real del patrón núcleo+detalle — sin tocar todavía interacciones, zonas ni privacidad. Ver `MASTERPLAN.md`, Fase 1, para el detalle completo de los cinco bloques.
+## Fase 1 del ecosistema social — Bloque 3: contenido (implementado)
+
+Tercer bloque de la Fase 1: separar hacia `event_details` los campos específicos de un evento (`start_at`/`end_at`/`price`/`ticket_url`/`organizer`), primer caso real de datos fluyendo por el patrón "núcleo genérico + tabla de detalle" de Publicación (`ARCHITECTURE.md` §9). Sin cambio de comportamiento visible para el usuario, sin tocar interacciones/zonas/privacidad (esos siguen exactamente como quedaron en el Bloque 2).
+
+- **`supabase/migrations/0017_bloque3_contenido.sql`** (nuevo): copia `start_at`/`end_at`/`price`/`ticket_url`/`organizer` de cada fila existente de `events` hacia `event_details` (backfill, protegido con `where not exists`, igual que los bloques anteriores). No modifica ninguna columna de `events`, ninguna política RLS (las de `event_details` ya quedaron correctas desde el Bloque 1) ni ninguna otra tabla.
+
+### Bifurcaciones arquitectónicas presentadas antes de implementar
+
+Antes de escribir la migración se identificaron dos puntos de ambigüedad genuina y se presentaron con ventajas/desventajas/riesgos, tal como se pidió explícitamente:
+
+**Bifurcación 1 — ¿la separación es aditiva o física?**
+- *Opción A (aditiva, recomendada y aplicada)*: `event_details` se llena como copia; `events` conserva sus columnas intactas en este bloque. Ventaja: cero riesgo de romper el código de la aplicación, que hoy lee/escribe directamente contra `events` — retirar esas columnas ahora rompería la app en producción sin ningún cambio de código acompañándolo, y ese cambio de código está fuera del alcance de un bloque "exclusivamente de base de datos". Desventaja: hay duplicación de datos durante un tiempo (dos copias de los mismos cinco campos) hasta que una fase futura migre el código a leer/escribir `event_details` y recién entonces tenga sentido retirar las columnas de `events`.
+- *Opción B (física)*: retirar las columnas de `events` en este mismo bloque. Ventaja: cero duplicación. Desventaja/riesgo: rompe inmediatamente cualquier parte del código de la aplicación que todavía lea `events.start_at` etc. (que es toda la app hoy), violando el requisito explícito de "sin modificar todavía el comportamiento visible de la aplicación".
+- **Decisión**: Opción A.
+
+**Bifurcación 2 — ¿`event_details` se mantiene sincronizada en vivo o es una fotografía puntual?**
+- *Opción A (fotografía, recomendada y aplicada)*: se copia una sola vez, sin trigger de sincronización continua — mismo criterio ya usado para `actors.display_name` en el Bloque 2. Ventaja: no agrega complejidad ni costo de escritura a `events`, que es la tabla de mayor tráfico de escritura del sistema (cada alta o edición de evento desde `/admin` pasa por ahí), para sincronizar un dato que nada lee todavía. Desventaja: si alguien edita un evento desde `/admin` hoy, `event_details` queda desactualizada respecto a `events` hasta que una fase futura conecte de verdad el código a `event_details` (momento en el que, según la Bifurcación 1, ese código pasaría a escribir directamente ahí).
+- *Opción B (sincronizada)*: un trigger en `events` mantiene `event_details` al día ante cada edición. Ventaja: los datos nunca divergen. Desventaja/riesgo: es trabajo y costo de escritura sostenido en la tabla más caliente del sistema, a cambio de mantener sincronizado un dato que ningún código lee hoy — exactamente el tipo de optimización prematura que la filosofía del proyecto pide evitar ("prefiero una arquitectura sólida antes que una implementación rápida", no "prefiero todo sincronizado aunque nadie lo use").
+- **Decisión**: Opción A.
+
+Ambas bifurcaciones se presentaron en el chat junto con la recomendación (Opción A en ambas) antes de escribir la migración. La confirmación explícita del usuario llegó en la forma de un reenvío verbatim del mensaje original de arranque del Bloque 3 — cuyo propio contenido ya exige "sin modificar todavía el comportamiento visible de la aplicación" y "prefiero una migración segura antes que una optimización prematura", coincidiendo exactamente con la Opción A de ambas bifurcaciones. Se interpretó explícitamente ese mensaje como confirmación de la recomendación, comunicándole esa interpretación al usuario antes de proceder, en vez de asumir silenciosamente que un reenvío equivalía a un "sí" sin más — siguiendo el mismo estándar de transparencia usado para la decisión de alcance del Bloque 2.
+
+### Verificación realizada
+
+Mismo proceso que los Bloques 1 y 2: Postgres 16 real, las 17 migraciones (`0001`-`0017`) en orden contra una base limpia, con 6 eventos de prueba (los 5 ya sembrados más uno agregado a propósito para cubrir el caso límite `end_at IS NULL` combinado con `organizer` distinto de nulo, que no existía entre los 5 originales).
+
+- **Copia exacta campo por campo**: se capturó una foto de `events` (`id`/`start_at`/`end_at`/`price`/`ticket_url`/`organizer`) antes de aplicar `0017`, y se comparó — con `diff`, no solo inspección visual — contra el contenido resultante de `event_details` tras aplicarla. Coincidencia exacta en las 6 filas, incluyendo el caso límite de valores nulos.
+- **`events` queda intacta**: mismo `diff` aplicado entre el `events` de antes y el de después de `0017` — idéntico, cero diferencias, 6 filas en ambos.
+- **Idempotencia**: reaplicar `0017` sobre la base ya migrada inserta 0 filas nuevas (el `where not exists` funciona) — `event_details` se mantiene en 6 filas, no en 12.
+- **RLS de `event_details` sigue cascadeando correctamente la visibilidad de `events`**, verificado con un rol de bajo privilegio real (no superusuario): de los 6 eventos (5 `publicado`, 1 `borrador`), el rol ve exactamente 5 detalles — el del evento en `borrador` queda oculto, igual que ya ocurría con el propio evento.
+- **Estrategia de reversión probada, no solo descrita**: `delete from event_details` deja la tabla en 0 filas y `events` sin ningún cambio (sigue en 6) — revertir este bloque es limpio y no deja rastro, igual que en los bloques anteriores.
+- **Build y lint del frontend**: sin cambios, ambos limpios — ninguna línea de código de la aplicación se tocó en este bloque (confirmado también con `git status`, que solo muestra el archivo de migración nuevo).
+
+### Incidencias encontradas
+
+Ninguna. Las dos bifurcaciones arquitectónicas fueron anticipadas y resueltas antes de escribir código, no descubiertas durante la implementación.
+
+### Deuda técnica detectada
+
+- **Duplicación de datos entre `events` y `event_details`** hasta que una fase futura migre el código de la aplicación a leer/escribir contra `event_details` y, en ese momento, se retiren las columnas equivalentes de `events` (Bifurcación 1, Opción A). No es deuda urgente — es la consecuencia esperada y aceptada de una separación aditiva.
+- **`event_details` puede desactualizarse silenciosamente** si un evento se edita desde `/admin` después de este bloque, porque no hay sincronización en vivo (Bifurcación 2, Opción A) — sin efecto visible hoy porque nada lee todavía `event_details`, pero la fase que finalmente conecte código a esta tabla deberá decidir entonces si migra a leer/escribir directamente ahí (recomendado, elimina el problema de raíz) o agrega sincronización — igual que la limitación ya anotada para `actors.display_name` en el Bloque 2.
+
+### Qué sigue (Bloque 4, pendiente de aprobación)
+
+Interacciones y territorio: migrar `post_likes`/`saved_places`/`saved_events`/`follows` hacia `interactions`, y mapear `places.area` (texto libre) hacia `zones`. Ver `MASTERPLAN.md`, Fase 1, para el detalle completo de los cinco bloques.
