@@ -479,6 +479,89 @@ Ninguna en el resultado final. El hallazgo de privacidad (política pública de 
 - **`places.area` sigue siendo texto libre sin validación** en el editor de administración — cualquier lugar nuevo o editado con una zona mal escrita quedará con `zone_id = null` hasta que se corrija el dato o se agregue un selector real contra `zones` en el editor — trabajo de una fase posterior, no de este bloque.
 - **Acceso administrativo a guardados sin registro de auditoría**: la política permite el acceso pero no lo registra — ver la nota de alcance en la sección de privacidad arriba.
 
-### Qué sigue (pendiente de aprobación)
+### Qué sigue
 
-El Bloque 5 (privacidad — activar el mecanismo de `consent_records`) es el último bloque de la Fase 1. Antes de eso, o en paralelo si se prefiere, sigue pendiente la fase separada de "cambio de fuente de verdad" para `interactions`/`places.zone_id` y `event_details` (condición ya establecida, no autorizada todavía). Ver `MASTERPLAN.md`, Fase 1, para el detalle completo.
+El Bloque 5 (privacidad) queda documentado en la sección siguiente. Sigue pendiente, sin autorizar todavía, la fase separada de "cambio de fuente de verdad" para `interactions`/`places.zone_id` y `event_details` (condición ya establecida). Ver `MASTERPLAN.md`, Fase 1.
+
+---
+
+## Fase 1 del ecosistema social — Bloque 5: privacidad (implementado)
+
+Quinto y último bloque de la Fase 1. A diferencia de los Bloques 1-4 (deliberadamente invisibles), este bloque **sí** introduce comportamiento real — es su propósito explícito: activar el mecanismo de consentimiento, exportación y eliminación de datos personales cuyo registro (`consent_records`) se adelantó vacío desde el Bloque 1.
+
+Antes de implementar se presentó un análisis previo completo (consentimiento, exportación, eliminación, modelo de datos, RLS, reversibilidad, cumplimiento LOPDP, pruebas, criterios de aceptación, deuda técnica) que investigó el esquema real y encontró dos hallazgos críticos, resueltos antes de escribir código.
+
+### Hallazgos críticos encontrados durante el análisis previo
+
+1. **`answers.question_id` tenía `on delete cascade` hacia `questions`.** Con el esquema previo a este bloque, borrar la cuenta de quien hizo una pregunta habría borrado también las respuestas de terceros a esa pregunta — pérdida de contenido ajeno como efecto colateral.
+2. **`consent_records.user_id` tenía `on delete cascade` hacia `auth.users`.** Borrar la cuenta habría destruido también la evidencia de que hubo un consentimiento y una solicitud de eliminación bien tramitados — justo la trazabilidad que más se necesita después de una eliminación.
+
+### Decisiones de producto aprobadas (cuatro bifurcaciones)
+
+1. **Eliminación de cuenta**: periodo de gracia de **30 días**, cancelable — no eliminación inmediata.
+2. **Contenido colaborativo** (preguntas, respuestas, estados, comentarios de eventos): se **anonimiza** el autor, nunca se borra el contenido — resuelve directamente el Hallazgo 1.
+3. **`consent_records`/`data_requests`**: **nunca se destruyen** al eliminar una cuenta — se conserva el historial de consentimiento y trazabilidad, resolviendo el Hallazgo 2.
+4. **Negocios sin propietaria** (variante específica, no una de las tres opciones originalmente presentadas): cuando la única dueña de un negocio elimina su cuenta sin haber transferido antes, el negocio pasa a `status = 'sin_propietario'` — no se bloquea la eliminación, no se borra el negocio. Deja de mostrarse públicamente, conserva su historial (eventos ya publicados bajo su `business_id`, etc.), y un administrador puede reasignarlo más adelante.
+
+### `supabase/migrations/0019_bloque5_privacidad.sql` (nuevo)
+
+- **`consent_records`**: gana `consent_key` (a qué consentimiento se refiere: `terminos_servicio`, `politica_privacidad`, `notificaciones_push`, `personalizacion_ia`) y `document_version`; el `check` de `event_type` gana `'consentimiento_retirado'` (retirar un consentimiento opcional inserta una fila nueva, nunca borra el historial — el estado vigente es la fila más reciente por `(user_id, consent_key)`); pierde su FK hacia `auth.users` (deja de tener `on delete cascade`) para sobrevivir a la eliminación de la cuenta que describe.
+- **`data_requests`** (tabla nueva): flujo de trabajo de una solicitud de exportación o eliminación, deliberadamente separado del log inmutable de `consent_records` — decisión arquitectónica presentada y aprobada explícitamente en el análisis previo. Columnas: `type` (`exportacion`/`eliminacion`), `status` (`pendiente`/`en_proceso`/`completada`/`cancelada`/`rechazada`), `requested_at`, `scheduled_for`, `cancelled_at`, `processed_at`, `processed_by`. Sin FK hacia el usuario, mismo motivo que `consent_records`. Sin política de `delete` — ninguna fila se borra jamás.
+- **Anonimización**: `questions.author_id`, `answers.author_id`, `statuses.author_id`, `event_comments.author_id` pasan de `not null` + `on delete cascade` a nullable + `on delete set null` — mismo precedente que ya usan `events.created_by`/`places.created_by` desde antes de esta fase.
+- **Negocios sin propietaria**: `businesses.owner_id` pasa a nullable + `on delete set null`; el `check` de `status` gana `'sin_propietario'`; un trigger nuevo (`handle_orphaned_business`, `before update`) fuerza `status := 'sin_propietario'` en el mismo instante en que `owner_id` se vuelve `null` por la cascada. La política de lectura pública de `businesses` (que nunca había incluido a los administradores) se reemplaza para agregar `or public.is_admin()` — sin esto, un admin no podría ni ver un negocio `sin_propietario` para reasignarlo; se documenta como una corrección indispensable para que el requisito fuera posible, no como una ampliación de alcance gratuita. La política de actualización de admins ya existente (`0005_profile_social.sql`) cubre la reasignación de `owner_id` sin necesitar una política nueva.
+
+### Fuera de alcance de esta migración (documentado con la misma transparencia)
+
+- **Invalidación de sesiones activas y revocación de tokens**: no requieren ninguna migración — son una consecuencia automática de que el proceso que ejecuta la eliminación definitiva invoque `auth.admin.deleteUser` (API de administración de Supabase Auth), que internamente revoca sesiones/tokens del usuario. No existe una tabla de sesiones en este esquema sobre la que escribir SQL.
+- **Invalidación de códigos QR**: no existe todavía ninguna entidad QR en el esquema — es un módulo de una fase futura (`ARCHITECTURE.md`). No hay nada que invalidar hoy. Se documenta aquí como **requisito obligatorio** para cuando esa fase se construya: el diseño de esa fase deberá incluir su propia invalidación al eliminar una cuenta.
+- **Borrado del archivo binario en Supabase Storage** (avatares, fotos de estados/negocios): requiere una llamada aparte a la API de Storage, no una migración de base de datos.
+- **Rectificación de datos** (principio LOPDP): la edición de perfil ya existente en la app cubre esto; no se agrega ningún mecanismo nuevo en este bloque.
+
+### `supabase/functions/export-user-data` y `supabase/functions/process-account-deletions` (nuevos)
+
+Mecanismo real que el Bloque 5 necesitaba activar (a diferencia de los Bloques 1-4, "solo base de datos" no era suficiente aquí). Siguen la misma convención de código que `ai-guide`/`send-push` ya existentes.
+
+- **`export-user-data`**: el usuario autenticado la llama para obtener sus propios datos en JSON. Deriva quién es del token de su sesión (`auth.getUser()`) — **nunca acepta un `userId` de parámetro del cliente**, precisamente el principio de diseño exigido en el análisis previo para que nadie pueda exportar datos ajenos.
+- **`process-account-deletions`**: pensada para invocarse periódicamente desde un disparador externo (no un usuario final) — exige un secreto compartido (`CRON_SECRET`) en un header, ya que procesa todas las solicitudes vencidas, no las de un solo usuario. Por cada `data_requests` tipo `eliminacion` con `scheduled_for` ya vencido, llama a `auth.admin.deleteUser` y marca la solicitud como `completada`; un error puntual deja la solicitud en `pendiente` para reintentarla en la siguiente ejecución en vez de perderla.
+
+**Nota de verificación honesta**: a diferencia de toda migración SQL de este proyecto (verificada exhaustivamente contra Postgres real), estas dos funciones **no pudieron probarse contra un proyecto Supabase real** en este entorno de desarrollo — no hay un proyecto desplegado ni credenciales de servicio disponibles aquí, y la API de administración de Auth no existe en el stub local usado para verificar las migraciones. Están escritas y revisadas con cuidado, siguiendo la misma convención que `ai-guide`/`send-push`, pero requieren una verificación end-to-end contra un proyecto real antes de confiar en ellas en producción — a diferencia del resto de este bloque, que sí tiene el mismo nivel de prueba real que los Bloques 1-4.
+
+### Principio de privacidad de la Guía IA (`AI_PHILOSOPHY.md`)
+
+Se agregó el Principio no negociable 11 y una entrada correspondiente en "Qué nunca debe hacer": la Guía IA nunca comparte información privada entre usuarios ni usa el contenido de una conversación privada de una persona para responderle a otra — una interacción privada del ecosistema (por ejemplo, `guardado` en `interactions`) es privada también para la Guía IA, no solo para otros usuarios humanos.
+
+### Verificación realizada (capa de base de datos)
+
+Postgres 16 real, las 19 migraciones (`0001`-`0019`) en orden contra una base limpia, con datos de prueba reales: 3 usuarios (ana con un negocio aprobado y una pregunta; beto respondiendo esa pregunta; caro como administradora).
+
+- **Consentimiento versionado con retiro**: se otorgó un consentimiento, se agregó una fila de retiro para otro `consent_key` — las 3 filas del historial completo se conservan intactas; el estado vigente es la más reciente por `(user_id, consent_key)`.
+- **`data_requests` con roles de bajo privilegio reales**: ana ve su propia solicitud, beto no la ve (0 filas); un intento de beto de cancelar la solicitud de ana afectó 0 filas; ana canceló la suya propia con éxito.
+- **Eliminación definitiva simulada de verdad**: se creó una nueva solicitud vencida, se marcó `completada`, y se borró el `auth.users` de ana (lo que haría `auth.admin.deleteUser` en producción). Resultado verificado punto por punto:
+  - `profiles`/`actors` de ana: 0 filas (cascada ya existente).
+  - **Negocio de ana**: `owner_id` quedó en `NULL` y `status` cambió automáticamente a `'sin_propietario'` — el trigger funcionó exactamente como se diseñó.
+  - **Pregunta de ana**: sobrevivió con `author_id = NULL` (anonimizada, no borrada).
+  - **Respuesta de beto** (a la pregunta de ana): sobrevivió completamente intacta, sin ningún cambio — prueba directa de que el Hallazgo 1 quedó resuelto.
+  - **Evento publicado por el negocio de ana**: conservó su `business_id` (el negocio, aunque huérfano, sigue existiendo) — historial preservado.
+  - **`consent_records`/`data_requests` de ana**: las 3 y 2 filas respectivamente sobrevivieron completas — prueba directa de que el Hallazgo 2 quedó resuelto.
+- **RLS del negocio `sin_propietario`**: un usuario normal no lo ve (0 negocios visibles); la administradora sí lo ve (1) y pudo reasignar `owner_id`/`status` con éxito usando la política de administración ya existente, sin necesitar una política nueva.
+- **Estrategia de reversión**: probada en dos escenarios distintos, con un resultado honesto y distinto en cada uno:
+  - Contra una base limpia (sin ninguna eliminación real procesada todavía): reversión completa exitosa, sin errores.
+  - Contra el estado que ya había procesado la eliminación real de ana: la reversión **falla exactamente donde se esperaba** (`column "author_id" of relation "questions" contains null values` al intentar restaurar `not null`) — un límite genuino e inherente de la función, no un defecto: una vez que el mecanismo anonimizó datos reales, no hay forma de "recuperar" el autor original, y restaurar las restricciones antiguas sin decidir qué hacer con esos datos ya anonimizados no es posible. Se documenta con la misma honestidad que el resto de la verificación, en vez de afirmar una reversión limpia que no sería cierta en producción.
+- **Build y lint del frontend**: sin cambios, ambos limpios; `git status` confirma que `src/` no fue tocado — los únicos cambios son la migración, las dos Edge Functions nuevas, y `AI_PHILOSOPHY.md`.
+
+### Incidencias encontradas
+
+Ninguna no anticipada. Los dos hallazgos críticos y la limitación de reversión post-uso-real fueron identificados y documentados con transparencia, no descubiertos como sorpresa a mitad de la implementación.
+
+### Deuda técnica detectada
+
+- **No existe todavía ninguna interfaz de usuario** para que una persona real otorgue/retire consentimientos, solicite una exportación, o solicite/cancele la eliminación de su cuenta desde la app — este bloque activa el mecanismo de backend (esquema + Edge Functions), no construye pantallas nuevas. Es trabajo de una fase posterior.
+- **Las Edge Functions no están verificadas contra un proyecto Supabase real** (ver la nota de verificación honesta arriba) — recomendado antes de confiar en ellas en producción.
+- **No hay mecanismo de disparo temporal configurado** (`pg_cron` u otro) para invocar `process-account-deletions` automáticamente cuando vence el periodo de gracia — hoy depende de que algo externo la llame.
+- **Transferencia de propiedad de un negocio**: sigue sin existir ningún mecanismo de autoservicio para que una dueña transfiera su negocio antes de eliminar su cuenta — hoy, sin transferencia previa, el único camino es la reasignación manual por un administrador tras la orfandad.
+- **Invalidación de códigos QR**: requisito obligatorio anotado para cuando esa fase futura se construya (ver arriba) — no aplica todavía porque la entidad no existe.
+- **Rectificación de datos** (principio LOPDP): fuera de alcance de este bloque, ver nota arriba.
+
+### Qué sigue
+
+Con el Bloque 5 completo, la Fase 1 del ecosistema social queda terminada en su capa de base de datos. Sigue pendiente, sin autorizar todavía: la fase separada de "cambio de fuente de verdad" para `interactions`/`places.zone_id`/`event_details` (condición ya establecida en los Bloques 3 y 4), la interfaz de usuario para consentimiento/exportación/eliminación, la verificación end-to-end de las Edge Functions contra un proyecto real, y la Fase 2 del `MASTERPLAN.md`.

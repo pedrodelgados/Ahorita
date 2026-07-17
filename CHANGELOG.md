@@ -2,6 +2,38 @@
 
 Registro de cambios notables de Ahorita (Cuenca Viva). Formato libre, en español, más cercano a un registro de fases de producto que a versiones semánticas — ver `PROJECT.md` para el plan completo y el estado real de la implementación.
 
+## 2026-07-17 — Fase 1, Bloque 5: privacidad (consentimiento, exportación y eliminación de cuenta)
+
+Quinto y último bloque de la Fase 1 del `MASTERPLAN.md`. A diferencia de los Bloques 1-4, introduce comportamiento real — es su propósito explícito: activar el mecanismo de `consent_records`, que se adelantó vacío desde el Bloque 1.
+
+### Agregado
+- `supabase/migrations/0019_bloque5_privacidad.sql`: `consent_records` gana consentimiento versionado (`consent_key`/`document_version`, retirable sin borrar historial) y pierde su FK hacia `auth.users` para sobrevivir a la eliminación de la cuenta; `data_requests` (tabla nueva) como flujo de trabajo independiente del log de consentimiento; `questions`/`answers`/`statuses`/`event_comments.author_id` pasan de `cascade` a `set null` (anonimización, el contenido colaborativo sobrevive); `businesses.owner_id` pasa a `set null` con un trigger que fuerza `status = 'sin_propietario'` cuando el dueño desaparece, sin bloquear la eliminación ni borrar el negocio.
+- `supabase/functions/export-user-data`: el usuario autenticado obtiene sus propios datos en JSON, derivando su identidad del token de sesión — nunca de un `userId` de parámetro.
+- `supabase/functions/process-account-deletions`: procesa (protegida por un secreto compartido) las solicitudes de eliminación cuyo periodo de gracia de 30 días venció, invocando `auth.admin.deleteUser`.
+- `AI_PHILOSOPHY.md`: nuevo Principio no negociable 11 — la Guía IA nunca comparte información privada entre usuarios ni usa una conversación privada de una persona para responderle a otra.
+
+### Hallazgos críticos encontrados en el análisis previo (resueltos antes de implementar)
+1. `answers.question_id` cascadeaba desde `questions` — borrar la cuenta de quien preguntó habría borrado también las respuestas de terceros.
+2. `consent_records.user_id` cascadeaba desde `auth.users` — habría destruido la evidencia de consentimiento/eliminación justo cuando más se necesita.
+
+### Decisiones de producto (cuatro bifurcaciones aprobadas)
+Periodo de gracia de 30 días cancelable; anonimizar autores de contenido colaborativo en vez de borrarlo; conservar `consent_records`/`data_requests` sin cascada; negocios sin propietaria pasan a `sin_propietario` (no se bloquea la eliminación, no se borra el negocio, un admin reasigna después).
+
+### Verificado
+- Postgres 16 real, las 19 migraciones en orden, con datos de prueba reales (una pregunta con respuesta ajena, un negocio aprobado, tres usuarios).
+- Consentimiento versionado con retiro: historial completo conservado, estado vigente = fila más reciente.
+- RLS de `data_requests` con roles de bajo privilegio: cada usuario ve y cancela solo lo suyo.
+- Eliminación definitiva simulada de verdad (borrado real del `auth.users` de prueba): perfil/actor cascadearon; el negocio quedó `sin_propietario` con `owner_id` NULL (trigger verificado); la pregunta sobrevivió anonimizada; la respuesta ajena sobrevivió intacta (Hallazgo 1 resuelto); `consent_records`/`data_requests` sobrevivieron completos (Hallazgo 2 resuelto).
+- RLS del negocio huérfano: invisible para un usuario normal, visible y reasignable por un admin.
+- Reversión probada en dos escenarios: limpia sin errores contra una base sin eliminaciones reales; falla exactamente donde se esperaba (`author_id` ya no admite `not null`) contra un estado que ya procesó una eliminación real — límite genuino, no un defecto.
+- Build y lint sin cambios; `git status` confirma que `src/` no fue tocado.
+
+### Nota de verificación honesta
+Las dos Edge Functions no pudieron probarse contra un proyecto Supabase real en este entorno (sin proyecto desplegado ni API de administración de Auth disponible) — a diferencia de la migración SQL, que sí tiene el mismo nivel de prueba real que los Bloques 1-4. Recomendado verificarlas end-to-end antes de producción.
+
+### Deuda técnica
+Sin interfaz de usuario todavía para consentimiento/exportación/eliminación desde la app; sin mecanismo de disparo temporal (`pg_cron` u otro) configurado para `process-account-deletions`; sin transferencia de propiedad de negocio de autoservicio; invalidación de QR documentada como requisito para cuando esa entidad exista (no existe hoy); rectificación de datos fuera de alcance.
+
 ## 2026-07-17 — Fase 1, Bloque 4: interacciones y territorio (post_likes/saved_places/saved_events/follows → interactions, places.area → zones)
 
 Cuarto bloque de la Fase 1 del `MASTERPLAN.md`. Precedido por un análisis previo formal (aprobado antes de escribir código) que investigó los lectores/escritores reales del frontend y encontró un hallazgo de privacidad relevante, resuelto antes de implementar.
