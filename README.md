@@ -1,6 +1,6 @@
 # Ahorita
 
-Ecosistema urbano inteligente para Cuenca, Ecuador. Ver `ARCHITECTURE.md` para la visión y arquitectura completa del ecosistema (documento fundacional, sin código), `PROJECT.md` para el plan de producto e implementación fase por fase, `ROADMAP.md` para qué fase sigue, y `CHANGELOG.md` para el registro de cambios.
+Ecosistema urbano inteligente para Cuenca, Ecuador. Ver `ARCHITECTURE.md` para la visión y arquitectura completa del ecosistema (documento fundacional, sin código), `AI_PHILOSOPHY.md` para la filosofía y el comportamiento de la Guía IA (autoridad absoluta sobre toda decisión de IA, también sin código), `MASTERPLAN.md` para el plan de desarrollo fase por fase con dependencias, `PROJECT.md` para el registro de lo ya implementado, `ROADMAP.md` para qué fase sigue, y `CHANGELOG.md` para el registro de cambios.
 
 ## Stack
 

@@ -2,6 +2,19 @@
 
 Registro de cambios notables de Ahorita (Cuenca Viva). Formato libre, en español, más cercano a un registro de fases de producto que a versiones semánticas — ver `PROJECT.md` para el plan completo y el estado real de la implementación.
 
+## 2026-07-17 — Filosofía y comportamiento de la Guía IA (AI_PHILOSOPHY.md)
+
+Tras aprobar el MASTERPLAN, el usuario pidió definir "el corazón del proyecto" antes de autorizar la Fase 1: un documento completamente independiente, autoridad absoluta sobre toda decisión relacionada con la IA, puramente de comportamiento de producto — sin modelos, APIs, LLMs ni arquitectura técnica.
+
+### Agregado
+- `AI_PHILOSOPHY.md` (nuevo): filosofía completa, personalidad, principios no negociables, qué puede/nunca debe hacer, cómo razona, decide, prioriza información, maneja incertidumbre, aprende del usuario y adapta sus respuestas; cómo aprovecha toda la información del ecosistema; cinco casos de razonamiento trabajados a partir de los ejemplos del usuario ("tengo 10 dólares", "estoy aburrido", "estoy con mi novia", "la una de la madrugada", "nunca he venido a Cuenca"); un recorrido fase por fase de `MASTERPLAN.md` explicando qué capacidad de razonamiento nueva le aporta cada una a la Guía IA (presentada explícitamente como el hilo conductor del proyecto, no una fase más); y el capítulo de cierre "La visión definitiva de la Guía IA".
+
+### Cambiado
+- `README.md` y `PROJECT.md`: enlazan `AI_PHILOSOPHY.md` como autoridad absoluta sobre IA, al mismo nivel que `ARCHITECTURE.md` sobre el resto del ecosistema.
+
+### Nota
+Ningún archivo de código se tocó — exclusivamente filosofía de producto, sin mención de modelos, proveedores ni implementación técnica, tal como se pidió explícitamente.
+
 ## 2026-07-17 — Plan Maestro de Desarrollo (MASTERPLAN.md)
 
 El usuario aprobó `ARCHITECTURE.md` como base oficial y pidió convertirlo en un plan de desarrollo accionable, actuando como CTO/Arquitecto Principal/Product Manager — sin código, sin migraciones, sin componentes, solo planificación.
