@@ -2,6 +2,23 @@
 
 Registro de cambios notables de Ahorita (Cuenca Viva). Formato libre, en español, más cercano a un registro de fases de producto que a versiones semánticas — ver `PROJECT.md` para el plan completo y el estado real de la implementación.
 
+## 2026-07-17 — Fase 1, Bloque 1: esquema fundacional (primera implementación del ecosistema social)
+
+Primer bloque de código real de la Fase 1 del `MASTERPLAN.md`, tras la aprobación de la propuesta definitiva de ejecución. Puramente estructural — invisible para el usuario final.
+
+### Agregado
+- `supabase/migrations/0015_bloque1_esquema_fundacional.sql` (nuevo): seis tablas nuevas, sin tocar ninguna tabla existente — `cities` (con "Cuenca"), `zones` (hija de `cities`, con "Centro Histórico" y "Turi" — las únicas zonas reales en uso hoy), `actors` (tipos persona/negocio/organizador/sistema, con los actores de sistema "Guía IA" y "Ahorita Editorial" ya creados, y una restricción que impide combinaciones inválidas de tipo/referencia), `interactions` (polimórfica, catálogo me_gusta/quiero_ir/ya_fui/guardado/seguimiento/compartir), `event_details` (primer caso del patrón núcleo+detalle, vacía), `consent_records` (línea base de privacidad, vacía).
+
+### Verificado
+- Las 14 migraciones existentes (`0001`-`0014`) más la nueva `0015` se ejecutaron contra un Postgres 16 real (con un stub del esquema `auth` de Supabase), no solo se revisaron visualmente.
+- Conteos idénticos antes/después en todas las tablas existentes (cero filas perdidas o alteradas).
+- Restricciones de `actors` verificadas con datos reales (rechazan persona+business_id y sistema+profile_id).
+- RLS de `interactions`, `event_details`, `cities` y `consent_records` verificada funcionalmente con dos usuarios simulados y un rol de bajo privilegio (nunca como superusuario) — no solo revisión de las políticas escritas.
+- Build y lint del frontend sin cambios — no se tocó ninguna línea de código de la aplicación en este bloque.
+
+### Nota
+Ninguna de las tablas nuevas está todavía conectada a la aplicación ni a los datos existentes — esa vinculación es el Bloque 2 (identidad), pendiente de aprobación del Product Owner antes de empezar, según lo acordado.
+
 ## 2026-07-17 — Revisión arquitectónica previa a la Fase 1: cinco decisiones + visión de motor de experiencias
 
 Antes de autorizar la implementación, el Product Owner pidió analizar cinco puntos de diseño de largo plazo (Actor, Publicación, Interacción, Ciudad, Guía IA) y aprobó las cinco recomendaciones. Se actualiza la documentación fundacional para incorporarlas.

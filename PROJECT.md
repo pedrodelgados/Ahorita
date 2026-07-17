@@ -312,3 +312,34 @@ Todo lo listado en la sección anterior ("Administración completa de eventos y 
 - **Publicar**: crear/editar y guardar con `status = "publicado"` (por defecto al crear). Para programar una publicación futura, se llena "Programar publicación" (`publish_at`) en la sección 6 del editor de eventos — el evento existe y es editable por el admin desde antes, pero no aparece en el feed público hasta esa fecha.
 - **Ocultar**: desde el menú de acciones (⋮) del listado, un clic en "Ocultar" cambia `status` a `oculto` — reversible, sin confirmación, el mismo botón pasa a decir "Publicar" para revertirlo.
 - **Eliminar**: desde el mismo menú, "Eliminar" pide confirmación explícita (`ConfirmationModal`) porque es irreversible — borra la fila de la base de datos, no solo la oculta.
+
+---
+
+## Fase 1 del ecosistema social — Bloque 1: esquema fundacional (implementado)
+
+Primer bloque de la Fase 1 descrita en `MASTERPLAN.md`, ejecutado tras la aprobación de la propuesta definitiva y de las cinco decisiones de la revisión arquitectónica (ver `ARCHITECTURE.md` §9-11 y `AI_PHILOSOPHY.md` §16). **Deliberadamente invisible para el usuario final** — no hay ninguna pantalla, flujo ni comportamiento nuevo todavía; el objetivo de este bloque es puramente estructural.
+
+- **`supabase/migrations/0015_bloque1_esquema_fundacional.sql`** (nuevo): crea seis tablas nuevas sin tocar ni una fila de las tablas existentes.
+  - `cities` — poblada con una sola fila, "Cuenca".
+  - `zones` — hija de `cities`, un solo nivel de profundidad (con `parent_zone_id` opcional para crecer sin comprometerse a más niveles todavía); poblada únicamente con las zonas realmente en uso hoy en `places.area` — "Centro Histórico" y "Turi" — sin inventar ninguna zona especulativa.
+  - `actors` — identidad unificada con tres tipos (`persona`/`negocio`/`organizador`/`sistema`), con una restricción (`check`) que impide combinaciones inválidas (un actor de tipo persona no puede tener `business_id`, uno de tipo sistema no puede tener ni `profile_id` ni `business_id`, etc.). Ya incluye los dos actores de tipo sistema aprobados: **"Guía IA"** y **"Ahorita Editorial"**. Todavía no está conectada a `profiles`/`businesses` — esa vinculación es el Bloque 2.
+  - `interactions` — polimórfica (generaliza el patrón ya usado por `post_likes`), con el catálogo de tipos ya aprobado: `me_gusta`, `quiero_ir`, `ya_fui`, `guardado`, `seguimiento`, `compartir`. `reportar` queda deliberadamente fuera de esta tabla. Nace vacía — la migración de datos de `post_likes`/`saved_places`/`saved_events`/`follows` es el Bloque 4.
+  - `event_details` — primer caso real del patrón "núcleo genérico + tabla de detalle" (una tabla por fila de `events`, referenciando su `id`). Nace vacía — separar los campos específicos de cada evento existente (`start_at`/`end_at`/`price`/`ticket_url`/`organizer`) hacia aquí es el Bloque 3.
+  - `consent_records` — línea base de privacidad (adelantada desde la última fase del plan original a esta primera, por decisión aprobada): registro de consentimiento y de solicitudes de acceso/eliminación de datos. Nace vacía — el mecanismo que efectivamente exporta o elimina datos es el Bloque 5.
+- Las seis tablas tienen RLS habilitada, con políticas verificadas funcionalmente (no solo revisadas visualmente) contra un Postgres real antes de aplicar la migración a producción — ver la sección de verificación más abajo.
+
+### Verificación realizada
+
+Se levantó un Postgres 16 local (con un stub mínimo del esquema `auth` de Supabase — `auth.users` y `auth.uid()` — para poder ejecutar las migraciones reales sin depender de un proyecto de Supabase) y se corrieron, en orden, las 14 migraciones ya existentes (`0001`-`0014`) más la nueva `0015`, contra una base de datos limpia.
+
+Comprobado con consultas reales, no solo revisión de sintaxis:
+- **Cero filas perdidas o alteradas**: los conteos de `places` (10), `events` (5) y el resto de tablas existentes son idénticos antes y después de aplicar `0015`.
+- **La restricción de `actors` rechaza combinaciones inválidas**: un actor `persona` con `business_id`, y un actor `sistema` con `profile_id`, fallan ambos con un error de `check constraint`, verificado con datos reales (no con una subconsulta vacía, que en un primer intento dio un falso positivo — corregido antes de dar la prueba por válida).
+- **RLS de `interactions` verificada con dos usuarios reales y un rol de bajo privilegio** (nunca como superusuario, que se salta RLS por completo): un usuario puede crear una interacción con su propio actor y no con el de otro; el intento con el actor ajeno se rechaza; un duplicado exacto se rechaza por la restricción `unique`; un usuario que intenta borrar la interacción de otro borra 0 filas y el dato original queda intacto.
+- **RLS de `event_details` verificada cascadeando la visibilidad real de `events`**: un usuario normal solo ve el detalle del evento con `status = 'publicado'`; el mismo usuario, marcado como admin, ve también el del evento oculto.
+- **RLS de `cities` y `consent_records` verificada**: un usuario no-admin no puede crear una ciudad aunque tenga permiso de tabla (el rechazo viene de la política, no del `GRANT`); un usuario puede insertar su propio registro de consentimiento pero no uno a nombre de otro usuario.
+- **Build y lint del frontend**: sin cambios, ambos limpios — no se tocó ninguna línea de código de la aplicación en este bloque, por lo que no hay regresión posible más allá de "la base de datos ya no es exactamente la misma", que es justamente lo que se verificó arriba.
+
+### Qué sigue (Bloque 2, pendiente de aprobación)
+
+Vincular `profiles`/`businesses` a `actors` (crear un Actor por cada fila existente de ambas tablas), sin tocar todavía la migración de interacciones, contenido ni privacidad — ver `MASTERPLAN.md`, Fase 1, para el detalle completo de los cinco bloques.
