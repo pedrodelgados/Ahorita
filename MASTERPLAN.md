@@ -2,530 +2,561 @@
 
 **Documento de planificación. Nivel: CTO / Arquitecto Principal / Product Manager. No contiene código, migraciones ni implementación.**
 
-Este documento convierte `ARCHITECTURE.md` (visión y arquitectura del ecosistema, ya aprobado) en un plan de ejecución accionable: fases de desarrollo concretas, en orden, con sus dependencias, sus tablas, sus riesgos y su criterio de éxito. **A partir de la aprobación de este documento, este es el único roadmap oficial de desarrollo de Ahorita** — sustituye a la sección "Próxima fase" de `ROADMAP.md`, que pasa a apuntar aquí.
+Este documento convierte `ARCHITECTURE.md` (visión y arquitectura del ecosistema, ya aprobado) en un plan de ejecución accionable: fases de desarrollo concretas, en orden, con sus dependencias, sus tablas, sus riesgos y su criterio de éxito. **`MASTERPLAN.md` es la única hoja de ruta oficial de desarrollo de Ahorita** — `ROADMAP.md` apunta aquí para el detalle.
 
-Relación con los demás documentos: `ARCHITECTURE.md` responde *qué es Ahorita y por qué*; este documento responde *en qué orden se construye y con qué criterio se sabe que cada pieza está lista*; `PROJECT.md` seguirá registrando, fase por fase, lo que realmente se construyó; `CHANGELOG.md` seguirá el detalle de cada cambio. Ninguna fase aquí descrita se implementa hasta que se apruebe explícitamente, exactamente como se hizo con la fase de administración de eventos y lugares.
+Relación con los demás documentos: `ARCHITECTURE.md` responde *qué es Ahorita y por qué*; `AI_PHILOSOPHY.md` es la autoridad absoluta sobre el comportamiento de la Guía IA; este documento responde *en qué orden se construye y con qué criterio se sabe que cada pieza está lista*; `PROJECT.md` registra, fase por fase, lo que realmente se construyó; `CHANGELOG.md` sigue el detalle de cada cambio. Ninguna fase aquí descrita se implementa hasta que se apruebe explícitamente.
+
+**Principio aprobado: la inteligencia artificial es un eje transversal del producto, no una función aislada.** Por eso cada fase incluye, además de sus doce campos técnicos habituales, un campo adicional — **"Aporte a la Guía IA"** — que documenta qué información o capacidad nueva le entrega a la Guía IA, aunque la integración técnica definitiva de esa capacidad se implemente después (en la Fase 7 y en las fases posteriores). Ninguna fase, sin importar cuán "no relacionada con IA" parezca su título, queda exenta de este campo.
+
+---
+
+## Decisiones estratégicas ya cerradas por el Product Owner (registro)
+
+Estas once decisiones fueron aprobadas antes de autorizar el inicio de la Fase 1 y ya están incorporadas en el detalle de cada fase más abajo. Se listan aquí también de forma compacta para que cualquier persona del equipo pueda verificarlas de un vistazo sin tener que leer las 13 fases completas:
+
+1. **Se aprueba invertir en la Fase 1** aunque no produzca funcionalidad visible — prioridad: evitar reconstruir el sistema con usuarios y negocios reales ya activos.
+2. **Verificación de negocios con vigencia anual**, orientada a confirmar actividad continua y datos actualizados — **la renovación no implica un cobro automático** (Fase 2).
+3. **Catálogo de reacciones cerrado para v1:** Me gusta, Quiero ir, Ya fui — no se agregan más sin evidencia real de valor (Fase 5B).
+4. **Techo máximo de contenido patrocinado: 15% aproximado del contenido mostrado**, siempre etiquetado como "Patrocinado", configurable únicamente por el administrador principal, con registro de auditoría de cualquier cambio (Fase 6 y Fase 11).
+5. **El contenido pagado nunca puede comprar una recomendación de la Guía IA** — la IA prioriza relevancia, contexto, disponibilidad, seguridad, confianza y calidad de datos, sin excepción (protegido por `AI_PHILOSOPHY.md`, reforzado en Fase 11).
+6. **Historias con duración máxima de 30 segundos**, alcance simple para v1: foto o video, texto básico, ubicación, vigencia de 24 horas — sin filtros, stickers ni funciones complejas (Fase 8).
+7. **Proveedor de pagos y proveedor de transporte quedan abiertos** hasta investigar condiciones reales disponibles en Ecuador (Fase 10 y Fase 12).
+8. **Precio final de la suscripción de negocio diferido** — debe existir un nivel gratuito inicial; el plan pagado se define después de validar valor y resultados medibles (Fase 11).
+9. **Privacidad, consentimiento, acceso y eliminación de datos se adelantan a la Fase 1** — no quedan relegados a la Fase 13.
+10. **La Fase 5 se divide en Fase 5A (seguir negocios, depende solo de la Fase 3) y Fase 5B (comentarios/guardados/reacciones generalizados, depende de la Fase 4).**
+11. **Azu Taxi se trata como ventana de integración posible desde fases tempranas, pero no se implementa hasta verificar formalmente qué mecanismo ofrece** (aplicación con deep link, API, teléfono, WhatsApp) — la arquitectura debe permitir sustituir el proveedor o el mecanismo sin rediseñar el núcleo (Fase 12).
 
 ---
 
 ## Cómo leer este documento
 
-Cada fase se describe con doce campos fijos, en este orden: Objetivo, Problema que resuelve, Módulos que incluye, De qué depende, Qué bloquea hasta completarse, Tablas nuevas, Entidades nuevas, APIs externas necesarias, Migraciones que requiere, Riesgos, Pruebas necesarias, Criterio de terminado (Definition of Done).
+Cada fase se describe con trece campos fijos, en este orden: Objetivo, Problema que resuelve, Módulos que incluye, De qué depende, Qué bloquea hasta completarse, Tablas nuevas, Entidades nuevas, APIs externas necesarias, Migraciones que requiere, Riesgos, Pruebas necesarias, Criterio de terminado (Definition of Done), y **Aporte a la Guía IA**.
 
-Las fases no son de tamaño arbitrario ni están numeradas por capricho: **cada fase deja el producto en un estado estable y funcional**, aunque no todas sean visibles para el usuario final de la misma manera — algunas (como la Fase 1) son invisibles desde afuera pero indispensables por dentro, y eso se declara explícitamente en vez de forzar una funcionalidad de cara al usuario donde no corresponde.
+Las fases no son de tamaño arbitrario: **cada fase deja el producto en un estado estable y funcional**, aunque no todas sean visibles para el usuario final de la misma manera.
 
-Nota sobre una decisión de reordenamiento respecto a `ARCHITECTURE.md` §60: aquella sección proponía ocho fases (A-H) a alto nivel. Este plan las **divide en trece fases más granulares** y **separa la integración de movilidad (Azu Taxi) de la fase de comercio**, por dos razones concretas: (1) cada fase debe tener un criterio de terminado verificable en semanas, no en meses — una fase que mezcla "verificación de negocios" con "roles granulares" y "modelo de datos" a la vez es demasiado grande para tener un solo punto de rollback seguro; y (2) Azu Taxi no comparte ninguna dependencia real con reservas/pagos/entradas (es una integración de solo lectura de ubicación hacia un socio externo), así que forzarla dentro de la misma fase que el manejo de dinero real le hereda un riesgo regulatorio que no le corresponde. Ambos cambios se justifican con más detalle en sus fases respectivas.
+Nota sobre reordenamiento respecto a `ARCHITECTURE.md` §60: aquella sección proponía ocho fases (A-H) a alto nivel; este plan las divide en fases más granulares, separa la integración de movilidad (Azu Taxi) de la fase de comercio, y —por decisión aprobada del Product Owner (decisión 10)— divide la fase de interacción social en 5A y 5B para capturar antes el valor de "seguir negocios", que no depende de tanto como el resto de la interacción social.
 
 ---
 
 ## Fase 0 — Línea base (ya completada, no se planifica aquí)
 
-Para que las dependencias de las fases siguientes sean legibles, se enumera lo que ya existe y sobre lo cual se construye todo lo demás: identidad básica de usuario (`profiles`), catálogo de categorías (`channels`), lugares (`places`), negocios con aprobación binaria (`businesses`), preguntas/respuestas/estados en vivo, likes genéricos (`post_likes`), guardados de lugares y eventos, seguir personas (`follows`), notificaciones push reales, eventos con administración completa (crear/editar/duplicar/ocultar/eliminar, estados de guardado, ciclo de vida editorial, `editor_pick`), y la Guía IA v1 (función de borde sobre la API de Claude, sin memoria de sesión). Ver `PROJECT.md` para el detalle completo de cómo se construyó cada pieza.
+Lo que ya existe y sobre lo cual se construye todo lo demás: identidad básica de usuario, catálogo de categorías, lugares, negocios con aprobación binaria, preguntas/respuestas/estados en vivo, likes genéricos, guardados de lugares y eventos, seguir personas, notificaciones push reales, eventos con administración completa, y la Guía IA v1 (sin memoria de sesión). Ver `PROJECT.md` para el detalle completo.
+
+**Aporte a la Guía IA.** Le da a la Guía IA su primera fuente de verdad real: lugares, negocios, eventos, categorías. Sin esto no habría nada sobre qué razonar — es la diferencia entre una IA que sabe cosas reales de Cuenca y una que solo tiene conocimiento genérico.
 
 ---
 
-## Fase 1 — Unificación del modelo de datos fundacional
+## Fase 1 — Unificación del modelo de datos fundacional + línea base de privacidad
 
-**Objetivo.** Introducir las cuatro abstracciones de `ARCHITECTURE.md` §9-11 — Actor, Publicación, Interacción, Ciudad — como estructura real de base de datos, sin cambiar en absoluto el comportamiento visible de la aplicación para el usuario final.
+**Objetivo.** Introducir las cuatro abstracciones de `ARCHITECTURE.md` §9-11 — Actor, Publicación, Interacción, Ciudad — como estructura real de base de datos, sin cambiar el comportamiento visible de la aplicación; y establecer, desde esta misma fase, una línea base real de privacidad: consentimiento explícito, acceso y eliminación de datos personales a solicitud del usuario. **Ambas cosas se aprobaron para ir juntas en esta fase (decisiones 1 y 9)** — no como funcionalidades independientes, sino porque unificar el modelo de datos es precisamente lo que hace viable construir un mecanismo de acceso/borrado *único y consistente*, en vez de uno distinto por cada tabla dispersa.
 
-**Problema que resuelve.** Cada fase social nueva que se construya sobre la estructura actual (tablas separadas por tipo de contenido y por tipo de interacción) agrega deuda técnica de forma exponencial: hoy ya existen `saved_places` y `saved_events` como tablas paralelas para lo que conceptualmente es la misma acción ("guardar"); sin esta fase, mañana existirían también `saved_promotions`, `saved_posts`, y comentarios duplicados por cada tipo de contenido nuevo. Resolverlo ahora, con relativamente poco contenido y tráfico, es mucho más barato que resolverlo después.
+**Problema que resuelve.** Dos problemas a la vez, deliberadamente: (a) cada fase social nueva sobre la estructura actual agrega deuda técnica exponencial (tablas paralelas por tipo de contenido e interacción); (b) el sistema ya empieza a recolectar datos personales reales desde el día uno, y dejar el marco de privacidad para el final del plan (como se pensaba originalmente en la Fase 13) es un riesgo real, no solo una imprecisión de orden — para cuando llegara la Fase 13, ya llevaríamos varias fases acumulando historial de interacciones y, más adelante, de conversación con la IA, sin un mecanismo real de consentimiento o borrado.
 
-**Módulos que incluye.** Modelo Actor (unifica identidad de persona y negocio). Modelo Publicación (generaliza eventos como su primer subtipo real, deja la estructura lista para publicaciones/promociones/historias). Modelo Interacción (generaliza likes, guardados, comentarios y seguimiento bajo un esquema polimórfico consistente, extendiendo el patrón que `post_likes` ya demuestra parcialmente). Entidad Ciudad (dimensión de escopo geográfico, poblada con un único valor: Cuenca).
+**Módulos que incluye.** Modelo Actor (unifica identidad de persona y negocio). Modelo Publicación (generaliza eventos como su primer subtipo). Modelo Interacción (generaliza likes, guardados, comentarios y seguimiento). Entidad Ciudad. **Línea base de privacidad:** registro de consentimiento explícito al usar funciones que recolectan datos personales, mecanismo de exportación de los propios datos, mecanismo de eliminación de cuenta y datos asociados.
 
-**De qué depende.** De nada dentro de esta nueva etapa — se apoya únicamente en la Fase 0 ya construida. Es, por diseño, la primera fase posible.
+**De qué depende.** De nada dentro de esta nueva etapa — se apoya únicamente en la Fase 0 ya construida.
 
-**Qué bloquea hasta completarse.** Fase 2 (Verificación debe referenciar Actor, no `businesses` directamente), Fase 3 (perfiles sociales unificados), Fase 4 (contenido social ampliado), Fase 5 (interacción social generalizada) — en la práctica, casi todo el resto del plan depende de esta fase, que es exactamente su propósito.
+**Qué bloquea hasta completarse.** Fase 2, Fase 3, Fase 4, Fase 5A, Fase 5B — en la práctica, casi todo el resto del plan. Y, específicamente por el bloque de privacidad: la Fase 7 (sesiones de IA con historial de conversación) hereda esta infraestructura ya lista en vez de tener que construirla bajo presión al mismo tiempo que construye memoria conversacional.
 
-**Tablas nuevas.** `cities` (ciudad, con límites geográficos aproximados). `actors` (identidad unificada, referenciada por `profiles` y `businesses`). `interactions` (tabla polimórfica: tipo de interacción, actor que interactúa, tipo y id del objetivo — generaliza `post_likes`/`saved_places`/`saved_events`/`follows`).
+**Tablas nuevas.** `cities`. `actors`. `interactions` (polimórfica, generaliza `post_likes`/`saved_places`/`saved_events`/`follows`). `consent_records` (usuario, tipo de consentimiento otorgado, fecha, vigencia, y registro de cuándo se ejerció un derecho de acceso o eliminación).
 
-**Entidades nuevas.** Actor, Ciudad, Interacción unificada.
+**Entidades nuevas.** Actor, Ciudad, Interacción unificada, Registro de consentimiento.
 
 **APIs externas necesarias.** Ninguna.
 
-**Migraciones que requerirá.** Migración de esquema que agrega `actors`/`cities`/`interactions` y adapta `profiles`/`businesses` para referenciar `actors`. Migración de datos que traslada las filas existentes de `post_likes`, `saved_places`, `saved_events` y `follows` hacia `interactions`, preservando cada fila (nunca se borra el historial durante la migración — las tablas viejas se retiran solo después de verificar conteos idénticos). Migración que puebla `cities` con una fila ("Cuenca") y asocia todas las filas existentes de `places`/`events`/`businesses` a ella.
+**Migraciones que requerirá.** Migración de esquema que agrega `actors`/`cities`/`interactions`/`consent_records` y adapta `profiles`/`businesses` para referenciar `actors`. Migración de datos que traslada `post_likes`, `saved_places`, `saved_events` y `follows` hacia `interactions`, preservando cada fila. Migración que puebla `cities` con una fila ("Cuenca").
 
-**Riesgos.** Es una migración de datos sobre información real de usuarios activos (likes, guardados, seguimientos ya existentes) — el riesgo central es pérdida o corrupción silenciosa de ese historial durante la migración. Mitigación: nunca eliminar una tabla vieja hasta confirmar conteos exactos antes/después, y ejecutar en una ventana de mantenimiento corta con respaldo verificado.
+**Riesgos.** El riesgo central ya identificado: migración de datos reales de usuarios activos, con posibilidad de pérdida o corrupción silenciosa de historial si no se ejecuta con cuidado. Riesgo adicional introducido por agregar el bloque de privacidad a una fase ya sensible: para no mezclar ambos riesgos en una sola ventana de cambio, el bloque de privacidad se trata como un sub-bloque de trabajo independiente dentro de la misma fase, verificable por separado de la migración de interacciones.
 
-**Pruebas necesarias.** Conteo exacto de filas migradas por tipo de interacción (los likes de ayer deben seguir siendo exactamente los mismos likes hoy). Regresión completa de toda la funcionalidad existente — el usuario final no debe notar ningún cambio. Prueba de carga sobre la nueva tabla `interactions` con un volumen simulado varias veces mayor al actual, para confirmar que la generalización no introduce un cuello de botella de rendimiento.
+**Pruebas necesarias.** Conteo exacto de filas migradas por tipo de interacción. Regresión completa de toda la funcionalidad existente. Prueba de carga sobre `interactions`. **Prueba específica de privacidad:** un usuario solicita la exportación de sus datos y la recibe completa; un usuario solicita la eliminación de su cuenta y sus datos personales dejan de estar accesibles, de principio a fin.
 
-**Criterio de terminado.** Toda la funcionalidad existente (feed, likes, guardados, seguir, comentarios de eventos) funciona de forma idéntica para el usuario final sin ningún cambio visible; el equipo de desarrollo puede confirmar, con un caso de prueba concreto, que agregar "seguir un negocio" o "comentar una promoción" en una fase futura no requiere crear una tabla nueva.
+**Criterio de terminado.** Toda la funcionalidad existente funciona de forma idéntica para el usuario final. El equipo puede confirmar que agregar "seguir un negocio" o "comentar una promoción" no requiere una tabla nueva. **Existe, desde el lanzamiento de esta fase, un mecanismo funcional de consentimiento, exportación y eliminación de datos personales** — no una promesa para la Fase 13, sino algo que ya funciona.
+
+**Aporte a la Guía IA.** Le da a la Guía IA una sola forma consistente de leer cualquier tipo de contenido, sin lógica distinta por tabla. Adicionalmente, adelantar la línea base de privacidad significa que cuando la Guía IA empiece a acumular historial de conversación (Fase 7) —el dato más sensible que va a manejar todo el sistema, según `AI_PHILOSOPHY.md` §11— ya existirá la infraestructura de consentimiento y borrado lista para aplicarse, en vez de construirse recién en ese momento bajo presión de lanzamiento.
+
+**Decisiones ya aprobadas aplicadas aquí:** 1, 9. No requiere aprobación adicional del Product Owner — solo ejecución.
 
 ---
 
 ## Fase 2 — Verificación robusta y roles granulares
 
-**Objetivo.** Formalizar la Verificación de negocios/organizadores como un proceso con estados, evidencia y vigencia (`ARCHITECTURE.md` §15), y separar el rol Editor/Curador del rol Administrador (§5).
+**Objetivo.** Formalizar la Verificación de negocios/organizadores como un proceso con estados, evidencia y **vigencia anual orientada a confirmar que el negocio sigue activo y que sus datos siguen actualizados** (decisión 2) — nunca como un cobro automático asociado a la renovación —, y separar el rol Editor/Curador del rol Administrador.
 
-**Problema que resuelve.** La aprobación de negocios hoy es un campo booleano sin evidencia adjunta, sin fecha de vencimiento y sin motivo de rechazo registrado — funcional para un puñado de negocios revisados a mano por una sola persona, pero no sostiene la confianza (el activo central del producto, principio (b) de `ARCHITECTURE.md`) a medida que el volumen crece y el equipo de curaduría deja de ser una sola persona.
+**Problema que resuelve.** La aprobación de negocios hoy es un campo booleano sin evidencia, sin vencimiento y sin motivo de rechazo registrado.
 
-**Módulos que incluye.** Sistema de Verificación con estados (`pendiente`/`en_revision`/`aprobado`/`rechazado`/`vencido`/`revocado`). Roles y permisos granulares (visitante/usuario/editor-curador/administrador/super-administrador, reemplazando el booleano `is_admin` actual). Extensión del panel de administración con una bandeja de trabajo de verificaciones pendientes.
+**Módulos que incluye.** Estados de verificación (`pendiente`/`en_revision`/`aprobado`/`rechazado`/`vencido`/`revocado`). Ciclo de renovación anual, gratuito, enfocado en confirmar continuidad y actualidad de datos (no en volver a cobrar ni en una revisión desde cero tan exhaustiva como la inicial). Roles granulares. Bandeja de trabajo de verificaciones pendientes.
 
-**De qué depende.** Fase 1 — la Verificación debe referenciar el Actor unificado, no la tabla `businesses` en su forma actual.
+**De qué depende.** Fase 1 — la Verificación debe referenciar el Actor unificado.
 
-**Qué bloquea hasta completarse.** Fase 3 (el perfil de negocio necesita mostrar un estado de verificación real, no un booleano), Fase 4 (solo Actores verificados deberían poder publicar Promociones), Fase 9 (check-in y promociones QR solo tienen sentido pleno sobre negocios ya verificados).
+**Qué bloquea hasta completarse.** Fase 3, Fase 4 (solo negocios verificados deberían publicar promociones), Fase 9 (check-in y promociones QR necesitan negocios verificados detrás).
 
-**Tablas nuevas.** `verifications` (actor solicitante, tipo de evidencia, estado, revisor, fecha de vigencia y de vencimiento, motivo si aplica). Extensión de `profiles` (o tabla `roles` dedicada) con un rol enumerado en vez del booleano actual.
+**Tablas nuevas.** `verifications` (actor solicitante, tipo de evidencia, estado, revisor, fecha de vigencia y de vencimiento, motivo si aplica, indicador de si la renovación fue solo de confirmación o requirió nueva evidencia). Extensión de `profiles` con un rol enumerado en vez del booleano `is_admin` actual.
 
-**Entidades nuevas.** Verificación (con ciclo de vida propio), Rol granular.
+**Entidades nuevas.** Verificación, Rol granular.
 
-**APIs externas necesarias.** Ninguna obligatoria — la evidencia se sube como archivo reutilizando el almacenamiento ya existente. Opcional a evaluar más adelante: un servicio de verificación automatizada de identidad/documento, no requerido para el mínimo viable de esta fase.
+**APIs externas necesarias.** Ninguna obligatoria.
 
-**Migraciones que requerirá.** Migración que crea `verifications` y traslada el estado actual de cada negocio (`pendiente`/`aprobado`) a una fila inicial de verificación, sin perder el historial de cuándo se aprobó. Migración que traslada `profiles.is_admin` al nuevo esquema de roles, preservando exactamente quién es administrador hoy.
+**Migraciones que requerirá.** Creación de `verifications`, con una fila inicial por cada negocio ya aprobado. Migración de `profiles.is_admin` al nuevo esquema de roles.
 
-**Riesgos.** Cambiar el modelo de permisos es sensible por naturaleza: un error puede dejar a un administrador real sin acceso, o dar de más a alguien. Mitigación: mantener el campo viejo (`is_admin`) en modo de solo lectura durante un periodo de convivencia, validando de forma cruzada contra el nuevo esquema de roles antes de retirarlo definitivamente.
+**Riesgos.** Cambiar el modelo de permisos es sensible. Adicional: un negocio que no renueva a tiempo por simple descuido (no por mala fe ni por haber cerrado) no debería perder su verificación de forma abrupta — se recomienda un periodo de gracia con aviso previo antes de marcar la verificación como vencida, a definir en el detalle de implementación de esta fase.
 
-**Pruebas necesarias.** Pruebas de autorización exhaustivas por cada rol (qué puede y no puede hacer cada uno, incluyendo casos negativos). Simulación del flujo completo de verificación de principio a fin (solicitud → evidencia → aprobación o rechazo con motivo → vigencia → vencimiento → renovación). Auditoría posterior a la migración: ningún negocio ya aprobado pierde su estado de aprobación.
+**Pruebas necesarias.** Autorización exhaustiva por rol. Simulación completa del ciclo de verificación, incluyendo la renovación anual sin cobro. Auditoría de que ningún negocio pierde su estado durante la migración.
 
-**Criterio de terminado.** Todo negocio existente conserva su estado sin interrupción de servicio; el equipo puede asignar el rol Editor/Curador a alguien sin otorgarle control total del sistema; existe una cola visible y priorizable de verificaciones pendientes con evidencia adjunta.
+**Criterio de terminado.** Todo negocio existente conserva su estado sin interrupción. Existe una cola de verificaciones pendientes. La renovación anual funciona como confirmación de actividad/datos, sin ningún cobro asociado, tal como se aprobó.
+
+**Aporte a la Guía IA.** Permite que la IA confíe en que un negocio verificado sigue realmente activo y con datos vigentes — no solo verificado alguna vez en el pasado y potencialmente desactualizado o cerrado hoy. La vigencia anual es, en el fondo, una señal de frescura de datos: si un negocio no ha renovado, la Guía IA debería tratar su información con más cautela, consistente con el principio de nunca inventar ni sobre-afirmar certeza (`AI_PHILOSOPHY.md` §10).
+
+**Decisiones ya aprobadas aplicadas aquí:** 2. No requiere aprobación adicional — solo definir, durante la implementación, el periodo de gracia antes de marcar vencimiento (detalle operativo, no estratégico).
 
 ---
 
 ## Fase 3 — Identidad social plena (perfiles y negocio extendido)
 
-**Objetivo.** Extender el perfil personal y el perfil de negocio según `ARCHITECTURE.md` §26-28: bloques comunes de identidad/actividad/relaciones/reputación para cualquier Actor, catálogo básico y horario visible en el perfil de negocio, y una relación explícita de "persona administra negocio" que permita gestionar ambos desde una sola sesión.
+**Objetivo.** Extender el perfil personal y el perfil de negocio: bloques comunes de identidad/actividad/relaciones/reputación, catálogo y horario visibles en el perfil de negocio, y relación explícita de "persona administra negocio".
 
-**Problema que resuelve.** El perfil personal y la ficha de un negocio (hoy incrustada dentro de lugares/eventos) son experiencias completamente distintas sin ninguna estructura compartida; y no existe manera de que una persona registrada administre un negocio sin una cuenta separada.
+**Problema que resuelve.** El perfil de negocio hoy es una ficha incrustada dentro de lugares/eventos, no una entidad propia visitable y administrable.
 
-**Módulos que incluye.** Arquitectura de perfil unificado. Arquitectura del negocio (catálogo, horario, insignia de verificación siempre visible). Arquitectura del perfil personal (intereses, contenido guardado, negocios administrados). Relación Actor-administra-Negocio.
+**Módulos que incluye.** Perfil unificado. Arquitectura del negocio. Arquitectura del perfil personal. Relación Actor-administra-Negocio.
 
-**De qué depende.** Fase 1 (Actor unificado) y Fase 2 (estado de verificación real que mostrar).
+**De qué depende.** Fase 1, Fase 2.
 
-**Qué bloquea hasta completarse.** Fase 5 (seguir un negocio requiere que exista un perfil de negocio real, no solo una ficha dentro de un lugar), Fase 6 (analíticas de negocio necesitan el concepto de "vistas de mi perfil" que nace aquí).
+**Qué bloquea hasta completarse.** Fase 5A (seguir negocios necesita este perfil real), Fase 6 (analíticas de negocio necesitan "vistas de mi perfil").
 
-**Tablas nuevas.** `actor_managers` (relación persona↔negocio administrado, con posibilidad futura de más de un administrador por negocio).
+**Tablas nuevas.** `actor_managers`.
 
 **Entidades nuevas.** Relación de administración de negocio.
 
 **APIs externas necesarias.** Ninguna.
 
-**Migraciones que requerirá.** Creación de `actor_managers`; ninguna migración destructiva sobre datos existentes.
+**Migraciones que requerirá.** Creación de `actor_managers`.
 
-**Riesgos.** Riesgo técnico bajo — es mayormente construcción sobre datos ya unificados en la Fase 1. El riesgo real es de alcance: la tentación de incluir analíticas avanzadas de negocio aquí quitándole foco a la Fase 6, donde en realidad corresponden.
+**Riesgos.** Bajo — riesgo real es de alcance (tentación de incluir analíticas avanzadas aquí, que pertenecen a la Fase 6).
 
-**Pruebas necesarias.** Una persona administra más de un negocio y cambia de contexto sin cerrar sesión. El estado de verificación se muestra correctamente y de forma inseparable del contenido en el perfil público.
+**Pruebas necesarias.** Una persona administra más de un negocio sin cerrar sesión. El estado de verificación se muestra de forma inseparable del contenido en el perfil público.
 
-**Criterio de terminado.** Todo perfil (personal o de negocio) se renderiza desde la misma estructura de datos común; un negocio ya verificado muestra su insignia de verificación de forma consistente en cualquier lugar donde aparezca su perfil.
+**Criterio de terminado.** Todo perfil se renderiza desde la misma estructura de datos común; un negocio verificado muestra su insignia de forma consistente.
+
+**Aporte a la Guía IA.** El catálogo, horario y la relación de administración le dan a la IA contexto de negocio estructurado y confiable para responder con precisión preguntas como "¿qué tienen?" o "¿a qué hora abren realmente hoy?" — información que hoy no existe de forma estructurada en ningún lugar del sistema.
+
+**Decisiones ya aprobadas aplicadas aquí:** ninguna directamente — ejecuta lo ya aprobado en Fases 1-2. No requiere aprobación adicional.
 
 ---
 
 ## Fase 4 — Contenido social ampliado (Publicaciones y Promociones)
 
-**Objetivo.** Implementar Publicación regular y Promoción como subtipos de la Publicación unificada, reutilizando el editor progresivo de secciones ya construido y probado para eventos.
+**Objetivo.** Implementar Publicación regular y Promoción como subtipos de la Publicación unificada, reutilizando el editor progresivo ya construido para eventos.
 
-**Problema que resuelve.** Hoy solo los eventos pueden publicarse desde el panel de administración — un negocio no tiene forma de compartir una novedad sin fecha de inicio obligatoria, ni de anunciar una promoción con una condición de canje concreta.
+**Problema que resuelve.** Hoy solo los eventos pueden publicarse — un negocio no tiene forma de compartir una novedad sin fecha de inicio obligatoria, ni de anunciar una promoción con condición de canje.
 
-**Módulos que incluye.** Sistema de publicaciones (§16). Sistema de promociones (§17), incluyendo su condición de canje y mecanismo de validación previsto (manual o QR, este último construido en la Fase 9).
+**Módulos que incluye.** Sistema de publicaciones. Sistema de promociones (condición de canje, mecanismo de validación previsto — el canje físico vía QR llega en la Fase 9).
 
-**De qué depende.** Fase 1 (la Publicación unificada debe existir antes de agregarle subtipos), Fase 2 (solo Actores verificados u organizadores aprobados deberían poder publicar), Fase 3 (se publica desde el perfil de negocio ya extendido).
+**De qué depende.** Fase 1, Fase 2, Fase 3.
 
-**Qué bloquea hasta completarse.** Fase 5 (probar comentarios/guardados generalizados necesita más de un tipo de contenido real sobre el cual probarlos), Fase 9 (promociones mediante QR necesita que el subtipo Promoción ya exista).
+**Qué bloquea hasta completarse.** Fase 5B (necesita más de un tipo de contenido real), Fase 9 (promociones QR necesita que el subtipo Promoción ya exista).
 
-**Tablas nuevas.** Ninguna tabla nueva de fondo si la Fase 1 se ejecutó correctamente — Publicación y Promoción son filas de la misma tabla de Publicación con un campo de subtipo. Se añade `promotion_details` como tabla auxiliar (condición de canje, mecanismo de validación) para no ensuciar la tabla genérica con campos que solo aplican a un subtipo.
+**Tablas nuevas.** Ninguna tabla nueva de fondo; se añade `promotion_details` como tabla auxiliar.
 
 **Entidades nuevas.** Publicación regular y Promoción (subtipos), Detalle de promoción.
 
-**APIs externas necesarias.** Ninguna en esta fase — el canje físico vía QR se construye en la Fase 9.
+**APIs externas necesarias.** Ninguna.
 
-**Migraciones que requerirá.** Agregar el campo de subtipo a la tabla de Publicación unificada; crear `promotion_details`.
+**Migraciones que requerirá.** Agregar el campo de subtipo a la Publicación unificada; crear `promotion_details`.
 
-**Riesgos.** Sobrecargar el editor progresivo con demasiadas variantes de campos por subtipo puede degradar la experiencia ya pulida construida para eventos. Mitigación: diseñar el formulario por composición de secciones comunes más secciones específicas del subtipo, no por condicionales anidados difíciles de mantener a largo plazo.
+**Riesgos.** Sobrecargar el editor progresivo con demasiadas variantes de campos por subtipo.
 
-**Pruebas necesarias.** Crear, editar y publicar cada subtipo de principio a fin. Verificar que el feed y la vista previa en vivo (ya construida para eventos) muestran correctamente cada subtipo con su propio tratamiento visual.
+**Pruebas necesarias.** Crear/editar/publicar cada subtipo de principio a fin.
 
-**Criterio de terminado.** Un negocio verificado puede publicar una Publicación regular y una Promoción con condición de canje desde el panel, con el mismo nivel de pulido (estados de guardado, confirmación al salir, vista previa real) ya alcanzado para eventos.
+**Criterio de terminado.** Un negocio verificado puede publicar una Publicación regular y una Promoción con condición de canje, con el mismo nivel de pulido ya alcanzado para eventos.
+
+**Aporte a la Guía IA.** Nace aquí, de forma literal, la variable "promociones activas" de la lista de contexto que la IA debe considerar (`AI_PHILOSOPHY.md` §7). La IA empieza a tener contenido variado sobre el cual razonar, no solo eventos con fecha fija.
+
+**Decisiones ya aprobadas aplicadas aquí:** ninguna directamente. No requiere aprobación adicional.
 
 ---
 
-## Fase 5 — Interacción social plena
+## Fase 5A — Seguir negocios
 
-**Objetivo.** Generalizar comentarios y guardados a cualquier Publicación, no solo eventos, y evaluar/implementar un conjunto acotado de reacciones con significado hiperlocal más allá de "me gusta" (por ejemplo, "quiero ir"/"fui" para eventos).
+**Objetivo.** Permitir que un usuario siga a un negocio de la misma forma en que ya sigue a una persona, generalizando el mecanismo de seguimiento (ya unificado en la Fase 1) al perfil de negocio construido en la Fase 3.
 
-**Problema que resuelve.** Hoy solo los eventos admiten comentarios; guardar ya está técnicamente unificado desde la Fase 1, pero *extender su uso* a Publicaciones y Promociones es funcionalidad nueva y visible de esta fase, no solo un cambio estructural.
+**Problema que resuelve.** Hoy "seguir" solo aplica a personas; un negocio no puede acumular una audiencia propia dentro de Ahorita, aunque ya tenga un perfil real desde la Fase 3.
 
-**Módulos que incluye.** Seguir negocios (extensión de seguidores, §29). Guardados generalizados (§30). Comentarios generalizados (§31). Reacciones (§32), evaluadas con criterio — no se copia el set de reacciones de una red social genérica sin que cada una se justifique por su valor como señal hiperlocal.
+**Por qué es una fase separada (decisión 10, aprobada por el Product Owner).** Seguir negocios solo depende de que exista el perfil de negocio (Fase 3) — no necesita que existan más tipos de contenido (Fase 4). Separarlo de lo que antes era "Fase 5" permite capturar ese valor de negocio real (audiencia propia dentro de la plataforma) más pronto, sin esperar a que el resto de la interacción social esté listo. Técnicamente, **esta fase puede ejecutarse en paralelo con la Fase 4**, ya que ninguna de las dos depende de la otra (ver matriz de dependencias).
 
-**De qué depende.** Fase 1 (Interacción unificada), Fase 3 (seguir negocios necesita el perfil de negocio de esa fase), Fase 4 (más de un tipo de Publicación real sobre la cual interactuar).
+**Módulos que incluye.** Extensión de "seguir" (ya unificado en la Fase 1) al Actor-Negocio.
 
-**Qué bloquea hasta completarse.** Fase 6 (el feed y las recomendaciones usan señales de interacción como insumo directo), Fase 7 (la Guía IA usa estas mismas interacciones para aprender de cada usuario).
+**De qué depende.** Fase 1 (Interacción unificada), Fase 3 (perfil de negocio real que seguir). **No depende de la Fase 4.**
 
-**Tablas nuevas.** Ninguna tabla nueva de fondo — se amplía el enumerado de tipos en `interactions`. Se añade `interaction_comments` como tabla de detalle (contenido de texto) vinculada 1:1 a una fila de interacción tipo "comentario", para no ensuciar la tabla genérica con un campo de texto que no aplica a un like o un guardado.
+**Qué bloquea hasta completarse.** Nada de forma dura — alimenta señales de afinidad para la Fase 6, pero no la bloquea de empezar.
 
-**Entidades nuevas.** Reacciones tipo "quiero ir"/"fui" (nuevos tipos de interacción), Comentario como detalle de interacción.
+**Tablas nuevas.** Ninguna — reutiliza `interactions` (Fase 1) con el tipo ya existente de seguimiento, extendido a objetivos de tipo Actor-Negocio.
+
+**Entidades nuevas.** Ninguna nueva — es una extensión de alcance sobre una entidad ya existente.
 
 **APIs externas necesarias.** Ninguna.
 
-**Migraciones que requerirá.** Ampliar el enumerado de `interaction_type`; crear `interaction_comments`; migrar el contenido ya existente de `event_comments` hacia el nuevo esquema, preservando el historial.
+**Migraciones que requerirá.** Ninguna nueva si `interactions` (Fase 1) ya contempló Actor-Negocio como tipo válido de objetivo; en caso contrario, una migración menor de ampliación del enumerado.
 
-**Riesgos.** El abuso (spam de comentarios o reacciones) crece proporcionalmente a la superficie de contenido comentable — este es el primer punto del roadmap donde la ausencia de un módulo de moderación completo (Fase 13) empieza a doler de verdad. Mitigación: límites de tasa básicos (no moderación completa) deben entrar en esta misma fase, no posponerse hasta la Fase 13.
+**Riesgos.** Bajo. El riesgo principal es de experiencia de usuario: que "seguir un negocio" no se sienta distinto de "seguir una persona" cuando en la práctica cumple un propósito distinto (enterarte de novedades/promociones, no solo actividad social).
 
-**Pruebas necesarias.** Comentar una Promoción funciona igual que comentar un Evento (generalización real, no solo en el papel). Límite de tasa efectivo (un usuario no puede comentar de forma masiva en un minuto). Los conteos desnormalizados que ya usa el feed (`likes_count`, `comments_count`) se mantienen correctos con los nuevos tipos de interacción.
+**Pruebas necesarias.** Un usuario sigue y deja de seguir un negocio correctamente; el negocio ve su conteo real de seguidores en su perfil (Fase 3).
 
-**Criterio de terminado.** Cualquier Publicación admite comentar, guardar y reaccionar con la misma experiencia y el mismo nivel de pulido; existen límites de tasa básicos activos contra abuso evidente.
+**Criterio de terminado.** Un usuario puede seguir/dejar de seguir un negocio con la misma facilidad que a una persona; el negocio ve su número de seguidores.
+
+**Aporte a la Guía IA.** Seguir un negocio es una señal de afinidad explícita fuerte — más confiable que una simple vista o un like ocasional — que alimenta directamente el perfil de afinidad que la Guía IA usará desde la Fase 6 en adelante para personalizar sus recomendaciones.
+
+**Decisiones ya aprobadas aplicadas aquí:** 10. No requiere aprobación adicional.
+
+---
+
+## Fase 5B — Interacción social plena (comentarios, guardados y reacciones generalizadas)
+
+**Objetivo.** Generalizar comentarios y guardados a cualquier Publicación, y fijar el catálogo final de reacciones para v1, ya aprobado: **Me gusta, Quiero ir, Ya fui** — sin agregar ninguna reacción adicional sin evidencia real de que aporta valor (decisión 3).
+
+**Problema que resuelve.** Hoy solo los eventos admiten comentarios; con Publicaciones y Promociones ya existiendo (Fase 4), restringir comentarios solo a eventos se siente arbitrario.
+
+**Módulos que incluye.** Guardados generalizados. Comentarios generalizados. Reacciones: Me gusta, Quiero ir, Ya fui — catálogo cerrado para v1.
+
+**De qué depende.** Fase 1 (Interacción unificada), Fase 4 (más de un tipo de Publicación real sobre la cual interactuar). A diferencia de la Fase 5A, esta sí necesita que exista contenido variado.
+
+**Qué bloquea hasta completarse.** Fase 6 (el feed y las recomendaciones usan estas interacciones como insumo directo), Fase 7 (la Guía IA aprende de estas mismas interacciones).
+
+**Tablas nuevas.** Ninguna de fondo — se amplía el enumerado de `interactions`. Se añade `interaction_comments` como tabla de detalle vinculada a una interacción tipo "comentario".
+
+**Entidades nuevas.** Comentario como detalle de interacción. (Las reacciones "Quiero ir"/"Ya fui" son tipos dentro del enumerado ya existente, no entidades nuevas.)
+
+**APIs externas necesarias.** Ninguna.
+
+**Migraciones que requerirá.** Ampliar el enumerado de tipos de interacción a exactamente Me gusta/Quiero ir/Ya fui/Guardado/Comentario/Seguimiento — sin dejar espacio abierto a tipos adicionales no revisados. Crear `interaction_comments`. Migrar `event_comments` existente hacia el nuevo esquema.
+
+**Riesgos.** El abuso (spam de comentarios) crece con la superficie de contenido comentable — límites de tasa básicos deben entrar en esta misma fase, no esperar a la Fase 13.
+
+**Pruebas necesarias.** Comentar una Promoción funciona igual que comentar un Evento. Límite de tasa efectivo. Los conteos desnormalizados se mantienen correctos con los nuevos tipos.
+
+**Criterio de terminado.** Cualquier Publicación admite comentar, guardar y reaccionar (solo con las tres reacciones aprobadas) con la misma experiencia; existen límites de tasa básicos activos.
+
+**Aporte a la Guía IA.** Comentarios, guardados y las tres reacciones son la fuente principal de "gustos del usuario" e "historial de interacción" que la Guía IA usa para personalizar (`AI_PHILOSOPHY.md` §11). "Ya fui" en particular es una señal más confiable que "me gusta" porque implica una acción real declarada, no solo una intención — aunque todavía menos confiable que un check-in físico confirmado, que llega recién en la Fase 9.
+
+**Decisiones ya aprobadas aplicadas aquí:** 3, 10. No requiere aprobación adicional — el catálogo de reacciones ya está cerrado.
 
 ---
 
 ## Fase 6 — Descubrimiento inteligente v2 (feed híbrido, recomendaciones, búsqueda)
 
-**Objetivo.** Evolucionar el feed de "solo proximidad temporal" al modelo híbrido de puntuación de `ARCHITECTURE.md` §21 (afinidad + peso editorial + peso de promoción acotado + decaimiento de frescura), e introducir el Sistema de recomendaciones (§20) como motor compartido entre el feed, la búsqueda por intención y la Guía IA.
+**Objetivo.** Evolucionar el feed de "solo proximidad temporal" al modelo híbrido de puntuación (afinidad + peso editorial + peso de promoción acotado + decaimiento de frescura), e introducir el motor de recomendaciones compartido con la Guía IA. **El techo máximo de contenido patrocinado —15% aproximado del contenido mostrado, configurable únicamente por el administrador principal y con registro de auditoría de cualquier cambio— se define en el diseño de la fórmula en esta misma fase** (decisión 4), aunque el contenido patrocinado real todavía no exista (llega en la Fase 11). Definirlo aquí, sin presión comercial todavía activa, es precisamente el punto: que el límite no se decida bajo presión de ingresos futuros.
 
-**Problema que resuelve.** El feed actual no distingue interés personal ni aprende de nada; con más tipos de contenido (Fase 4) y señales de interacción reales ya disponibles (Fase 5), seguir mostrando únicamente orden cronológico desaprovecha datos que el sistema ya tiene.
+**Problema que resuelve.** El feed actual no distingue interés personal ni aprende de nada.
 
-**Módulos que incluye.** Algoritmo del feed (§21). Sistema de recomendaciones (§20). Sistema de búsqueda mejorado, distinguiendo búsqueda por texto (ya existente) de búsqueda por intención (delegada a la Guía IA en la Fase 7, no duplicada aquí, §22).
+**Módulos que incluye.** Algoritmo del feed híbrido, con el parámetro de techo de promoción (15% aproximado) ya construido como configuración auditable. Sistema de recomendaciones. Búsqueda mejorada (búsqueda por texto simple, independiente de este motor, ya disponible desde antes; búsqueda por intención delegada a la Guía IA en la Fase 7).
 
-**De qué depende.** Fase 4 (más de un tipo de contenido que rankear), Fase 5 (señales de interacción reales que alimentar al algoritmo).
+**De qué depende.** Fase 4, Fase 5B (señales de interacción reales que alimentar al algoritmo). Se beneficia también de la Fase 5A si ya está lista (seguir negocios como señal de afinidad), aunque no depende estrictamente de ella.
 
-**Qué bloquea hasta completarse.** Fase 7 (la Guía IA v2 reutiliza este motor de recomendaciones en vez de duplicar lógica), Fase 11 (contenido promocionado en el feed depende de que el algoritmo híbrido ya tenga un lugar bien definido y acotado para ese peso).
+**Qué bloquea hasta completarse.** Fase 7 (la Guía IA v2 reutiliza este motor), Fase 11 (contenido promocionado necesita que este algoritmo ya tenga el lugar y el techo ya definidos).
 
-**Tablas nuevas.** `affinity_scores` (actor, categoría, peso — perfil de afinidad legible y corregible por el usuario, según el principio de transparencia de §40).
+**Tablas nuevas.** `affinity_scores`. `feed_config` (parámetro del techo de promoción, quién lo modificó y cuándo — tabla de auditoría del propio parámetro, exigida por la decisión 4).
 
-**Entidades nuevas.** Perfil de afinidad.
+**Entidades nuevas.** Perfil de afinidad, Configuración auditable del feed.
 
-**APIs externas necesarias.** Ninguna obligatoria. Evaluar (no adoptar de antemano) un servicio de búsqueda de texto completo solo si el volumen real de contenido supera lo que una búsqueda de coincidencia parcial simple puede resolver con buen rendimiento.
+**APIs externas necesarias.** Ninguna obligatoria.
 
-**Migraciones que requerirá.** Creación de `affinity_scores`; ninguna migración destructiva.
+**Migraciones que requerirá.** Creación de `affinity_scores` y `feed_config`, esta última poblada desde el inicio con el techo de 15% aprobado y restringida a modificación solo por el rol de administrador principal (no por Editor/Curador, ver `MASTERPLAN.md` Fase 2 — separación de roles).
 
-**Riesgos.** El riesgo central, ya señalado en `ARCHITECTURE.md` §21: que cualquier peso de promoción futura termine superando en la fórmula a la relevancia real. Aunque el contenido promocionado pagado no existe todavía en esta fase (llega en la Fase 11), la fórmula debe diseñarse dejando ese espacio ya acotado desde ahora, no improvisado después bajo presión comercial.
+**Riesgos.** El riesgo ya señalado: que cualquier peso de promoción futura termine superando a la relevancia real. Mitigado precisamente por definir el techo ahora, con registro de auditoría, en vez de dejarlo como un número mágico sin trazabilidad.
 
-**Pruebas necesarias.** Comparación A/B interna (orden cronológico puro contra orden híbrido, con el mismo conjunto de usuarios de prueba) para confirmar que la relevancia percibida mejora, no solo que el algoritmo es más complejo. Verificación de que el perfil de afinidad mostrado al usuario coincide exactamente con lo que el algoritmo usa internamente — transparencia real, no solo declarada.
+**Pruebas necesarias.** Comparación A/B interna (cronológico puro vs. híbrido). Verificación de que el perfil de afinidad mostrado al usuario coincide con lo que el algoritmo usa. **Prueba específica del techo:** el contenido patrocinado nunca supera el 15% configurado incluso en escenarios simulados de alto volumen de contenido pagado; un cambio al parámetro por parte de alguien que no es administrador principal se rechaza; un cambio válido queda registrado con quién y cuándo.
 
-**Criterio de terminado.** El feed prioriza contenido relevante por afinidad además de proximidad temporal; el usuario puede ver y corregir su propio perfil de afinidad desde su perfil personal.
+**Criterio de terminado.** El feed prioriza contenido relevante por afinidad además de proximidad temporal; el usuario puede ver y corregir su perfil de afinidad; el techo de promoción del 15% ya existe como parámetro auditable, aunque todavía en cero contenido patrocinado real.
+
+**Aporte a la Guía IA.** El perfil de afinidad legible y el motor de recomendaciones construidos aquí son, literalmente, el "cerebro de preferencias" que la Guía IA hereda en la Fase 7 en vez de construir uno propio por separado — sin esto, la IA v2 no tendría con qué personalizar sus respuestas más allá del contexto puntual de cada pregunta.
+
+**Decisiones ya aprobadas aplicadas aquí:** 4. No requiere aprobación adicional — el techo y su gobernanza ya están cerrados.
 
 ---
 
 ## Fase 7 — Guía IA v2 (sesiones persistentes y personalización)
 
-**Objetivo.** Introducir la Sesión de Guía IA persistente (§36) y conectar la IA al motor de recomendaciones construido en la Fase 6, para que responda con criterio de afinidad real del usuario, no solo con el contexto de la pregunta puntual.
+**Objetivo.** Introducir la Sesión de Guía IA persistente y conectar la IA al motor de recomendaciones de la Fase 6, para que responda con criterio de afinidad real, no solo con el contexto de la pregunta puntual. Esta es la fase donde la filosofía completa de `AI_PHILOSOPHY.md` se activa técnicamente por primera vez con memoria real.
 
-**Problema que resuelve.** Hoy cada consulta a la IA carece esencialmente de memoria; con el motor de recomendaciones ya existente, la IA puede dar respuestas mucho más útiles reutilizando esa infraestructura en vez de construir su propia lógica de personalización por separado.
+**Problema que resuelve.** Hoy cada consulta a la IA carece esencialmente de memoria.
 
-**Módulos que incluye.** Arquitectura de sesión de IA (§36). Fuentes de información de la IA, sin cambios en el principio de nunca inventar datos (§37). Cómo recomienda lugares y eventos (§38-39), reutilizando el motor de la Fase 6. Cómo aprende de cada usuario (§40), compartiendo el mismo perfil de afinidad legible de la Fase 6.
+**Módulos que incluye.** Sesión de IA persistente. Conexión al motor de recomendaciones y al perfil de afinidad de la Fase 6. Aplicación práctica de todos los principios de comportamiento definidos en `AI_PHILOSOPHY.md`.
 
-**De qué depende.** Fase 6 — el motor de recomendaciones y el perfil de afinidad deben existir antes de que la IA pueda apoyarse en ellos.
+**De qué depende.** Fase 6. Y, por la decisión 9, hereda ya construida la línea base de privacidad de la Fase 1 — el consentimiento y el mecanismo de borrado no se construyen aquí desde cero, se aplican al nuevo tipo de dato (historial de conversación) sobre una infraestructura ya existente.
 
-**Qué bloquea hasta completarse.** Nada de forma dura. La Fase 9 (Guía IA contextual en puntos turísticos vía QR, §45) se beneficia de que la IA ya tenga memoria de sesión antes de extenderse a un punto de acceso físico, pero no depende estrictamente de ello.
+**Qué bloquea hasta completarse.** Nada de forma dura; mejora sustancialmente la Fase 9 (Guía IA contextual en puntos turísticos vía QR).
 
-**Tablas nuevas.** `ai_sessions` (usuario, historial de conversación, con mecanismo explícito de borrado por el usuario).
+**Tablas nuevas.** `ai_sessions` (usuario, historial de conversación, con mecanismo de borrado que reutiliza `consent_records` de la Fase 1).
 
 **Entidades nuevas.** Sesión de Guía IA.
 
-**APIs externas necesarias.** Ninguna nueva — se mantiene la función de borde ya construida sobre la API de Claude.
+**APIs externas necesarias.** Ninguna nueva — se mantiene la función de borde ya construida.
 
-**Migraciones que requerirá.** Creación de `ai_sessions`, sin tocar tablas existentes.
+**Migraciones que requerirá.** Creación de `ai_sessions`.
 
-**Riesgos.** Privacidad (§57 de `ARCHITECTURE.md`): el historial de conversación con la IA es potencialmente el dato más sensible que recolecta todo el sistema. Requiere diseño de retención y borrado desde el primer día de esta fase, no como una mejora agregada después de un incidente.
+**Riesgos.** Privacidad: el historial de conversación es, según `AI_PHILOSOPHY.md` §11, potencialmente el dato más sensible de todo el sistema. Mitigado por heredar ya lista la infraestructura de consentimiento/borrado de la Fase 1, en vez de construirla bajo presión en esta misma fase.
 
-**Pruebas necesarias.** Suite de casos donde la respuesta correcta es "no lo sé" por falta de datos reales, confirmando que la IA nunca inventa. Prueba de borrado efectivo del historial a solicitud del usuario. Prueba de que cada recomendación de la IA puede explicar su propio motivo quiado se le pregunta.
+**Pruebas necesarias.** Suite de casos donde la respuesta correcta es "no lo sé". Borrado efectivo del historial. Verificación de que cada recomendación puede explicar su propio motivo.
 
-**Criterio de terminado.** La Guía IA recuerda contexto dentro de una sesión, prioriza por afinidad real del usuario que pregunta, y el usuario puede ver y borrar su historial de conversación desde su perfil.
+**Criterio de terminado.** La Guía IA recuerda contexto dentro de una sesión, prioriza por afinidad real, y el usuario puede ver y borrar su historial de conversación.
+
+**Aporte a la Guía IA.** Esta fase no le "aporta" a la IA como las demás — es donde la IA misma se transforma, ya alimentada por las seis fases anteriores: modelo de datos unificado (Fase 1), verificación como señal de confianza (Fase 2), perfiles de negocio ricos (Fase 3), contenido variado (Fase 4), señales de seguimiento e interacción (Fases 5A-5B), y un motor de afinidad ya maduro (Fase 6).
+
+**Decisiones ya aprobadas aplicadas aquí:** 5, 9. No requiere aprobación adicional.
 
 ---
 
 ## Fase 8 — Historias y video como contenido de primera clase
 
-**Objetivo.** Evolucionar los "estados" (reportes en vivo) actuales hacia Historias con vigencia de 24 horas (§35), y formalizar el video como un atributo de medio disponible para cualquier Publicación, con transcodificación en servidor (§34).
+**Objetivo.** Evolucionar "estados" hacia Historias, con el alcance exacto ya aprobado para v1 (decisión 6): **duración máxima de 30 segundos**, foto o video, texto básico, ubicación, vigencia de 24 horas — **sin filtros, stickers ni funciones complejas**. Formalizar el video como atributo de medio disponible para cualquier Publicación, con transcodificación en servidor.
 
-**Problema que resuelve.** El formato "esto está pasando ahora" —la ventaja diferencial de Ahorita frente a un directorio estático, principio (c) de `ARCHITECTURE.md`— hoy vive de forma primitiva en "estados"; sin mejor tratamiento visual y sin soporte robusto de video, se pierde la oportunidad de ser el canal preferido para mostrar ambiente en vivo real.
+**Problema que resuelve.** El formato "esto está pasando ahora" hoy vive de forma primitiva en "estados".
 
-**Módulos que incluye.** Sistema de Historias. Soporte de video como atributo de medio, con compresión/transcodificación para no penalizar el rendimiento en redes móviles imperfectas (§58).
+**Módulos que incluye.** Historias (alcance simple ya cerrado). Soporte de video con compresión.
 
-**De qué depende.** Fase 1 (Publicación unificada — una Historia es un subtipo con vigencia corta obligatoria), Fase 4 (el patrón de subtipos ya probado con Publicaciones/Promociones).
+**De qué depende.** Fase 1, Fase 4.
 
-**Qué bloquea hasta completarse.** Nada crítico — es una fase de enriquecimiento de formato, no de infraestructura habilitante para otras fases.
+**Qué bloquea hasta completarse.** Nada crítico.
 
-**Tablas nuevas.** Ninguna de fondo si se modela como un subtipo más de Publicación con `expires_at` obligatorio a 24 horas. Opcional: `story_views` si se decide implementar "quién vio tu historia".
+**Tablas nuevas.** Ninguna de fondo — subtipo de Publicación con `expires_at` obligatorio a 24 horas y un límite de duración de 30 segundos validado en el momento de publicar.
 
-**Entidades nuevas.** Historia (subtipo), Vista de historia (opcional).
+**Entidades nuevas.** Historia (subtipo).
 
-**APIs externas necesarias.** **Servicio de transcodificación/compresión de video** — la primera dependencia externa no trivial de todo este plan, necesaria porque no se puede depender de que cada usuario suba un archivo ya optimizado.
+**APIs externas necesarias.** Servicio de transcodificación/compresión de video.
 
-**Migraciones que requerirá.** Agregar el subtipo Historia; tabla opcional de vistas.
+**Migraciones que requerirá.** Agregar el subtipo Historia con sus restricciones ya definidas (30 segundos, sin campos de filtros/stickers que ni siquiera deben existir en el modelo de datos de esta fase).
 
-**Riesgos.** El costo de almacenamiento y procesamiento de video puede crecer rápido sin límites explícitos. Mitigación: definir desde el diseño (no ajustar después de un problema de costos) límites de duración y tamaño — por ejemplo, historias de máximo 15-30 segundos.
+**Riesgos.** Costo de almacenamiento/procesamiento de video — mitigado por el límite ya aprobado de 30 segundos, no dejado abierto a decidir después.
 
-**Pruebas necesarias.** Expiración automática exacta a las 24 horas. Transcodificación correcta de un archivo pesado subido por un usuario. Rendimiento verificado en una conexión móvil simulada lenta, no solo en conexión de oficina.
+**Pruebas necesarias.** Expiración automática exacta a 24 horas. Rechazo de cualquier archivo que supere 30 segundos. Transcodificación correcta. Rendimiento en conexión móvil simulada lenta.
 
-**Criterio de terminado.** Un usuario o negocio puede publicar una Historia que desaparece automáticamente a las 24 horas con tratamiento visual distintivo; cualquier Publicación admite video con carga fluida en red móvil imperfecta.
+**Criterio de terminado.** Un usuario o negocio publica una Historia de máximo 30 segundos que desaparece a las 24 horas, con el alcance simple ya aprobado — sin ninguna función adicional no contemplada aquí.
+
+**Aporte a la Guía IA.** Las historias dan a la Guía IA una señal de "esto está pasando ahora mismo" en tiempo real, más viva que un evento programado con anticipación — refuerza directamente su capacidad de responder bien a preguntas como "qué está pasando ahorita" (`AI_PHILOSOPHY.md`, caso "estoy aburrido").
+
+**Decisiones ya aprobadas aplicadas aquí:** 6. No requiere aprobación adicional.
 
 ---
 
 ## Fase 9 — QR y experiencias físicas
 
-**Objetivo.** Construir el Token QR genérico (§41) y sus consumidores: check-in en lugares (§44), promociones mediante QR (§43), validación de entradas (§42), y turismo mediante QR (§45).
+**Objetivo.** Construir el Token QR genérico y sus consumidores: check-in en lugares, promociones mediante QR, validación de entradas, y turismo mediante QR.
 
-**Problema que resuelve.** Es el módulo que conecta directamente el mundo digital con la experiencia física real. Sin él, todo lo construido hasta este punto es descubrimiento y conversación — nunca una confirmación de que algo realmente ocurrió en el mundo físico, que es precisamente el hueco que ninguno de los siete productos de referencia mencionados en `ARCHITECTURE.md` §1 resuelve bien para una sola ciudad.
+**Problema que resuelve.** Hasta este punto, todo lo construido es descubrimiento y conversación digital — nada confirma que algo realmente ocurrió en el mundo físico.
 
-**Módulos que incluye.** Arquitectura del sistema QR (un solo token genérico, no tres sistemas paralelos). Validación de entradas. Promociones mediante QR. Check-in en lugares. Turismo mediante QR.
+**Módulos que incluye.** Token QR genérico. Validación de entradas. Promociones QR. Check-in. Turismo QR.
 
-**De qué depende.** Fase 2 (verificación de negocios — check-in y promociones QR solo tienen sentido pleno con negocios ya verificados detrás), Fase 4 (Promoción como subtipo debe existir para que un QR de promoción tenga qué canjear).
+**De qué depende.** Fase 2 (verificación), Fase 4 (Promoción como subtipo).
 
-**Qué bloquea hasta completarse.** Fase 10 — la venta de entradas interna necesita el Token QR de validación ya construido, porque una entrada digital *es*, en la práctica, un Token QR con un tipo de acción específico.
+**Qué bloquea hasta completarse.** Fase 10 (una entrada vendida internamente es, en la práctica, un Token QR).
 
-**Tablas nuevas.** `qr_tokens` (código único, tipo de acción, entidad referenciada, estado, actor emisor y/o receptor, vigencia).
+**Tablas nuevas.** `qr_tokens`.
 
-**Entidades nuevas.** Token QR (con tipo de acción como diferenciador, no una tabla por caso de uso).
+**Entidades nuevas.** Token QR.
 
-**APIs externas necesarias.** Ninguna obligatoria para generar o leer códigos QR (se resuelve completamente del lado del cliente). Si se decide instalar QR físicos para turismo, puede requerirse coordinación con un servicio de impresión — operativa, no necesariamente técnica.
+**APIs externas necesarias.** Ninguna obligatoria.
 
-**Migraciones que requerirá.** Creación de `qr_tokens`; ninguna migración destructiva sobre lo existente.
+**Migraciones que requerirá.** Creación de `qr_tokens`.
 
-**Riesgos.** Fraude por duplicación (alguien comparte una captura de pantalla de un token de un solo uso). Mitigación: invalidación inmediata al primer escaneo exitoso, con marca de tiempo y quién lo validó, y una señal visual inequívoca de "ya usado" frente a "válido" en el punto de validación.
+**Riesgos.** Fraude por duplicación de tokens de un solo uso.
 
-**Pruebas necesarias.** Ciclo de vida completo por cada tipo de token: emitir, escanear, validar estado, marcar como usado, confirmar que un segundo escaneo del mismo token se rechaza. Prueba de expiración. Prueba específica de que el check-in (a diferencia de una entrada) sí es repetible por diseño.
+**Pruebas necesarias.** Ciclo de vida completo por tipo de token. Expiración. Check-in repetible vs. entrada de un solo uso.
 
-**Criterio de terminado.** Un negocio verificado puede generar un QR de check-in funcional; una Promoción puede canjearse una vez vía QR con conteo real visible para el negocio; un Evento con entradas puede validar asistencia real vía QR.
+**Criterio de terminado.** Check-in, canje de promoción y validación de entrada funcionan de principio a fin sobre negocios verificados.
+
+**Aporte a la Guía IA.** El check-in confirma presencia física real — una señal de popularidad mucho más confiable que un simple "me gusta" o "quiero ir" (que son intención declarada, no confirmación). La Guía IA puede usar esta señal para recomendar con más confianza ("mucha gente ha estado aquí realmente esta semana"), consistente con la jerarquía de priorización de `AI_PHILOSOPHY.md` §9.
+
+**Decisiones ya aprobadas aplicadas aquí:** ninguna directamente. No requiere aprobación adicional.
 
 ---
 
 ## Fase 10 — Comercio: reservas y venta de entradas internas
 
-**Objetivo.** Implementar Reservas (§46) y venta de entradas dentro de la propia plataforma (§47), reduciendo gradualmente la dependencia del enlace externo de entradas (`ticket_url`) que hoy funciona como solución de transición.
+**Objetivo.** Implementar Reservas y venta de entradas dentro de la plataforma. **El proveedor de pagos queda explícitamente abierto** (decisión 7) hasta que el equipo comercial investigue condiciones reales disponibles en Ecuador.
 
-**Problema que resuelve.** Hoy Ahorita delega toda venta de entradas y toda reserva a plataformas externas — pierde la oportunidad de comisión (modelo de negocio, Fase 11) y de tener el dato real de asistencia dentro del propio ecosistema en vez de depender de lo que un tercero reporte.
+**Problema que resuelve.** Hoy Ahorita delega toda venta de entradas y reserva a plataformas externas.
 
-**Módulos que incluye.** Arquitectura de reservas. Arquitectura de venta de entradas internas, generando un Token QR (Fase 9) como confirmación digital.
+**Módulos que incluye.** Reservas. Venta de entradas internas, generando un Token QR como confirmación.
 
-**De qué depende.** Fase 9 (Token QR de validación ya construido).
+**De qué depende.** Fase 9.
 
-**Qué bloquea hasta completarse.** Fase 11, específicamente la parte de "comisión sobre transacciones" — solo tiene sentido si existen transacciones reales que comisionar.
+**Qué bloquea hasta completarse.** Fase 11 (comisión sobre transacciones).
 
-**Tablas nuevas.** `reservations` (actor, publicación o lugar reservado, estado, fecha). `transactions` (abstracción común de cobro, reutilizada también por la suscripción de negocio en la Fase 11 — nunca un flujo de cobro distinto por caso de uso).
+**Tablas nuevas.** `reservations`, `transactions`.
 
 **Entidades nuevas.** Reserva, Transacción.
 
-**APIs externas necesarias.** **Proveedor de pagos** — decisión explícitamente no prescrita por adelantado en `ARCHITECTURE.md` §49; corresponde al equipo de producto evaluarla en su momento según condiciones reales del mercado ecuatoriano.
+**APIs externas necesarias.** **Proveedor de pagos — decisión pendiente de investigación de mercado, no técnica** (decisión 7).
 
-**Migraciones que requerirá.** Creación de `reservations` y `transactions`. El campo `ticket_url` existente se conserva sin eliminarse — algunos organizadores seguirán prefiriendo su propia plataforma de venta externa.
+**Migraciones que requerirá.** Creación de `reservations` y `transactions`. `ticket_url` se conserva sin eliminarse.
 
-**Riesgos.** La fase de mayor riesgo regulatorio y financiero de todo el plan, porque implica manejo de dinero real. Requiere revisión legal y fiscal específica de Ecuador (facturación, retenciones) antes de activarse, no solo revisión técnica de seguridad.
+**Riesgos.** El de mayor riesgo regulatorio y financiero de todo el plan — requiere revisión legal y fiscal específica de Ecuador antes de activarse.
 
-**Pruebas necesarias.** Estados de transacción exhaustivos (iniciada/completada/fallida/reembolsada) incluyendo casos de fallo simulado (pago rechazado, timeout del proveedor). Conciliación exacta (el dinero cobrado coincide con las entradas/reservas efectivamente emitidas). Auditoría de seguridad específica: nunca almacenar datos de tarjeta directamente, delegar siempre esa responsabilidad al proveedor de pagos.
+**Pruebas necesarias.** Estados de transacción exhaustivos con fallos simulados. Conciliación exacta. Auditoría de seguridad de pagos.
 
-**Criterio de terminado.** Un usuario puede reservar o comprar una entrada dentro de la app con un pago real procesado y una confirmación (Token QR) generada automáticamente; el organizador ve el estado de sus ventas en tiempo real.
+**Criterio de terminado.** Un usuario reserva o compra una entrada con un pago real procesado y una confirmación (Token QR) generada automáticamente.
+
+**Aporte a la Guía IA.** Permite que la Guía IA pase de recomendar a *resolver* — "te reservo la mesa" o "te consigo la entrada" dentro de la misma conversación, en vez de solo sugerir y dejar el resto del trabajo a la persona.
+
+**Decisiones ya aprobadas aplicadas aquí:** 7. Cuando llegue esta fase, el Product Owner y el equipo comercial deberán cerrar la elección real de proveedor — no es una aprobación pendiente ahora, es una decisión que todavía no existe información suficiente para tomar.
 
 ---
 
 ## Fase 11 — Monetización activa y publicidad
 
-**Objetivo.** Activar la suscripción de negocio verificado (§53) y el contenido promocionado etiquetado (§52), apoyándose en la base de negocios verificados (Fase 2-3), la variedad de contenido (Fase 4), el feed con un peso de promoción ya acotado por diseño (Fase 6), y la infraestructura de transacción reutilizable (Fase 10).
+**Objetivo.** Activar la suscripción de negocio verificado y el contenido promocionado, respetando el techo del 15% ya definido en la Fase 6. **El precio final del plan pagado de la suscripción queda diferido** (decisión 8) — debe existir un nivel gratuito desde el lanzamiento de esta fase, y el plan pagado se define después de validar qué valor y resultados medibles obtiene un negocio real dentro de Ahorita.
 
-**Problema que resuelve.** Hasta este punto del plan, el ecosistema completo no genera ingreso propio — es la fase donde el producto empieza a sostenerse económicamente.
+**Problema que resuelve.** Hasta este punto, el ecosistema no genera ingreso propio.
 
-**Módulos que incluye.** Arquitectura de publicidad (contenido promocionado, siempre etiquetado sin excepción). Arquitectura de monetización (suscripción de negocio, con nivel gratuito básico para no bloquear la adopción inicial).
+**Módulos que incluye.** Contenido promocionado, sujeto al techo de 15% ya construido y auditado desde la Fase 6, y a la restricción explícita de que **nunca puede comprar una recomendación de la Guía IA** (decisión 5, protegida por `AI_PHILOSOPHY.md`). Suscripción de negocio con nivel gratuito, pricing pagado sin definir todavía.
 
-**De qué depende.** Fase 2 (verificación como requisito para poder suscribirse), Fase 6 (el feed ya tiene un lugar acotado y auditable para el peso de promoción), Fase 10 (la abstracción de Transacción se reutiliza para el cobro recurrente de la suscripción).
+**De qué depende.** Fase 2, Fase 6, Fase 10.
 
-**Qué bloquea hasta completarse.** Nada más adelante en este plan depende estrictamente de esta fase — es una fase de "cosecha" del valor ya construido, no de habilitación de fases futuras.
+**Qué bloquea hasta completarse.** Nada más adelante en este plan.
 
-**Tablas nuevas.** `subscriptions` (negocio, plan, estado, vigencia). `promoted_content` (publicación, peso/presupuesto de promoción, periodo activo).
+**Tablas nuevas.** `subscriptions`, `promoted_content` (esta última referencia directamente el `feed_config` de la Fase 6 para respetar el techo ya definido).
 
 **Entidades nuevas.** Suscripción, Contenido promocionado.
 
-**APIs externas necesarias.** El mismo proveedor de pagos de la Fase 10, con soporte de cobro recurrente (más exigente que un cobro único de entrada).
+**APIs externas necesarias.** El proveedor de pagos elegido en la Fase 10, con soporte de cobro recurrente.
 
-**Migraciones que requerirá.** Creación de `subscriptions` y `promoted_content`; ningún cambio destructivo.
+**Migraciones que requerirá.** Creación de `subscriptions` y `promoted_content`.
 
-**Riesgos.** El riesgo de producto más delicado de todo el plan: cualquier percepción de que pagar mejora deshonestamente la visibilidad por encima de la relevancia real daña la confianza que sostiene todo el ecosistema (principio (b) de `ARCHITECTURE.md`, reiterado en §21 y §52). Mitigación: un límite duro y auditable en la fórmula del feed sobre cuánto puede pesar la promoción pagada, y una etiqueta visual sin excepciones en cualquier superficie donde aparezca contenido promocionado.
+**Riesgos.** El riesgo de producto más delicado de todo el plan: que la promoción pagada erosione la confianza. Mitigado por dos capas independientes ya aprobadas: el techo técnico del 15% en el feed (decisión 4) y la prohibición explícita de que compre una recomendación de la Guía IA (decisión 5) — dos mecanismos distintos protegiendo el mismo principio en dos superficies distintas del producto.
 
-**Pruebas necesarias.** Verificación de que el contenido promocionado aparece etiquetado en el 100% de los casos, en feed, búsqueda y mapa por igual. Prueba de facturación recurrente completa (renovación automática, cancelación, manejo de un cobro fallido). Prueba negativa: un negocio no verificado no puede suscribirse ni promocionar contenido bajo ninguna circunstancia.
+**Pruebas necesarias.** El contenido promocionado nunca supera el 15% ni siquiera en escenarios simulados de presión comercial alta. **Prueba específica:** la Guía IA, al recomendar, nunca prioriza una opción por estar promocionada — se verifica comparando sus respuestas con y sin contenido patrocinado activo sobre las mismas opciones, confirmando que el orden de recomendación no cambia por el pago. Facturación recurrente completa. Un negocio no verificado no puede suscribirse ni promocionar.
 
-**Criterio de terminado.** Un negocio verificado puede suscribirse y pagar de forma recurrente; puede promocionar una publicación real con un peso acotado y siempre visible en el feed; el equipo tiene un reporte de ingresos reales por ambas vías.
+**Criterio de terminado.** Un negocio verificado se suscribe (nivel gratuito disponible desde el lanzamiento) y puede promocionar contenido real dentro del techo del 15%, siempre etiquetado; la Guía IA jamás altera sus recomendaciones por esto, verificado con pruebas específicas.
+
+**Aporte a la Guía IA.** Ninguno positivo — al contrario, esta es la fase que más se debe vigilar para que **no** contamine el razonamiento de la Guía IA. `AI_PHILOSOPHY.md` es la autoridad que lo protege (principio no negociable §4.3), y esta fase existe bajo esa restricción explícita, no a pesar de ella.
+
+**Decisiones ya aprobadas aplicadas aquí:** 4, 5, 8. El pricing final del plan pagado no requiere aprobación ahora — se retomará cuando existan datos reales de valor medible que lo justifiquen.
 
 ---
 
-## Fase 12 — Integración de movilidad (Azu Taxi y transporte)
+## Fase 12 — Integración de movilidad (ventana condicionada)
 
-**Objetivo.** Implementar la integración desacoplada de transporte descrita en §48, extendiendo el patrón ya existente de deep link a Google Maps/Uber dentro de "Cómo llegar".
+**Objetivo.** Evaluar y, cuando corresponda, implementar una integración de transporte (Azu Taxi u otro proveedor vigente en su momento) desde la ficha de un lugar o evento. **Por decisión aprobada (11), esta fase se trata como una ventana de integración posible desde fases tempranas, pero no se implementa hasta verificar formalmente qué mecanismo real ofrece el proveedor:** aplicación con deep link, API formal, contacto telefónico, WhatsApp Business, u otro. La arquitectura de integración debe permitir sustituir el proveedor o el mecanismo elegido sin rediseñar el núcleo del sistema.
 
-**Problema que resuelve.** Cierra el último tramo del flujo de usuario (§12, momento de "experiencia física") — descubrir algo y poder llegar a algo son necesidades igual de reales, y hoy ese tramo se resuelve solo con enlaces genéricos a apps de terceros sin ninguna relación comercial ni de datos con Ahorita.
+**Problema que resuelve.** Cierra el último tramo del flujo de usuario — descubrir algo y poder llegar son necesidades igual de reales.
 
-**Módulos que incluye.** Integración con Azu Taxi (o el proveedor de transporte vigente en el momento de implementar).
+**Módulos que incluye.** Integración de movilidad, con el mecanismo concreto (deep link, API, WhatsApp, etc.) a definir tras la investigación formal.
 
-**De qué depende.** Técnicamente, de nada dentro de este plan — es la razón por la que se separó como fase propia en vez de agruparla con comercio (ver la nota de reordenamiento al inicio del documento). Puede desarrollarse en paralelo con cualquier fase desde la Fase 6 en adelante sin fricción.
+**De qué depende.** Técnicamente, de nada dentro de este plan — solo de ubicación y lugares/eventos, ya existentes desde la Fase 0. Es la fase con menos dependencias reales de todo el plan; puede investigarse y prototiparse desde etapas muy tempranas, aunque su implementación final espere a que la investigación de mecanismos esté cerrada.
 
 **Qué bloquea hasta completarse.** Nada.
 
-**Tablas nuevas.** Ninguna necesariamente — puede resolverse con un deep link parametrizado, igual que la integración actual con Google Maps/Uber. Si se decide medir conversión (cuántos viajes se iniciaron desde Ahorita), una tabla ligera `mobility_referrals`.
+**Tablas nuevas.** Ninguna necesariamente si se resuelve con deep link parametrizado; `mobility_referrals` opcional si se decide medir conversión.
 
 **Entidades nuevas.** Referencia de movilidad (opcional).
 
-**APIs externas necesarias.** **API o SDK de Azu Taxi**, tratada siempre como reemplazable por diseño (principio de la capa de integraciones externas, `ARCHITECTURE.md` §6).
+**APIs externas necesarias.** Depende enteramente del resultado de la investigación formal exigida por la decisión 11 — puede ser una API, puede ser simplemente un deep link a una app, puede ser una integración vía WhatsApp Business. **Esta decisión no se toma hoy.**
 
-**Migraciones que requerirá.** Opcional, solo si se decide trackear conversión con `mobility_referrals`.
+**Migraciones que requerirá.** Opcional.
 
-**Riesgos.** Dependencia de un socio externo cuya disponibilidad o API puede cambiar sin aviso. Mitigación: mantener siempre el deep link genérico a Google Maps/Uber como alternativa de respaldo, nunca reemplazarlo por completo.
+**Riesgos.** Dependencia de un socio externo cuya disponibilidad o mecanismo real puede no ser el que se asumía. Mitigado precisamente por la decisión 11: no se compromete ningún diseño técnico hasta confirmar el mecanismo real disponible.
 
-**Pruebas necesarias.** El deep link/integración funciona con las coordenadas reales de cualquier lugar o evento. Prueba de degradación: si la integración falla, el usuario igual puede llegar por el medio genérico ya existente.
+**Pruebas necesarias.** Una vez definido el mecanismo: que la integración funcione con coordenadas reales; prueba de degradación (si falla, el deep link genérico a Google Maps/Uber sigue funcionando como respaldo, sin importar qué mecanismo se haya elegido para Azu Taxi).
 
-**Criterio de terminado.** Desde la ficha de un lugar o evento, un usuario puede iniciar un viaje con Azu Taxi con un solo toque, con origen y destino precargados.
+**Criterio de terminado.** Existe una integración funcional con el mecanismo real confirmado del proveedor de transporte vigente, sustituible sin rediseñar el núcleo.
+
+**Aporte a la Guía IA.** Permite que la Guía IA resuelva "cómo llegar" dentro de la misma conversación en la que ya recomendó algo. La forma exacta en que la IA invoca esta integración dependerá del mecanismo real que se confirme (un deep link se invoca distinto que una API o que una sugerencia de contactar por WhatsApp) — pero la filosofía de comportamiento ya definida en `AI_PHILOSOPHY.md` no cambia con el mecanismo elegido.
+
+**Decisiones ya aprobadas aplicadas aquí:** 11. La única acción pendiente antes de cualquier implementación es la investigación formal de mecanismos disponibles — no una decisión de producto adicional del Product Owner en este momento.
 
 ---
 
-## Fase 13 — Madurez operativa y cumplimiento
+## Fase 13 — Madurez operativa y cumplimiento (extiende la línea base de privacidad ya establecida)
 
-**Objetivo.** Implementar los módulos adicionales propuestos en `ARCHITECTURE.md` Parte XIII que no encajan de forma natural dentro de una sola fase de producto, pero son requisito de sostenibilidad a partir de cierto volumen: moderación completa con cola humana, soporte al negocio, internacionalización, cumplimiento legal (LOPDP de Ecuador), feature flags/experimentación, observabilidad e incidentes.
+**Objetivo.** Moderación completa con cola humana, soporte al negocio, internacionalización, cumplimiento legal completo, feature flags, observabilidad. **Importante: esta fase ya no introduce la privacidad desde cero** — eso se adelantó a la Fase 1 (decisión 9). Aquí se extiende esa línea base (términos de servicio completos, políticas más elaboradas, cumplimiento regulatorio ampliado) sobre una base de consentimiento y borrado que ya existe y funciona desde el principio del plan.
 
-**Problema que resuelve.** Sin esto, el crecimiento de usuarios y negocios logrado por las fases anteriores expone al ecosistema a riesgos operativos, legales y de confianza que ninguna cantidad de buena arquitectura de producto resuelve por sí sola.
+**Problema que resuelve.** Sin esto, el crecimiento de usuarios y negocios expone al ecosistema a riesgos operativos y legales que ninguna arquitectura de producto resuelve por sí sola.
 
-**Módulos que incluye.** Moderación completa (extiende los límites de tasa básicos ya construidos en la Fase 5 hacia una cola humana real con prioridad). Soporte y ayuda. Internacionalización (español/inglés). Cumplimiento legal y términos de servicio. Feature flags. Observabilidad e incidentes.
+**Módulos que incluye.** Moderación completa. Soporte y ayuda. Internacionalización. Cumplimiento legal completo y términos de servicio. Feature flags. Observabilidad.
 
-**De qué depende.** Formalmente, ninguna fase previa la bloquea de empezar — pero **se recomienda iniciar sus componentes de forma incremental desde la Fase 5** (donde nace la primera necesidad real de moderación), no esperar hasta llegar aquí en el orden del documento. Se coloca al final de la lista por claridad expositiva, no como instrucción de secuencia estricta — ver la matriz de paralelización más abajo.
+**De qué depende.** Formalmente ninguna fase previa la bloquea de empezar — se recomienda iniciar sus componentes de forma incremental desde la Fase 5B (límites de tasa básicos ya exigidos ahí).
 
-**Qué bloquea hasta completarse.** Ninguna fase de producto queda técnicamente bloqueada, pero el crecimiento sano del negocio y del equipo de curaduría (§54 de `ARCHITECTURE.md`) sí depende de tener esto resuelto antes de escalar el volumen de negocios y contenido varias veces por encima del actual.
+**Qué bloquea hasta completarse.** Ninguna fase de producto queda técnicamente bloqueada, pero el crecimiento sano del negocio depende de tenerlo resuelto antes de escalar el volumen varias veces por encima del actual.
 
-**Tablas nuevas.** `moderation_reports` (contenido o actor reportado, motivo, estado, prioridad, resolución). `feature_flags` (nombre, estado, porcentaje de usuarios expuestos).
+**Tablas nuevas.** `moderation_reports`, `feature_flags`.
 
 **Entidades nuevas.** Reporte de moderación, Feature flag.
 
-**APIs externas necesarias.** Posible servicio de moderación automatizada de imágenes/texto si el volumen de contenido lo justifica. Posible servicio de traducción/gestión de contenido multi-idioma si se prioriza inglés antes de contar con recursos de traducción humana.
+**APIs externas necesarias.** Posible servicio de moderación automatizada; posible servicio de traducción.
 
-**Migraciones que requerirá.** Creación de `moderation_reports` y `feature_flags`; ningún cambio destructivo.
+**Migraciones que requerirá.** Creación de `moderation_reports` y `feature_flags`.
 
-**Riesgos.** El riesgo principal aquí es organizacional, no técnico: es exactamente el tipo de fase que se pospone indefinidamente porque no "se ve" en una demo de producto, hasta que un incidente de moderación o de cumplimiento legal obliga a resolverla bajo presión.
+**Riesgos.** El riesgo principal es organizacional (postergación indefinida por no "verse" en una demo), no técnico.
 
-**Pruebas necesarias.** Simulación de reporte → cola de moderación → resolución con distintos niveles de prioridad. Activación y desactivación de una funcionalidad vía feature flag sin necesidad de un despliegue de código nuevo. Auditoría de que el historial de ubicación y de conversación con la IA (§57) puede exportarse y borrarse a solicitud del usuario, requisito directo de la LOPDP.
+**Pruebas necesarias.** Simulación de reporte → cola → resolución. Activación/desactivación de funcionalidad vía feature flag. Auditoría de que el historial de ubicación e IA puede exportarse/borrarse — reutilizando y extendiendo el mecanismo que ya existe desde la Fase 1, no uno nuevo.
 
-**Criterio de terminado.** Existe una cola de moderación funcional con tiempo de respuesta objetivo definido; existen políticas legales publicadas y accesibles; el equipo puede activar una funcionalidad nueva solo para un subconjunto de usuarios antes de un lanzamiento total.
+**Criterio de terminado.** Cola de moderación funcional con tiempo de respuesta objetivo definido; políticas legales completas publicadas; activación de funcionalidad para un subconjunto de usuarios sin despliegue de código nuevo.
+
+**Aporte a la Guía IA.** Protege la confianza en los datos que la Guía IA usa — la moderación filtra contenido no confiable antes de que la IA pueda citarlo o recomendarlo; el cumplimiento legal completo (que ya parte de una base sólida desde la Fase 1) sostiene la legitimidad del historial de conversación que la IA acumula desde la Fase 7.
+
+**Decisiones ya aprobadas aplicadas aquí:** 9 (por herencia — el alcance de privacidad que faltaba aquí ya se resolvió antes). No requiere aprobación adicional.
 
 ---
 
 # Matriz de dependencias de módulos
 
-Formato idéntico al ejemplo entregado por el usuario para la Guía IA — cada módulo con la lista completa de lo que necesita ya resuelto antes de poder comenzar.
+**Identidad (Actor unificado)** depende de: ✔ Nada (Fase 1).
 
-**Identidad (Actor unificado)** depende de:
-✔ Nada — es la base de todo el plan (Fase 1).
+**Ciudad** depende de: ✔ Nada (Fase 1).
 
-**Ciudad** depende de:
-✔ Nada — se construye en paralelo con Identidad (Fase 1).
+**Privacidad y consentimiento** depende de: ✔ Identidad — **adelantada a la Fase 1 por decisión aprobada**, ya no depende de que el resto del plan avance para existir.
 
-**Verificación** depende de:
-✔ Identidad
+**Verificación** depende de: ✔ Identidad.
 
-**Negocios (perfil extendido)** depende de:
-✔ Identidad
-✔ Verificación
+**Negocios (perfil extendido)** depende de: ✔ Identidad, ✔ Verificación.
 
-**Lugares** depende de:
-✔ Ciudad
-(ya construido en la Fase 0; se re-asocia a Ciudad en la Fase 1)
+**Lugares** depende de: ✔ Ciudad.
 
-**Eventos** depende de:
-✔ Lugares
-✔ Categorías
-(ya construido en la Fase 0; es el subtipo de referencia para todo lo demás)
+**Eventos** depende de: ✔ Lugares, ✔ Categorías.
 
-**Publicaciones y Promociones** depende de:
-✔ Identidad
-✔ Verificación
-✔ Negocios
-✔ Modelo de Publicación unificado (generaliza Eventos)
+**Publicaciones y Promociones** depende de: ✔ Identidad, ✔ Verificación, ✔ Negocios, ✔ Modelo de Publicación unificado.
 
-**Interacciones (likes/guardados/comentarios/seguir)** depende de:
-✔ Identidad
-✔ Publicaciones (necesita contenido real sobre el cual interactuar)
+**Seguir (personas y negocios)** depende de: ✔ Identidad, ✔ Negocios (perfil) — **no depende de Publicaciones**, por eso es la Fase 5A y puede ir en paralelo con la Fase 4.
 
-**Feed / Descubrimiento** depende de:
-✔ Publicaciones
-✔ Interacciones
-✔ Categorías
-✔ Ubicación
+**Comentarios / Guardados / Reacciones generalizadas** depende de: ✔ Identidad, ✔ Publicaciones — esta sí depende de que exista más de un tipo de contenido, por eso es la Fase 5B y sí necesita la Fase 4.
 
-**Búsqueda** depende de:
-✔ Publicaciones
-✔ Categorías
-✔ Ubicación
+**Feed / Descubrimiento** depende de: ✔ Publicaciones, ✔ Interacciones (5A+5B), ✔ Categorías, ✔ Ubicación.
 
-**Recomendaciones** depende de:
-✔ Interacciones
-✔ Feed
-✔ Categorías
-✔ Identidad (intereses declarados)
+**Búsqueda** depende de: ✔ Publicaciones, ✔ Categorías, ✔ Ubicación.
 
-**Guía IA** depende de:
-✔ Identidad
-✔ Negocios
-✔ Publicaciones
-✔ Categorías
-✔ Ubicación
-✔ Feed
-✔ Recomendaciones
-(exactamente el ejemplo entregado por el usuario, confirmado por este análisis)
+**Recomendaciones** depende de: ✔ Interacciones, ✔ Feed, ✔ Categorías, ✔ Identidad.
 
-**Historias** depende de:
-✔ Publicaciones (subtipo con vigencia corta)
+**Guía IA** depende de: ✔ Identidad, ✔ Negocios, ✔ Publicaciones, ✔ Categorías, ✔ Ubicación, ✔ Feed, ✔ Recomendaciones, ✔ Privacidad y consentimiento (para el historial de sesión).
 
-**Video** depende de:
-✔ Publicaciones (atributo de medio)
+**Historias** depende de: ✔ Publicaciones.
 
-**Token QR (genérico)** depende de:
-✔ Identidad
-✔ Verificación
-✔ Publicaciones
-✔ Lugares
+**Video** depende de: ✔ Publicaciones.
 
-**Check-in en lugares** depende de:
-✔ Token QR
-✔ Lugares
-✔ Ubicación (geocercas)
+**Token QR (genérico)** depende de: ✔ Identidad, ✔ Verificación, ✔ Publicaciones, ✔ Lugares.
 
-**Validación de entradas** depende de:
-✔ Token QR
-✔ Eventos
-✔ Publicaciones
+**Check-in en lugares** depende de: ✔ Token QR, ✔ Lugares, ✔ Ubicación.
 
-**Promociones mediante QR** depende de:
-✔ Token QR
-✔ Promociones
+**Validación de entradas** depende de: ✔ Token QR, ✔ Eventos, ✔ Publicaciones.
 
-**Reservas** depende de:
-✔ Token QR
-✔ Publicaciones/Lugares
-✔ Pagos (si son pagadas)
+**Promociones mediante QR** depende de: ✔ Token QR, ✔ Promociones.
 
-**Venta de entradas internas** depende de:
-✔ Token QR
-✔ Eventos
-✔ Pagos
+**Reservas** depende de: ✔ Token QR, ✔ Publicaciones/Lugares, ✔ Pagos (si son pagadas).
 
-**Pagos** depende de:
-✔ Identidad
-✔ Verificación (negocios que cobran)
-✔ Transacción (abstracción común)
+**Venta de entradas internas** depende de: ✔ Token QR, ✔ Eventos, ✔ Pagos.
 
-**Suscripciones / Monetización** depende de:
-✔ Verificación
-✔ Pagos
-✔ Feed (lugar acotado para el peso de promoción)
+**Pagos** depende de: ✔ Identidad, ✔ Verificación, ✔ Transacción (abstracción común) — **proveedor todavía sin elegir, por decisión.**
 
-**Publicidad / Contenido promocionado** depende de:
-✔ Feed
-✔ Suscripciones
-✔ Publicaciones
+**Suscripciones / Monetización** depende de: ✔ Verificación, ✔ Pagos, ✔ Feed (techo de 15% ya definido) — **pricing final todavía sin definir, por decisión.**
 
-**Notificaciones** depende de:
-✔ Identidad
-✔ Interacciones (eventos que disparan una notificación)
-✔ Ubicación (proximidad, a futuro)
+**Publicidad / Contenido promocionado** depende de: ✔ Feed (techo 15% auditable), ✔ Suscripciones, ✔ Publicaciones. **Restricción permanente: nunca puede alterar las recomendaciones de la Guía IA.**
 
-**Analíticas** depende de:
-✔ Interacciones
-✔ Publicaciones
-✔ Verificación (negocios)
-✔ Token QR (asistencia real, canjes reales)
+**Notificaciones** depende de: ✔ Identidad, ✔ Interacciones, ✔ Ubicación (a futuro).
 
-**Moderación** depende de:
-✔ Publicaciones
-✔ Interacciones (comentarios, reportes)
+**Analíticas** depende de: ✔ Interacciones, ✔ Publicaciones, ✔ Verificación, ✔ Token QR.
 
-**Movilidad (Azu Taxi)** depende de:
-✔ Ubicación
-✔ Lugares/Eventos (destino)
-(deliberadamente sin dependencia de ningún módulo social o comercial — por eso puede desarrollarse en cualquier momento sin fricción, ver Fase 12)
+**Moderación** depende de: ✔ Publicaciones, ✔ Interacciones.
 
-**Multi-ciudad (expansión real, no la preparación estructural)** depende de:
-✔ Ciudad
-✔ Prácticamente todos los demás módulos ya generalizados correctamente
-(es más una validación transversal de que el resto del sistema no asumió "Cuenca" en ningún lugar, que un módulo con dependencias propias acotadas)
+**Movilidad (transporte)** depende de: ✔ Ubicación, ✔ Lugares/Eventos — **mecanismo/proveedor sin confirmar, por decisión (investigación formal pendiente).**
+
+**Multi-ciudad (expansión real)** depende de: ✔ Ciudad, ✔ prácticamente todos los demás módulos ya generalizados correctamente.
 
 ---
 
@@ -533,31 +564,34 @@ Formato idéntico al ejemplo entregado por el usuario para la Guía IA — cada 
 
 ## Qué puede desarrollarse en paralelo
 
-- Los componentes de **Fase 13** (límites de tasa básicos, borradores de términos de servicio, scaffolding de feature flags) pueden y deben empezar de forma incremental desde la **Fase 5** en adelante, en vez de esperar a que el plan llegue formalmente a esa fase.
-- **Fase 8** (Historias/Video) y **Fase 9** (QR) no comparten dependencias entre sí más allá de la Fase 1/4 ya resueltas — pueden construirse en paralelo por equipos distintos sin coordinación estrecha.
-- **Fase 12** (Azu Taxi) puede desarrollarse en paralelo con prácticamente cualquier fase desde la Fase 6 en adelante, precisamente porque no comparte dependencias reales con el resto del plan (ver matriz de dependencias) — es la justificación técnica de haberla separado de la fase de comercio.
-- **Notificaciones** y **Analíticas** son transversales por naturaleza: cada fase que introduce un nuevo tipo de interacción o transacción debe simplemente añadir su propio evento a estos dos sistemas ya existentes, en vez de tratarlos como una fase monolítica al final.
-- Dentro de la **Fase 6**, el trabajo de "búsqueda mejorada" puede avanzar en paralelo al de "feed híbrido" — comparten dependencias de entrada pero no comparten código ni lógica entre sí.
+- **La Fase 5A (seguir negocios) puede ejecutarse en paralelo con la Fase 4** — es la actualización más importante de esta sección respecto a la versión anterior del documento: ambas dependen únicamente de fases ya completadas (Fase 1-3), no una de la otra.
+- Los componentes de la **Fase 13** (límites de tasa, borradores de políticas, scaffolding de feature flags) deben empezar de forma incremental desde la **Fase 5B**, no esperar a que el plan llegue formalmente a esa fase — con la salvedad de que la línea base de privacidad ya no es parte de este bloque incremental, porque ya se resolvió por completo en la Fase 1.
+- **Fase 8** (Historias/Video) y **Fase 9** (QR) no comparten dependencias entre sí — pueden construirse en paralelo.
+- **La investigación formal de mecanismos de Azu Taxi (Fase 12)** puede comenzar en paralelo con prácticamente cualquier fase desde la Fase 2-3 en adelante, precisamente porque no comparte dependencias reales con el resto del plan — aunque su implementación final espere a que esa investigación concluya (decisión 11).
+- **Notificaciones** y **Analíticas** son transversales: cada fase que introduce un nuevo tipo de interacción o transacción añade su propio evento a estos sistemas ya existentes.
 
 ## Qué nunca debería empezar antes de otra cosa
 
-- **Verificación (Fase 2) nunca antes de Identidad unificada (Fase 1)** — modelarla directamente sobre `businesses` en su forma actual reproduciría la misma deuda técnica que este plan existe para evitar.
-- **Publicaciones/Promociones (Fase 4) nunca antes de Verificación (Fase 2)** — abrir la capacidad de publicar contenido nuevo sin un sistema de confianza real detrás reproduce exactamente el riesgo que el principio (b) de `ARCHITECTURE.md` señala como no negociable.
-- **QR de check-in/promociones (Fase 9) nunca antes de Verificación (Fase 2)** — sin negocios verificados detrás, es una superficie de fraude físico sin ningún control de confianza.
-- **Comercio interno (Fase 10) nunca antes del Token QR (Fase 9)** — una entrada vendida sin mecanismo de validación real no tiene forma de confirmarse en el mundo físico.
-- **Monetización (Fase 11) nunca antes del Feed híbrido (Fase 6)** — vender promoción sobre un feed puramente cronológico no tiene ningún lugar coherente donde insertar ese peso sin que se sienta arbitrario o, peor, dañino para la confianza.
-- **Cualquier generalización de interacción social (Fase 5) nunca antes de la Interacción unificada (Fase 1)** — es, otra vez, el error estructural que este plan entero existe para prevenir desde el principio.
+- **Verificación (Fase 2) nunca antes de Identidad unificada (Fase 1).**
+- **Publicaciones/Promociones (Fase 4) nunca antes de Verificación (Fase 2).**
+- **QR de check-in/promociones (Fase 9) nunca antes de Verificación (Fase 2).**
+- **Comercio interno (Fase 10) nunca antes del Token QR (Fase 9).**
+- **Monetización (Fase 11) nunca antes del Feed híbrido con su techo ya definido (Fase 6).**
+- **Fase 5B nunca antes de la Fase 4** — a diferencia de la Fase 5A, sí necesita contenido variado para generalizar comentarios/guardados/reacciones sobre algo real.
+- **Ninguna implementación de Azu Taxi (Fase 12) antes de confirmar formalmente su mecanismo de integración real** — la investigación puede adelantarse, la implementación no (decisión 11).
 
 ## Qué puede esperar a una versión 2.0
 
-- **Reacciones más allá de un conjunto mínimo** ("me gusta", "quiero ir", "fui") — un set acotado es suficiente para la versión 1 del sistema social completo; ampliar el catálogo de reacciones es una mejora de v2.0, no un requisito de lanzamiento.
-- **Venta de entradas y reservas internas completas (Fase 10)** — el enlace externo de entradas (`ticket_url`) ya es una solución de transición aceptable de forma indefinida si el volumen real de transacciones no justifica todavía el riesgo regulatorio de manejar dinero directamente.
-- **Contenido promocionado / publicidad (la mitad "publicidad" específicamente de la Fase 11, distinta de la suscripción básica que sí es razonable en v1)** — puede posponerse hasta tener suficiente volumen de negocios suscritos para que valga la pena construirla.
-- **Internacionalización completa** — español puede ser la única versión 1 viable; inglés se adelanta a v1 solo si los datos reales de uso de visitantes/turistas lo justifican antes.
-- **Turismo mediante QR físico (§45)** — depende de coordinación institucional y de instalación física de códigos, que es operativamente mucho más lenta que cualquier desarrollo de software; aunque el Token QR genérico (Fase 9) se construya en v1, este caso de uso específico puede esperar sin bloquear nada más.
-- **Reservas para servicios más allá de eventos** (mesas de restaurante, citas de servicio) — el foco inicial de "reservable" debe ser eventos con cupo limitado; extender el concepto a otros tipos de negocio es una ampliación de alcance razonable para v2.0.
-- **Multi-ciudad real** (expansión efectiva a una segunda ciudad) — distinta de la preparación estructural de la entidad Ciudad, que sí es parte de v1 (Fase 1) precisamente para que esta expansión, cuando se decida, no requiera una migración de arquitectura.
+- **Reacciones más allá de Me gusta / Quiero ir / Ya fui** — catálogo cerrado explícitamente por decisión del Product Owner; no se reabre sin evidencia real de valor.
+- **Venta de entradas y reservas internas completas (Fase 10)** — `ticket_url` sigue siendo una alternativa válida indefinidamente.
+- **Contenido promocionado a gran escala** — puede posponerse hasta tener suficiente volumen de negocios suscritos, aunque el techo y su gobernanza ya existan desde la Fase 6.
+- **Internacionalización completa.**
+- **Turismo mediante QR físico** — depende de coordinación institucional y instalación física, mucho más lenta que el desarrollo de software.
+- **Reservas para servicios más allá de eventos.**
+- **Multi-ciudad real.**
+- **Precio final de la suscripción de negocio** — diferido explícitamente hasta validar valor medible (decisión 8), no una omisión.
+- **Elección definitiva de proveedor de pagos y de transporte** — diferida explícitamente hasta investigar condiciones reales en Ecuador (decisiones 7 y 11).
 
 ---
 
-*Fin del documento. No se ha creado ninguna migración, tabla, componente ni línea de código de la aplicación — este documento es exclusivamente planificación. Cada fase se implementa solo tras aprobación explícita, comenzando por la Fase 1 cuando el usuario lo indique.*
+*Fin del documento. No se ha creado ninguna migración, tabla, componente ni línea de código de la aplicación — este documento es exclusivamente planificación. Cada fase se implementa solo tras aprobación explícita, comenzando por la Fase 1 cuando el Product Owner apruebe la propuesta de ejecución concreta correspondiente.*
