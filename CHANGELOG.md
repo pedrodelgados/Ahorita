@@ -2,6 +2,31 @@
 
 Registro de cambios notables de Ahorita (Cuenca Viva). Formato libre, en español, más cercano a un registro de fases de producto que a versiones semánticas — ver `PROJECT.md` para el plan completo y el estado real de la implementación.
 
+## 2026-07-17 — Fase 1, Bloque 4: interacciones y territorio (post_likes/saved_places/saved_events/follows → interactions, places.area → zones)
+
+Cuarto bloque de la Fase 1 del `MASTERPLAN.md`. Precedido por un análisis previo formal (aprobado antes de escribir código) que investigó los lectores/escritores reales del frontend y encontró un hallazgo de privacidad relevante, resuelto antes de implementar.
+
+### Agregado
+- `supabase/migrations/0018_bloque4_interacciones_territorio.sql` (nuevo): backfill de `post_likes` (→ `me_gusta`), `saved_places`/`saved_events` (→ `guardado`) y `follows` (→ `seguimiento`, hacia el Actor del perfil seguido) en `interactions`; `places.zone_id` (columna nueva) poblada únicamente donde `places.area` coincide exactamente con una `zones.name` existente. Reemplaza la política de lectura pública de `interactions` por una que excluye el tipo `guardado`.
+
+### Decisión de privacidad
+Se encontró que la política pública heredada de `interactions` (Bloque 1) habría hecho públicos los guardados al migrarlos, cuando `saved_places`/`saved_events` son privados hoy. Se presentó como bifurcación y se aprobó: los guardados son visibles solo para su dueño o para un administrador (uso justificado caso por caso, sin tabla de auditoría en este bloque — ver nota de alcance en `PROJECT.md`).
+
+### Verificado
+- Las 18 migraciones (`0001`-`0018`) ejecutadas contra un Postgres 16 real, con datos de prueba incluyendo un lugar con zona deliberadamente no coincidente (caso límite).
+- Reconciliación exacta de conteos (10 interacciones) y comparación campo por campo (`diff`) contra las tablas de origen para los cuatro mapeos.
+- `places.zone_id`: 10/11 lugares resueltos; el caso no coincidente quedó en NULL, sin corrección silenciosa.
+- `events.likes_count` coincide exactamente con el conteo real en `interactions` para los 5 eventos.
+- Idempotencia de la lógica de datos confirmada (reejecutar inserta/actualiza 0 filas).
+- RLS de privacidad de "guardado" probada con roles de bajo privilegio reales: cada usuario ve solo lo suyo, las interacciones públicas siguen visibles para todos, y un admin ve todos los guardados.
+- Un actor no puede crear ni borrar interacciones de otro actor (verificado con intentos reales rechazados por RLS).
+- Tablas de origen completamente intactas (conteos y `diff` idénticos antes/después).
+- Estrategia de reversión ejecutada de verdad, restaura el estado exacto previo.
+- Build y lint del frontend sin cambios; `git status` confirma que solo se agregó el archivo de migración.
+
+### Nota
+Queda como condición obligatoria (impuesta antes de este bloque y ya extendida por simetría a `event_details`): ninguna parte de la aplicación puede empezar a leer `interactions` o `places.zone_id` sin una fase separada de reconciliación final, cambio controlado de fuente de verdad, actualización del frontend, pruebas de regresión, periodo de convivencia, reversión disponible y retiro posterior de las estructuras antiguas.
+
 ## 2026-07-17 — Fase 1, Bloque 3: contenido (separa datos de eventos hacia event_details)
 
 Tercer bloque de la Fase 1 del `MASTERPLAN.md`: primer caso real de datos fluyendo por el patrón "núcleo genérico + tabla de detalle" de Publicación. Sin cambio de comportamiento visible para el usuario.

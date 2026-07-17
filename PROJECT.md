@@ -418,6 +418,67 @@ Ninguna. Las dos bifurcaciones arquitectónicas fueron anticipadas y resueltas a
 - **Duplicación de datos entre `events` y `event_details`** hasta que una fase futura migre el código de la aplicación a leer/escribir contra `event_details` y, en ese momento, se retiren las columnas equivalentes de `events` (Bifurcación 1, Opción A). No es deuda urgente — es la consecuencia esperada y aceptada de una separación aditiva.
 - **`event_details` puede desactualizarse silenciosamente** si un evento se edita desde `/admin` después de este bloque, porque no hay sincronización en vivo (Bifurcación 2, Opción A) — sin efecto visible hoy porque nada lee todavía `event_details`, pero la fase que finalmente conecte código a esta tabla deberá decidir entonces si migra a leer/escribir directamente ahí (recomendado, elimina el problema de raíz) o agrega sincronización — igual que la limitación ya anotada para `actors.display_name` en el Bloque 2.
 
-### Qué sigue (Bloque 4, pendiente de aprobación)
+---
 
-Interacciones y territorio: migrar `post_likes`/`saved_places`/`saved_events`/`follows` hacia `interactions`, y mapear `places.area` (texto libre) hacia `zones`. Ver `MASTERPLAN.md`, Fase 1, para el detalle completo de los cinco bloques.
+## Fase 1 del ecosistema social — Bloque 4: interacciones y territorio (implementado)
+
+Cuarto bloque de la Fase 1: poblar `interactions` con una copia fiel de `post_likes`/`saved_places`/`saved_events`/`follows`, y `places.zone_id` con el equivalente estructurado de `places.area`. Sin cambio de comportamiento visible — el frontend sigue leyendo/escribiendo exclusivamente las tablas de siempre.
+
+Antes de implementar se presentó un análisis previo completo (tablas afectadas, lectores/escritores reales del frontend investigados en el código, recomendación aditiva vs. cambio inmediato, mapeo detallado, manejo de valores de zona no coincidentes, reconciliación de conteos, reversión, pruebas de RLS, criterios de aceptación y deuda técnica), aprobado explícitamente junto con una decisión de privacidad puntual antes de escribir cualquier migración.
+
+- **`supabase/migrations/0018_bloque4_interacciones_territorio.sql`** (nuevo):
+  - Backfill de `post_likes` → `interactions` (`type='me_gusta'`), resolviendo `actor_id` vía `actors.profile_id = post_likes.user_id` — consecuencia directa de que el Bloque 2 ya garantiza esa correspondencia.
+  - Backfill de `saved_places` → `interactions` (`type='guardado'`, `target_type='place'`) y `saved_events` → `interactions` (`type='guardado'`, `target_type='event'`).
+  - Backfill de `follows` → `interactions` (`type='seguimiento'`, `target_type='actor'`) — el destino es el **Actor** del perfil seguido (resuelto vía `actors.profile_id = follows.followed_id`), no el `profile_id` directamente, coherente con que Actor es la entidad que se sigue en la arquitectura.
+  - Todos los backfills protegidos con `where not exists` (mismo patrón idempotente de los Bloques 2 y 3).
+  - `places.zone_id` (columna nueva, nullable, `references zones(id) on delete set null`), poblada únicamente donde `places.area` coincide **exactamente** (case-sensitive) con `zones.name` para la ciudad "Cuenca". Ningún valor ambiguo se fuerza ni se corrige.
+  - Reemplazo de la política de lectura de `interactions`: la política pública creada en el Bloque 1 (`for select using (true)`) se sustituye por una que excluye el tipo `guardado` de la lectura pública — ver la decisión de privacidad abajo.
+  - Ningún trigger de sincronización — fotografía puntual, mismo criterio que `actors.display_name` (Bloque 2) y `event_details` (Bloque 3).
+  - Ninguna columna ni fila de `post_likes`/`saved_places`/`saved_events`/`follows`/`places.area` se modifica ni se elimina.
+
+### Decisión de privacidad de "guardado" (aprobada explícitamente antes de implementar)
+
+Durante el análisis previo se encontró que la política de lectura de `interactions`, heredada tal cual del Bloque 1, es totalmente pública (`using (true)`) — pensada para `me_gusta`/`quiero_ir`/`ya_fui`/`seguimiento`/`compartir`, que sí son públicos hoy. Pero `saved_places` y `saved_events` son **privadas** hoy (`using (auth.uid() = user_id)`): nadie más que el dueño puede ver qué guardó. Migrar esos datos hacia `interactions` sin ajustar la política habría sido una regresión real de privacidad, no cosmética.
+
+Se presentó como bifurcación explícita antes de escribir la migración, y se aprobó la Opción 1: **los guardados son privados** — visibles únicamente para el actor dueño o para un administrador (necesidad administrativa, legal, de soporte o de seguridad, justificada caso por caso). El resto de tipos de interacción mantiene exactamente la visibilidad pública que ya tenían. La política implementada:
+
+```sql
+create policy "Interacciones públicas excepto guardados" on public.interactions
+  for select using (
+    type <> 'guardado'
+    or exists (select 1 from public.actors a where a.id = actor_id and a.profile_id = auth.uid())
+    or public.is_admin()
+  );
+```
+
+**Nota de alcance**: el acceso de administrador a un guardado ajeno es técnicamente posible (para los casos justificados que aprobaste), pero esta migración no agrega ninguna tabla ni mecanismo de auditoría de esos accesos — sería una funcionalidad nueva, fuera del alcance de un bloque que explícitamente no debía agregar funcionalidades para el usuario. Si en el futuro se decide que un registro de auditoría de accesos administrativos es necesario, es una decisión de producto a proponer y aprobar aparte, no algo que este bloque debiera asumir por adelantado.
+
+### Verificación realizada
+
+Mismo proceso que los Bloques 1-3: Postgres 16 real, las 18 migraciones (`0001`-`0018`, saltando `0002` que depende de Supabase Storage) en orden contra una base limpia, con datos de prueba reales: 4 perfiles (uno sin `username`, caso límite ya conocido del Bloque 2), 1 negocio, 3 `post_likes` (dos usuarios distintos likeando el mismo evento, uno likeando otro), 3 `saved_places`, 1 `saved_event`, 3 `follows`, y **un lugar de prueba con `area = 'centro historico'`** (minúsculas, deliberadamente no coincidente con ninguna `zone`) para verificar el caso límite del punto 6-8 del análisis previo.
+
+- **Reconciliación exacta de conteos**: `interactions` quedó con 3 `me_gusta` + 3 `guardado`/`place` + 1 `guardado`/`event` + 3 `seguimiento` = 10 filas, exactamente el total esperado.
+- **Comparación campo por campo** (no solo conteos) de los cuatro mapeos contra una foto de las tablas de origen capturada antes de migrar — con `diff`, coincidencia exacta en los cuatro casos (`post_likes`→`me_gusta`, `saved_places`→`guardado`/`place`, `saved_events`→`guardado`/`event`, `follows`→`seguimiento`/`actor`).
+- **`places.zone_id`**: 10 de 11 lugares resueltos (coincidencia exacta con `Centro Histórico`/`Turi`); el lugar de prueba con `'centro historico'` (minúsculas) quedó correctamente en `NULL` — el comportamiento esperado del punto 6-8 del análisis previo, no un error. En una base de producción real, cualquier valor así encontrado debe reportarse antes de decidir si se corrige el dato de origen o se crea una zona legítima nueva — no se corrige ni se inventa silenciosamente en ningún caso.
+- **`events.likes_count` vs. conteo real en `interactions`**: coincidencia exacta para los 5 eventos (2, 1, 0, 0, 0), confirmando que el trigger existente (`sync_event_likes_count`, del Bloque previo a Fase 1) y el backfill nuevo cuentan lo mismo.
+- **Idempotencia de la lógica de datos**: reejecutar los `insert`/`update` de la migración (sin la parte de DDL de política, que por naturaleza es de una sola vez, igual que cualquier `create table`) insertó y actualizó 0 filas — el `where not exists`/`where zone_id is null` funciona.
+- **Privacidad de "guardado" verificada con roles de bajo privilegio reales** (nunca superusuario): cada usuario ve únicamente sus propios guardados (ana: 2, beto: 1, caro: 1) y no los de los demás; las interacciones públicas (`me_gusta`/`seguimiento`) siguen siendo visibles para cualquier usuario (beto vio las 6 públicas de todos); un usuario marcado `is_admin` vio los 4 guardados existentes, confirmando el acceso administrativo aprobado.
+- **Un actor no puede crear una interacción a nombre de otro actor**: verificado con un intento real que fue rechazado por RLS (`new row violates row-level security policy`); el mismo usuario sí pudo crear una interacción con su propio actor.
+- **Un actor no puede borrar la interacción de otro**: un intento de borrado de un guardado ajeno borró 0 filas, con el dato original intacto después.
+- **Tablas de origen completamente intactas**: conteos idénticos antes/después en `post_likes` (3), `saved_places` (3), `saved_events` (1), `follows` (3), `events` (5); `places.area` verificado con `diff` sin ninguna diferencia.
+- **Estrategia de reversión ejecutada de verdad**: `delete from interactions`, `alter table places drop column zone_id`, y restaurar la política pública original dejaron el estado exacto previo al bloque — las cinco tablas de origen siguieron en los mismos conteos después de revertir.
+- **Build y lint del frontend**: sin cambios, ambos limpios; `git status` confirmó que solo se agregó el archivo de migración — ninguna línea de `src/` fue tocada.
+
+### Incidencias encontradas
+
+Ninguna en el resultado final. El hallazgo de privacidad (política pública de `interactions` vs. privacidad real de `saved_places`/`saved_events`) fue identificado y resuelto en el análisis previo, antes de escribir código — exactamente el propósito de exigir ese análisis por separado.
+
+### Deuda técnica detectada
+
+- **Duplicación de datos** entre las cinco tablas de origen y `interactions`/`places.zone_id`, aceptada temporalmente. Antes de que cualquier parte de la aplicación lea desde `interactions` o `places.zone_id`, es obligatoria una fase separada de reconciliación final, cambio controlado de fuente de verdad, actualización del frontend, pruebas de regresión, periodo de convivencia, reversión disponible, y retiro posterior de las estructuras antiguas — condición explícita impuesta para este bloque y, por simetría, ya aplicada también a `event_details` en el Bloque 3.
+- **`places.area` sigue siendo texto libre sin validación** en el editor de administración — cualquier lugar nuevo o editado con una zona mal escrita quedará con `zone_id = null` hasta que se corrija el dato o se agregue un selector real contra `zones` en el editor — trabajo de una fase posterior, no de este bloque.
+- **Acceso administrativo a guardados sin registro de auditoría**: la política permite el acceso pero no lo registra — ver la nota de alcance en la sección de privacidad arriba.
+
+### Qué sigue (pendiente de aprobación)
+
+El Bloque 5 (privacidad — activar el mecanismo de `consent_records`) es el último bloque de la Fase 1. Antes de eso, o en paralelo si se prefiere, sigue pendiente la fase separada de "cambio de fuente de verdad" para `interactions`/`places.zone_id` y `event_details` (condición ya establecida, no autorizada todavía). Ver `MASTERPLAN.md`, Fase 1, para el detalle completo.
