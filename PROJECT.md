@@ -273,7 +273,7 @@ Fuera de alcance de esta fase, explícitamente: negocios verificados, publicacio
 
 ### Checkpoint estable
 
-Tag de Git `checkpoint-admin-eventos-lugares` en el commit que cierra esta fase — usar `git checkout checkpoint-admin-eventos-lugares` para volver exactamente a este estado si una fase futura necesita revertirse.
+Tag de Git `checkpoint-admin-eventos-lugares` en el commit que cierra esta fase (`abf12ed`, rama `claude/esto-tengo-2wzbnj`) — usar `git checkout checkpoint-admin-eventos-lugares` (o directamente `git checkout abf12ed` si el tag no llegó a sincronizarse al remoto) para volver exactamente a este estado si una fase futura necesita revertirse.
 
 ---
 

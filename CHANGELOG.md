@@ -9,7 +9,7 @@ El usuario aprobó la fase completa (CRUD + ajustes finales) y pidió cerrarla f
 ### Agregado
 - `ROADMAP.md` (nuevo): mapa de fases completas y la próxima fase (sistema social), explícitamente marcada como no iniciada hasta recibir arquitectura y requisitos definitivos.
 - `PROJECT.md`: sección "✅ FASE CERRADA — Administración de eventos y lugares" con checklist de funcionalidades completas, limitaciones conocidas, y desglose de qué datos son reales/de prueba/fallback.
-- Tag de Git `checkpoint-admin-eventos-lugares` en este commit — punto estable para volver si una fase futura necesita revertirse.
+- Tag de Git `checkpoint-admin-eventos-lugares` (commit `abf12ed`, rama `claude/esto-tengo-2wzbnj`) — punto estable para volver si una fase futura necesita revertirse.
 
 ## 2026-07-17 — Cierre de la fase administrativa: ajustes finales
 
