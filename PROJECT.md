@@ -340,6 +340,40 @@ Comprobado con consultas reales, no solo revisión de sintaxis:
 - **RLS de `cities` y `consent_records` verificada**: un usuario no-admin no puede crear una ciudad aunque tenga permiso de tabla (el rechazo viene de la política, no del `GRANT`); un usuario puede insertar su propio registro de consentimiento pero no uno a nombre de otro usuario.
 - **Build y lint del frontend**: sin cambios, ambos limpios — no se tocó ninguna línea de código de la aplicación en este bloque, por lo que no hay regresión posible más allá de "la base de datos ya no es exactamente la misma", que es justamente lo que se verificó arriba.
 
-### Qué sigue (Bloque 2, pendiente de aprobación)
+---
 
-Vincular `profiles`/`businesses` a `actors` (crear un Actor por cada fila existente de ambas tablas), sin tocar todavía la migración de interacciones, contenido ni privacidad — ver `MASTERPLAN.md`, Fase 1, para el detalle completo de los cinco bloques.
+## Fase 1 del ecosistema social — Bloque 2: identidad (implementado)
+
+Segundo bloque de la Fase 1, con el alcance estrictamente acotado que se aprobó: vincular `profiles`/`businesses` con `actors`, sin tocar events/interactions/zones/privacidad ni la interfaz.
+
+- **`supabase/migrations/0016_bloque2_identidad.sql`** (nuevo):
+  - Crea un actor tipo `persona` por cada fila ya existente de `profiles`, y uno tipo `negocio` por cada fila ya existente de `businesses` — sin modificar ninguna columna de ninguna de las dos tablas. La relación ya vivía lista en `actors.profile_id`/`actors.business_id` desde el Bloque 1; este bloque solo la puebla.
+  - Agrega dos triggers (`on_profile_created_actor`, `on_business_created_actor`), ambos `security definer` con el mismo patrón que ya usa `handle_new_user` (`0001_init.sql`), para que la correspondencia se mantenga cierta también para cada perfil o negocio que se cree de ahora en adelante — sin esto, la garantía solo sería válida en el instante en que corre la migración, y empezaría a romperse con el primer registro nuevo. Un usuario normal no tiene permiso para insertar en `actors` directamente (solo existe una política de insert para actores de sistema, del Bloque 1); el trigger funciona precisamente porque corre con privilegio elevado, igual que la creación automática de `profiles` al registrarse.
+  - Los actores de sistema creados en el Bloque 1 ("Guía IA", "Ahorita Editorial") quedan intactos — el backfill solo toca filas de tipo `persona`/`negocio`.
+
+### Decisión de alcance documentada explícitamente
+
+La instrucción acotaba el bloque a "vincular" y "crear un actor por cada profile/business existente". Interpretar "garantizar una correspondencia **verificable**" como una garantía permanente (no solo válida en el instante de la migración) llevó a agregar los dos triggers, además del backfill — sin ellos, un usuario que se registre mañana no tendría actor, y la "correspondencia verificable" dejaría de ser cierta al día siguiente de este bloque. Se documenta aquí con esa claridad para que quede a la vista, ya que técnicamente es un mecanismo adicional (dos funciones y dos triggers) más allá de un simple `insert` de una sola vez — ninguno de los dos es visible en la interfaz ni cambia ningún comportamiento existente, solo mantiene viva la garantía pedida.
+
+### Limitación conocida
+
+`actors.display_name` para un actor `persona`/`negocio` es una fotografía tomada en el momento de su creación (el `username` o `name` de ese instante) — no se mantiene sincronizada si el perfil o el negocio cambian su nombre después. Ningún código de la aplicación lee todavía `actors.display_name` (nada está conectado al modelo nuevo aún), así que hoy esto no tiene ningún efecto visible; se deja anotado para que la fase que primero muestre actores en la interfaz decida entonces si lee el nombre en vivo desde `profiles`/`businesses` (recomendado) o agrega un mecanismo de sincronización — no es una decisión que este bloque debiera tomar por adelantado.
+
+### Verificación realizada
+
+Mismo proceso que el Bloque 1: Postgres 16 real, las 16 migraciones (`0001`-`0016`) en orden contra una base limpia, con datos de prueba reales (4 perfiles — incluyendo uno sin `username`, el caso límite — y 3 negocios).
+
+- **Conteos idénticos antes/después** en `profiles` (4) y `businesses` (3) tras correr `0016` — ninguna fila tocada.
+- **Reconciliación exacta**: cero perfiles sin actor, cero negocios sin actor, cero perfiles con más de un actor, cero negocios con más de un actor. Total: 4 personas + 3 negocios + 2 sistema = 9 actores, verificado con consulta directa, no solo inspección visual.
+- **Caso límite del perfil sin `username`**: el actor se creó igual, con un nombre de respaldo generado (`Usuario` + los primeros caracteres del id) — nunca un valor nulo ni un error.
+- **Los triggers probados con inserciones reales nuevas**, no solo el backfill: un signup nuevo (insertando en `auth.users`, igual que hace Supabase Auth) generó su actor automáticamente; un registro de negocio nuevo, ejecutado con un rol de bajo privilegio bajo las mismas políticas RLS que un usuario real (no como superusuario), también generó su actor — confirmando que el trigger `security definer` funciona incluso cuando quien dispara el insert no tiene permiso directo sobre `actors` (se verificó explícitamente que ese mismo rol, sin el trigger de por medio, recibe `permission denied` al intentar insertar en `actors` directamente).
+- **Estrategia de reversión probada, no solo descrita**: se hizo `drop trigger`/`drop function` de ambos mecanismos y se borraron las filas de tipo `persona`/`negocio` de `actors`; el resultado fue el estado exacto de antes del bloque (mismos `profiles`/`businesses`, solo los 2 actores de sistema en `actors`) — confirmando que revertir este bloque es limpio y no deja rastro.
+- **Build y lint del frontend**: sin cambios, ambos limpios — ninguna línea de código de la aplicación se tocó en este bloque tampoco.
+
+### Incidencias encontradas
+
+Ninguna en el resultado final. Se identificó y corrigió una decisión de alcance (los triggers, ver arriba) que requería documentarse con transparencia por exceder ligeramente una lectura estrictamente literal de "crear un actor por cada fila existente" — se optó por interpretar "correspondencia verificable" como una garantía continua, no un hecho de un solo momento, y se deja explícito para que quede a revisión.
+
+### Qué sigue (Bloque 3, pendiente de aprobación)
+
+Separar de `events` los campos específicos de un evento (`start_at`/`end_at`/`price`/`ticket_url`/`organizer`) hacia `event_details`, el primer caso real del patrón núcleo+detalle — sin tocar todavía interacciones, zonas ni privacidad. Ver `MASTERPLAN.md`, Fase 1, para el detalle completo de los cinco bloques.

@@ -2,6 +2,24 @@
 
 Registro de cambios notables de Ahorita (Cuenca Viva). Formato libre, en español, más cercano a un registro de fases de producto que a versiones semánticas — ver `PROJECT.md` para el plan completo y el estado real de la implementación.
 
+## 2026-07-17 — Fase 1, Bloque 2: identidad (vincula profiles/businesses con actors)
+
+Segundo bloque de la Fase 1 del `MASTERPLAN.md`, con alcance estrictamente acotado a vincular identidad — sin tocar events, interacciones, zonas, privacidad ni la interfaz.
+
+### Agregado
+- `supabase/migrations/0016_bloque2_identidad.sql` (nuevo): backfill de un actor `persona` por cada `profile` existente y uno `negocio` por cada `business` existente; dos triggers `security definer` (`on_profile_created_actor`, `on_business_created_actor`) que crean el actor correspondiente para cada perfil/negocio nuevo de ahora en adelante, con el mismo patrón que `handle_new_user`.
+
+### Verificado
+- Las 16 migraciones (`0001`-`0016`) ejecutadas contra un Postgres 16 real, con datos de prueba incluyendo el caso límite de un perfil sin `username`.
+- Conteos idénticos antes/después en `profiles` y `businesses` — cero filas tocadas.
+- Reconciliación exacta: cero perfiles/negocios sin actor, cero con más de uno.
+- Los triggers probados con inserciones reales nuevas (un signup simulado y un registro de negocio bajo RLS real con un rol de bajo privilegio, no como superusuario), confirmando que funcionan incluso sin permiso directo de ese rol sobre `actors`.
+- Estrategia de reversión ejecutada de verdad (no solo descrita): `drop trigger`/`drop function` + borrar las filas `persona`/`negocio` de `actors` restaura exactamente el estado previo al bloque.
+- Build y lint del frontend sin cambios.
+
+### Nota
+Decisión de alcance documentada con transparencia en `PROJECT.md`: se agregaron los dos triggers (además del backfill pedido explícitamente) para que "una correspondencia verificable" sea una garantía permanente, no solo válida en el instante de la migración — señalado como una interpretación, no como algo pedido literalmente palabra por palabra. `actors.display_name` es una fotografía del momento de creación, sin sincronización posterior — limitación conocida y documentada, sin efecto visible hoy porque ningún código de la aplicación lee todavía esa columna.
+
 ## 2026-07-17 — Fase 1, Bloque 1: esquema fundacional (primera implementación del ecosistema social)
 
 Primer bloque de código real de la Fase 1 del `MASTERPLAN.md`, tras la aprobación de la propuesta definitiva de ejecución. Puramente estructural — invisible para el usuario final.
