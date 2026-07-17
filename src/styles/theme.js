@@ -4,6 +4,7 @@
 export const COLORS = {
   bg: "#FBF8F4",
   ink: "#2B2622",
+  inkSoft: "#948A80",
   accent: "#E8785C",
 };
 

@@ -1,116 +1,83 @@
-import { useEffect, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
-import { User } from "lucide-react";
-import { useAuth } from "../contexts/AuthContext";
-import { getProfile } from "../lib/profile";
-import InterestsPrompt from "../features/auth/InterestsPrompt";
+import { useState } from "react";
+import { Map, Grid3x3 } from "lucide-react";
+import { COLORS } from "../styles/theme";
 import PlaceGrid from "../features/places/PlaceGrid";
 import PlaceSheet from "../features/places/PlaceSheet";
-import StoriesBar from "../features/stories/StoriesBar";
-import EditorialCard from "../features/editorial/EditorialCard";
-import GuideBar from "../features/ai/GuideBar";
-import Button from "../components/ui/Button";
+import MapView from "../features/explore/MapView";
 
 export default function ExplorePage() {
-  const { user, isGuest, signOut } = useAuth();
-  const navigate = useNavigate();
-  const [profile, setProfile] = useState(null);
-  const [dismissedPrompt, setDismissedPrompt] = useState(false);
+  const [view, setView] = useState("map");
   const [selectedPlace, setSelectedPlace] = useState(null);
-
-  useEffect(() => {
-    if (user) getProfile(user.id).then(setProfile).catch(() => {});
-  }, [user]);
-
-  const showInterestsPrompt =
-    user && profile && profile.interests.length === 0 && !dismissedPrompt;
 
   return (
     <div style={{ minHeight: "100svh" }}>
-      <div
+      <header
         style={{
-          position: "sticky",
-          top: 0,
-          zIndex: 10,
-          background: "var(--color-bg)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          padding: "16px 24px",
           borderBottom: "1px solid rgba(43, 38, 34, 0.08)",
         }}
       >
-        <header
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            padding: "16px 24px",
-          }}
-        >
-          <h1 style={{ fontSize: 22 }}>Ahorita</h1>
+        <h1 style={{ fontSize: 22 }}>Explorar</h1>
+        <ViewToggle view={view} onChange={setView} />
+      </header>
 
-          {user ? (
-            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-              <Link
-                to="/perfil"
-                aria-label="Mi perfil"
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  width: 36,
-                  height: 36,
-                  borderRadius: "50%",
-                  background: "rgba(43, 38, 34, 0.06)",
-                }}
-              >
-                <User size={17} />
-              </Link>
-              <Button variant="ghost" style={{ padding: "8px 14px", fontSize: 14 }} onClick={signOut}>
-                Cerrar sesión
-              </Button>
-            </div>
-          ) : (
-            <Button
-              style={{ padding: "8px 14px", fontSize: 14 }}
-              onClick={() => navigate("/login")}
-            >
-              Crear cuenta
-            </Button>
-          )}
-        </header>
-
-        <div style={{ padding: "0 24px 16px", maxWidth: 720, margin: "0 auto" }}>
-          <GuideBar />
-        </div>
-      </div>
-
-      <main style={{ maxWidth: 720, margin: "0 auto", padding: 24 }}>
-        {showInterestsPrompt && (
-          <InterestsPrompt
-            userId={user.id}
-            onDone={() => setDismissedPrompt(true)}
-          />
-        )}
-
-        {isGuest && (
-          <p
-            style={{
-              fontSize: 13,
-              color: "#6b6360",
-              background: "#FFFFFF",
-              borderRadius: "var(--radius-sm)",
-              padding: "10px 14px",
-              marginBottom: 24,
-            }}
-          >
-            Estás explorando sin cuenta. Crea una para guardar lugares, comentar y publicar.
-          </p>
-        )}
-
-        <StoriesBar onSelectPlace={setSelectedPlace} />
-        <EditorialCard />
-        <PlaceGrid onSelectPlace={setSelectedPlace} />
-      </main>
+      {view === "map" ? (
+        <MapView onSelectPlace={setSelectedPlace} />
+      ) : (
+        <main style={{ maxWidth: 720, margin: "0 auto", padding: "20px 20px 84px" }}>
+          <PlaceGrid onSelectPlace={setSelectedPlace} />
+        </main>
+      )}
 
       <PlaceSheet place={selectedPlace} onClose={() => setSelectedPlace(null)} />
     </div>
+  );
+}
+
+function ViewToggle({ view, onChange }) {
+  return (
+    <div
+      style={{
+        display: "flex",
+        background: "rgba(43, 38, 34, 0.06)",
+        borderRadius: "var(--radius-full)",
+        padding: 3,
+      }}
+    >
+      <ToggleButton active={view === "map"} onClick={() => onChange("map")} icon={<Map size={15} />} label="Mapa" />
+      <ToggleButton
+        active={view === "grid"}
+        onClick={() => onChange("grid")}
+        icon={<Grid3x3 size={15} />}
+        label="Cuadrícula"
+      />
+    </div>
+  );
+}
+
+function ToggleButton({ active, onClick, icon, label }) {
+  return (
+    <button
+      onClick={onClick}
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: 6,
+        border: "none",
+        borderRadius: "var(--radius-full)",
+        padding: "7px 14px",
+        fontSize: 13,
+        fontWeight: 600,
+        background: active ? "#FFFFFF" : "transparent",
+        color: active ? COLORS.ink : COLORS.inkSoft,
+        boxShadow: active ? "var(--shadow-card)" : "none",
+      }}
+    >
+      {icon}
+      {label}
+    </button>
   );
 }

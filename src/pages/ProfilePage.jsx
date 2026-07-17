@@ -65,7 +65,7 @@ export default function ProfilePage() {
         }}
       >
         <button
-          onClick={() => navigate("/explorar")}
+          onClick={() => navigate("/")}
           style={{ background: "none", border: "none", display: "flex" }}
           aria-label="Volver"
         >
@@ -77,7 +77,7 @@ export default function ProfilePage() {
         </Button>
       </header>
 
-      <main style={{ maxWidth: 720, margin: "0 auto", padding: 24 }}>
+      <main style={{ maxWidth: 720, margin: "0 auto", padding: "24px 24px 84px" }}>
         <Card style={{ marginBottom: 20 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 16 }}>
             <div
@@ -119,7 +119,7 @@ export default function ProfilePage() {
                   Guardar
                 </Button>
               </div>
-              <p style={{ fontSize: 12, color: "#6b6360", marginTop: 6 }}>{user.email}</p>
+              <p style={{ fontSize: 12, color: "#948A80", marginTop: 6 }}>{user.email}</p>
             </div>
           </div>
 
@@ -157,7 +157,7 @@ export default function ProfilePage() {
 
         <h2 style={{ fontSize: 16, marginBottom: 12 }}>Lugares guardados</h2>
         {savedPlaces.length === 0 ? (
-          <p style={{ color: "#6b6360", fontSize: 14, marginBottom: 24 }}>
+          <p style={{ color: "#948A80", fontSize: 14, marginBottom: 24 }}>
             Todavía no has guardado ningún lugar.
           </p>
         ) : (
@@ -182,7 +182,7 @@ export default function ProfilePage() {
           </Link>
         </div>
         {businesses.length === 0 ? (
-          <p style={{ color: "#6b6360", fontSize: 14 }}>Todavía no has registrado ningún negocio.</p>
+          <p style={{ color: "#948A80", fontSize: 14 }}>Todavía no has registrado ningún negocio.</p>
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
             {businesses.map((b) => (

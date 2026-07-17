@@ -2,10 +2,14 @@ import { Navigate, Route, Routes } from "react-router-dom";
 import { useAuth } from "./contexts/AuthContext";
 import LoginPage from "./features/auth/LoginPage";
 import UsageModeScreen from "./features/auth/UsageModeScreen";
+import FeedPage from "./pages/FeedPage";
 import ExplorePage from "./pages/ExplorePage";
 import ProfilePage from "./pages/ProfilePage";
+import SearchPage from "./pages/SearchPage";
+import NotificationsPage from "./pages/NotificationsPage";
 import BusinessRegisterPage from "./pages/BusinessRegisterPage";
 import AdminPage from "./pages/AdminPage";
+import MainLayout from "./components/layout/MainLayout";
 
 function RequireAccess({ children }) {
   const { isAuthenticated, isGuest, loading } = useAuth();
@@ -24,7 +28,7 @@ function RequireAuth({ children }) {
 }
 
 export default function App() {
-  const { isAuthenticated, isGuest, loading } = useAuth();
+  const { loading } = useAuth();
 
   if (loading) return null;
 
@@ -33,7 +37,11 @@ export default function App() {
       <Route
         path="/"
         element={
-          <Navigate to={isAuthenticated || isGuest ? "/explorar" : "/login"} replace />
+          <RequireAccess>
+            <MainLayout>
+              <FeedPage />
+            </MainLayout>
+          </RequireAccess>
         }
       />
       <Route path="/login" element={<LoginPage />} />
@@ -49,7 +57,9 @@ export default function App() {
         path="/explorar"
         element={
           <RequireAccess>
-            <ExplorePage />
+            <MainLayout>
+              <ExplorePage />
+            </MainLayout>
           </RequireAccess>
         }
       />
@@ -57,8 +67,26 @@ export default function App() {
         path="/perfil"
         element={
           <RequireAuth>
-            <ProfilePage />
+            <MainLayout>
+              <ProfilePage />
+            </MainLayout>
           </RequireAuth>
+        }
+      />
+      <Route
+        path="/buscar"
+        element={
+          <RequireAccess>
+            <SearchPage />
+          </RequireAccess>
+        }
+      />
+      <Route
+        path="/notificaciones"
+        element={
+          <RequireAccess>
+            <NotificationsPage />
+          </RequireAccess>
         }
       />
       <Route

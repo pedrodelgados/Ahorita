@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
-import { Sparkles } from "lucide-react";
+import { Sparkles, Globe, Ticket, UtensilsCrossed } from "lucide-react";
 import { listQuestions } from "../../lib/questions";
 import { listStatuses } from "../../lib/statuses";
+import { isOpenNow } from "../../lib/directions";
 import { CHANNELS, COLORS } from "../../styles/theme";
 import BottomSheet from "../../components/layout/BottomSheet";
 import AuthGate from "../../components/ui/AuthGate";
@@ -9,6 +10,7 @@ import Composer from "./Composer";
 import QuestionCard from "./QuestionCard";
 import StatusCard from "./StatusCard";
 import SaveButton from "./SaveButton";
+import DirectionsSection from "./DirectionsSection";
 import GuideChat from "../ai/GuideChat";
 
 function mergeTimeline(questions, statuses) {
@@ -47,6 +49,7 @@ export default function PlaceSheet({ place, onClose }) {
   }
 
   const channel = place && CHANNELS.find((c) => c.id === place.channel_default);
+  const openNow = place && isOpenNow(place.hours);
 
   return (
     <BottomSheet open={!!place} onClose={onClose}>
@@ -68,13 +71,33 @@ export default function PlaceSheet({ place, onClose }) {
             />
             <div style={{ flex: 1 }}>
               <h2 style={{ fontSize: 19 }}>{place.name}</h2>
-              <p style={{ fontSize: 13, color: "#6b6360", margin: 0 }}>
+              <p style={{ fontSize: 13, color: "#948A80", margin: 0 }}>
                 {place.area}
                 {channel && ` · ${channel.label}`}
+                {openNow !== null && (
+                  <span style={{ color: openNow ? "#4FA383" : "#C0392B", fontWeight: 600 }}>
+                    {" "}
+                    · {openNow ? "Abierto" : "Cerrado"}
+                  </span>
+                )}
               </p>
             </div>
             <SaveButton placeId={place.id} style={{ background: "var(--color-bg)" }} />
           </div>
+
+          {(place.website || place.tickets_url || place.menu_url) && (
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 16 }}>
+              {place.tickets_url && (
+                <InfoLink href={place.tickets_url} icon={<Ticket size={14} />} label="Comprar entradas" />
+              )}
+              {place.menu_url && (
+                <InfoLink href={place.menu_url} icon={<UtensilsCrossed size={14} />} label="Ver menú" />
+              )}
+              {place.website && <InfoLink href={place.website} icon={<Globe size={14} />} label="Página web" />}
+            </div>
+          )}
+
+          <DirectionsSection place={place} />
 
           {showGuide ? (
             <div
@@ -97,7 +120,7 @@ export default function PlaceSheet({ place, onClose }) {
                 <h3 style={{ fontSize: 15 }}>Guía IA sobre {place.name}</h3>
                 <button
                   onClick={() => setShowGuide(false)}
-                  style={{ background: "none", border: "none", color: "#6b6360", fontSize: 13 }}
+                  style={{ background: "none", border: "none", color: "#948A80", fontSize: 13 }}
                 >
                   Cerrar
                 </button>
@@ -123,7 +146,7 @@ export default function PlaceSheet({ place, onClose }) {
                 borderRadius: "var(--radius-full)",
                 border: "1px solid rgba(43, 38, 34, 0.1)",
                 background: "#FFFFFF",
-                color: "#6b6360",
+                color: "#948A80",
                 fontSize: 14,
                 marginBottom: 16,
               }}
@@ -137,10 +160,10 @@ export default function PlaceSheet({ place, onClose }) {
             <Composer place={place} onCreated={handleCreated} />
           </AuthGate>
 
-          {loading && <p style={{ color: "#6b6360", fontSize: 14 }}>Cargando…</p>}
+          {loading && <p style={{ color: "#948A80", fontSize: 14 }}>Cargando…</p>}
 
           {!loading && items.length === 0 && (
-            <p style={{ color: "#6b6360", fontSize: 14 }}>
+            <p style={{ color: "#948A80", fontSize: 14 }}>
               Todavía no hay actividad aquí. ¡Sé el primero en preguntar o reportar algo!
             </p>
           )}
@@ -155,5 +178,30 @@ export default function PlaceSheet({ place, onClose }) {
         </div>
       )}
     </BottomSheet>
+  );
+}
+
+function InfoLink({ href, icon, label }) {
+  return (
+    <a
+      href={href}
+      target="_blank"
+      rel="noreferrer"
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        gap: 6,
+        padding: "8px 14px",
+        borderRadius: "var(--radius-full)",
+        background: "rgba(43, 38, 34, 0.06)",
+        color: COLORS.ink,
+        fontSize: 13,
+        fontWeight: 600,
+        textDecoration: "none",
+      }}
+    >
+      {icon}
+      {label}
+    </a>
   );
 }

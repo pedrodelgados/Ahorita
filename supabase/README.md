@@ -36,6 +36,9 @@ La función usa `claude-sonnet-5`. Recibe `{ messages, placeId? }`: sin `placeId
 - `0003_seed_places.sql` precarga ~10 lugares reales del Centro Histórico de Cuenca para evitar el "arranque en frío". Las imágenes son placeholders (`picsum.photos`) — reemplázalas por fotos reales antes de lanzar.
 - `0004_seed_editorial.sql` precarga una tarjeta editorial de ejemplo ("Este fin de semana"). Edítala o crea una nueva fila en `editorial_posts` para actualizar el contenido curado.
 - `0005_profile_social.sql` agrega `saved_places` (lugares guardados), `follows` (seguir personas), y `profiles.is_admin` con las políticas necesarias para el panel de administración (`/admin`).
+- `0006_author_profile_relations.sql` reapunta los FK de autor de `questions`/`answers`/`statuses` a `profiles` en vez de `auth.users`, para poder mostrar el nombre de usuario y el botón de "seguir".
+- `0007_feed_and_likes.sql` agrega `places.tag/hours/website/tickets_url/menu_url/description` (para las tarjetas del feed de Inicio) y `post_likes` (like genérico para cualquier tipo de contenido, con la vista `post_like_counts` para el conteo agregado).
+- `0008_seed_tags.sql` etiqueta algunos lugares semilla (`imperdible`, `gratis`, `hoy`) para que el feed de Inicio no se vea plano en el arranque en frío.
 
 ## Convertir tu cuenta en administradora
 

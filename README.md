@@ -51,3 +51,9 @@ Para crear el esquema de base de datos, ve a `supabase/README.md`.
 - Registro de negocios (`src/pages/BusinessRegisterPage.jsx`) con estado "en revisión" hasta que un admin lo aprueba
 - Panel de administración simple en `/admin` (`src/pages/AdminPage.jsx`): aprobar/rechazar negocios, verificar respuestas, cargar lugares nuevos sin tocar código
 - PWA instalable: manifest, service worker (`vite-plugin-pwa`) e íconos en `public/icons/`
+
+**Prompt maestro (revisión posterior) — ver `PROJECT.md`**
+- **"Inicio"** (`/`, `src/pages/FeedPage.jsx`): feed vertical estilo Instagram, un post grande a la vez, mezcla orgánica de lugares/estados/preguntas/editorial (`src/lib/feed.js`), like/comentar/compartir/guardar por post (`src/lib/postLikes.js`), píldoras de categoría con ícono, barra de IA fija, búsqueda (`/buscar`) y notificaciones (`/notificaciones`, honesto placeholder — no hay push todavía)
+- **"Explorar"** (`/explorar`) rediseñado: mapa real con Leaflet + OpenStreetMap, geolocalización del navegador, pines de color por canal, widget de clima (placeholder honesto, sin datos falsos), toggle a cuadrícula (`src/features/explore/`)
+- **Navegación por pestañas** fija (Inicio / Explorar / Perfil) en `src/components/layout/BottomNav.jsx`
+- **"Cómo llegar"** en el Bottom Sheet de lugar: distancia y tiempo real (geolocalización + fórmula de Haversine), deep link a Google Maps y a Uber, tarjetas caminando/bici/tranvía/auto, sección de transporte (tranvía/bus) con parada y tarifa referencial — sin horario en vivo, porque no existe una API pública de tiempo real para el tranvía/buses de Cuenca (`src/features/places/DirectionsSection.jsx`)

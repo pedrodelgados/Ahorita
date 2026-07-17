@@ -42,7 +42,7 @@ export default function UsageModeScreen() {
     try {
       if (user) await updateProfile(user.id, { usage_mode: modeId });
     } finally {
-      navigate("/explorar");
+      navigate("/");
     }
   }
 
@@ -52,7 +52,7 @@ export default function UsageModeScreen() {
         <h1 style={{ fontSize: 26, marginBottom: 6, textAlign: "center" }}>
           ¿Cómo usarás Ahorita?
         </h1>
-        <p style={{ color: "#6b6360", textAlign: "center", marginBottom: 28 }}>
+        <p style={{ color: "#948A80", textAlign: "center", marginBottom: 28 }}>
           Así te mostramos lo más relevante primero.
         </p>
 
@@ -69,19 +69,19 @@ export default function UsageModeScreen() {
             >
               <Icon size={22} color="#E8785C" style={{ marginBottom: 10 }} />
               <h3 style={{ fontSize: 16, marginBottom: 4 }}>{label}</h3>
-              <p style={{ fontSize: 13, color: "#6b6360", margin: 0 }}>{description}</p>
+              <p style={{ fontSize: 13, color: "#948A80", margin: 0 }}>{description}</p>
             </Card>
           ))}
         </div>
 
         <button
-          onClick={() => navigate("/explorar")}
+          onClick={() => navigate("/")}
           style={{
             display: "block",
             margin: "24px auto 0",
             background: "none",
             border: "none",
-            color: "#6b6360",
+            color: "#948A80",
             fontSize: 14,
             textDecoration: "underline",
           }}

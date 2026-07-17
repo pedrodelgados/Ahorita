@@ -73,9 +73,9 @@ export default function AdminPage() {
   if (profile && !profile.is_admin) {
     return (
       <div style={{ padding: 40, textAlign: "center" }}>
-        <p style={{ color: "#6b6360" }}>No tienes acceso a esta página.</p>
-        <Button onClick={() => navigate("/explorar")} style={{ marginTop: 16 }}>
-          Volver a explorar
+        <p style={{ color: "#948A80" }}>No tienes acceso a esta página.</p>
+        <Button onClick={() => navigate("/")} style={{ marginTop: 16 }}>
+          Volver a inicio
         </Button>
       </div>
     );
@@ -107,7 +107,7 @@ export default function AdminPage() {
       <main style={{ maxWidth: 720, margin: "0 auto", padding: 24 }}>
         <h2 style={{ fontSize: 16, marginBottom: 12 }}>Negocios en revisión</h2>
         {pendingBusinesses.length === 0 ? (
-          <p style={{ color: "#6b6360", fontSize: 14, marginBottom: 28 }}>
+          <p style={{ color: "#948A80", fontSize: 14, marginBottom: 28 }}>
             No hay negocios pendientes.
           </p>
         ) : (
@@ -115,7 +115,7 @@ export default function AdminPage() {
             {pendingBusinesses.map((b) => (
               <Card key={b.id}>
                 <p style={{ fontWeight: 600, fontSize: 14, marginBottom: 4 }}>{b.name}</p>
-                <p style={{ fontSize: 13, color: "#6b6360", marginBottom: 10 }}>
+                <p style={{ fontSize: 13, color: "#948A80", marginBottom: 10 }}>
                   {b.category} · {b.address || "sin dirección"}
                 </p>
                 <div style={{ display: "flex", gap: 8 }}>
@@ -137,14 +137,14 @@ export default function AdminPage() {
 
         <h2 style={{ fontSize: 16, marginBottom: 12 }}>Respuestas sin verificar</h2>
         {unverifiedAnswers.length === 0 ? (
-          <p style={{ color: "#6b6360", fontSize: 14, marginBottom: 28 }}>
+          <p style={{ color: "#948A80", fontSize: 14, marginBottom: 28 }}>
             No hay respuestas pendientes de verificar.
           </p>
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 28 }}>
             {unverifiedAnswers.map((a) => (
               <Card key={a.id}>
-                <p style={{ fontSize: 13, color: "#6b6360", marginBottom: 4 }}>
+                <p style={{ fontSize: 13, color: "#948A80", marginBottom: 4 }}>
                   {a.question?.place?.name} · {a.question?.text}
                 </p>
                 <p style={{ fontSize: 14, marginBottom: 10 }}>{a.text}</p>

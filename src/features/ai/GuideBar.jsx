@@ -26,7 +26,7 @@ export default function GuideBar() {
           borderRadius: "var(--radius-full)",
           border: "1px solid rgba(43, 38, 34, 0.1)",
           background: "#FFFFFF",
-          color: "#6b6360",
+          color: "#948A80",
           fontSize: 14,
           textAlign: "left",
         }}

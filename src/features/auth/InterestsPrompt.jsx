@@ -36,7 +36,7 @@ export default function InterestsPrompt({ userId, onDone }) {
       }}
     >
       <h3 style={{ fontSize: 16, marginBottom: 4 }}>¿Qué te interesa?</h3>
-      <p style={{ fontSize: 13, color: "#6b6360", marginBottom: 14 }}>
+      <p style={{ fontSize: 13, color: "#948A80", marginBottom: 14 }}>
         Elige uno o más — puedes cambiarlo cuando quieras.
       </p>
 
@@ -62,7 +62,7 @@ export default function InterestsPrompt({ userId, onDone }) {
         </Button>
         <button
           onClick={onDone}
-          style={{ background: "none", border: "none", color: "#6b6360", fontSize: 14 }}
+          style={{ background: "none", border: "none", color: "#948A80", fontSize: 14 }}
         >
           Ahora no
         </button>

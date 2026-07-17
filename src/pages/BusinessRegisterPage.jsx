@@ -81,7 +81,7 @@ export default function BusinessRegisterPage() {
       >
         <div style={{ maxWidth: 380, textAlign: "center" }}>
           <h1 style={{ fontSize: 26, marginBottom: 12 }}>¡Listo, gracias!</h1>
-          <p style={{ color: "#6b6360", marginBottom: 24, lineHeight: 1.5 }}>
+          <p style={{ color: "#948A80", marginBottom: 24, lineHeight: 1.5 }}>
             Tu negocio quedó <strong>en revisión</strong>. Te avisaremos cuando esté aprobado y
             visible para todos en Ahorita.
           </p>
@@ -113,7 +113,7 @@ export default function BusinessRegisterPage() {
       </header>
 
       <main style={{ maxWidth: 560, margin: "0 auto", padding: 24 }}>
-        <p style={{ color: "#6b6360", fontSize: 14, marginBottom: 20 }}>
+        <p style={{ color: "#948A80", fontSize: 14, marginBottom: 20 }}>
           Cuéntanos de tu negocio. Un administrador lo revisará antes de publicarlo en Ahorita.
         </p>
 
@@ -160,7 +160,7 @@ export default function BusinessRegisterPage() {
               />
             </Field>
           </div>
-          <p style={{ fontSize: 12, color: "#6b6360", marginTop: -8 }}>
+          <p style={{ fontSize: 12, color: "#948A80", marginTop: -8 }}>
             Puedes copiar la latitud y longitud desde Google Maps (clic derecho sobre el punto).
           </p>
 
@@ -205,7 +205,7 @@ export default function BusinessRegisterPage() {
               alignItems: "center",
               gap: 8,
               fontSize: 13,
-              color: "#6b6360",
+              color: "#948A80",
               cursor: "pointer",
             }}
           >

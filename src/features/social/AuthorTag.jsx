@@ -13,7 +13,7 @@ export default function AuthorTag({ author }) {
 
   return (
     <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
-      <span style={{ fontSize: 12, color: "#6b6360" }}>
+      <span style={{ fontSize: 12, color: "#948A80" }}>
         {author.username || "Alguien de Ahorita"}
       </span>
       {isAuthenticated && !isMe && (

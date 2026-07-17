@@ -26,6 +26,17 @@ export async function getPlace(id) {
   return data;
 }
 
+export async function searchPlaces(query) {
+  const { data, error } = await supabase
+    .from("places")
+    .select("*")
+    .ilike("name", `%${query}%`)
+    .order("name")
+    .limit(30);
+  if (error) throw error;
+  return data;
+}
+
 export async function createPlace(payload) {
   const { data, error } = await supabase.from("places").insert(payload).select().single();
   if (error) throw error;

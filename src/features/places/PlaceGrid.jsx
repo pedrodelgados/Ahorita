@@ -33,7 +33,7 @@ export default function PlaceGrid({ onSelectPlace }) {
         <ZoneFilter areas={areas} selected={selectedArea} onSelect={setSelectedArea} />
       )}
 
-      {loading && <p style={{ color: "#6b6360", fontSize: 14 }}>Cargando lugares…</p>}
+      {loading && <p style={{ color: "#948A80", fontSize: 14 }}>Cargando lugares…</p>}
 
       {error && (
         <p style={{ color: "#c0392b", fontSize: 14 }}>
@@ -42,7 +42,7 @@ export default function PlaceGrid({ onSelectPlace }) {
       )}
 
       {!loading && !error && places.length === 0 && (
-        <p style={{ color: "#6b6360", fontSize: 14 }}>
+        <p style={{ color: "#948A80", fontSize: 14 }}>
           Todavía no hay lugares cargados con estos filtros.
         </p>
       )}

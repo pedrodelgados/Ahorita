@@ -38,19 +38,19 @@ export default function LoginPage() {
       return;
     }
 
-    navigate(mode === "signup" ? "/bienvenida" : "/explorar");
+    navigate(mode === "signup" ? "/bienvenida" : "/");
   }
 
   function handleGuest() {
     continueAsGuest();
-    navigate("/explorar");
+    navigate("/");
   }
 
   if (confirmEmailSent) {
     return (
       <AuthShell>
         <h1 style={{ fontSize: 28, marginBottom: 12 }}>Revisa tu correo</h1>
-        <p style={{ color: "#6b6360", lineHeight: 1.5 }}>
+        <p style={{ color: "#948A80", lineHeight: 1.5 }}>
           Te enviamos un enlace de confirmación a <strong>{email}</strong>.
           Ábrelo para activar tu cuenta y volver a Ahorita.
         </p>
@@ -61,13 +61,13 @@ export default function LoginPage() {
   return (
     <AuthShell>
       <h1 style={{ fontSize: 32, marginBottom: 4 }}>Ahorita</h1>
-      <p style={{ color: "#6b6360", marginBottom: 28 }}>
+      <p style={{ color: "#948A80", marginBottom: 28 }}>
         Todo lo que pasa en Cuenca, en vivo.
       </p>
 
       <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 12 }}>
         <InputField
-          icon={<Mail size={18} color="#6b6360" />}
+          icon={<Mail size={18} color="#948A80" />}
           type="email"
           placeholder="Correo electrónico"
           value={email}
@@ -75,7 +75,7 @@ export default function LoginPage() {
           required
         />
         <InputField
-          icon={<Lock size={18} color="#6b6360" />}
+          icon={<Lock size={18} color="#948A80" />}
           type="password"
           placeholder="Contraseña"
           value={password}
@@ -207,7 +207,7 @@ function Divider() {
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 12, margin: "24px 0" }}>
       <span style={{ flex: 1, height: 1, background: "rgba(43, 38, 34, 0.1)" }} />
-      <span style={{ fontSize: 13, color: "#6b6360" }}>o continúa con</span>
+      <span style={{ fontSize: 13, color: "#948A80" }}>o continúa con</span>
       <span style={{ flex: 1, height: 1, background: "rgba(43, 38, 34, 0.1)" }} />
     </div>
   );

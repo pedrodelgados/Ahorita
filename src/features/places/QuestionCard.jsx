@@ -86,7 +86,7 @@ export default function QuestionCard({ question, onUpdate }) {
                     gap: 4,
                     background: "none",
                     border: "none",
-                    color: "#6b6360",
+                    color: "#948A80",
                     fontSize: 13,
                     flexShrink: 0,
                   }}
@@ -136,7 +136,7 @@ export default function QuestionCard({ question, onUpdate }) {
         <AuthGate prompt="Inicia sesión para responder">
           <button
             onClick={() => setShowReply(true)}
-            style={{ background: "none", border: "none", color: "#6b6360", fontSize: 13 }}
+            style={{ background: "none", border: "none", color: "#948A80", fontSize: 13 }}
           >
             Responder
           </button>

@@ -43,7 +43,7 @@ export default function GuideChat({ placeId, placeholder, suggestions = [] }) {
               alignItems: "center",
               gap: 6,
               fontSize: 13,
-              color: "#6b6360",
+              color: "#948A80",
               marginBottom: 10,
             }}
           >
@@ -99,7 +99,7 @@ export default function GuideChat({ placeId, placeholder, suggestions = [] }) {
             </div>
           ))}
           {loading && (
-            <p style={{ alignSelf: "flex-start", color: "#6b6360", fontSize: 13 }}>
+            <p style={{ alignSelf: "flex-start", color: "#948A80", fontSize: 13 }}>
               Pensando…
             </p>
           )}

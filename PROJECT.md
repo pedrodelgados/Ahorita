@@ -1,113 +1,106 @@
-# Ahorita — Plan inicial para Claude Code
+# Ahorita (Cuenca Viva) — Prompt maestro
 
-## Visión del producto
+Quiero construir **"Ahorita"** (nombre de trabajo, también evaluamos "Cuenca Viva") — una red social hiperlocal para descubrir Cuenca, Ecuador en tiempo real. No es una guía turística: es una red social donde todo gira alrededor de lugares — preguntas, respuestas, reportes en vivo y contenido curado — con una IA que responde usando datos reales de la app, no genéricos.
 
-**Ahorita** no es una guía turística — es la red social hiperlocal para descubrir lo que pasa en Cuenca, Ecuador, en tiempo real. Todo gira alrededor de lugares, no de un mapa: preguntas, respuestas y reportes en vivo anclados a sitios físicos de la ciudad.
+## Stack técnico
 
-**Frase de posicionamiento:** "Todo lo que pasa en Cuenca, en vivo."
+- Frontend: React + Vite (web app / PWA instalable)
+- Backend: Supabase (Postgres + Auth + Storage + Realtime)
+- IA: API de Claude, llamada desde un endpoint del backend (nunca directo desde el cliente, para no exponer la key)
+- Hosting: Vercel o Netlify
 
-**Audiencia:** turistas y locales por igual.
+## Sistema de diseño — sigue esto exactamente, no uses valores por defecto
 
-**Visión de expansión (no construir todavía, solo tenerlo en mente para no cerrar puertas en el diseño de datos):** mismo motor, activado ciudad por ciudad — cantones cercanos primero (Gualaceo, Chordeleg, Paute, Girón, Sígsig, Cajas), luego ciudades más grandes (Loja, Baños, Quito, Guayaquil).
+**Paleta** (tonos suaves y elegantes, nunca saturados/candy):
+- Fondo: `#FBF8F4` · Tinta principal: `#2B2622` · Tinta suave: `#948A80`
+- Acento primario: `#E8785C` (coral suave)
+- Color por categoría: Gastronomía `#E8785C` · Cultura `#8B7CE0` · Vida nocturna `#E0669A` · Deportes `#4FA383` · Naturaleza `#4FA3A0` · Glamping `#B8875A` · Hoteles `#5B94C9` · Música `#D9A83F` · Familiar `#E0966A` · Pet friendly `#7BAE8C`
 
----
+**Tipografía:** "Fraunces" (serif editorial) para títulos y logo; "Inter" para cuerpo y navegación. Nada de fuentes redondeadas/infantiles.
 
-## Stack técnico recomendado
+**Iconografía:** SIEMPRE íconos vectoriales (Lucide o equivalente). Nunca emojis como íconos de UI, mapa, categorías o navegación — los emojis solo como acento puntual junto a un título, nunca como reemplazo de un ícono funcional.
 
-- **Frontend:** React + Vite (empezar como web app / PWA instalable; app nativa con React Native es una fase posterior)
-- **Backend / base de datos / autenticación / notificaciones push:** Supabase (Postgres + Auth + Storage + Realtime)
-- **IA:** API de Claude (`claude-sonnet-4-6` o el modelo vigente), llamada desde un endpoint propio del backend (no directo desde el cliente, para no exponer la key)
-- **Hosting:** Vercel o Netlify para el frontend; Supabase gestiona el backend
+**Componentes:** esquinas muy redondeadas (16–24px), sombras suaves de bajo contraste, mucho espacio en blanco, círculos de categoría con tinte suave del color (8–15% opacidad) en estado inactivo y relleno sólido solo en estado activo.
 
----
+**Referencia de calidad:** debe sentirse como Apple Maps + Airbnb + Instagram — premium, minimalista, fotografías grandes, nunca recargado. Es el estándar, no una aspiración — trátalo como criterio de aceptación de cada pantalla.
 
-## Sistema de diseño
+## Pantallas y comportamiento esperado
 
-- **Paleta:** fondo claro y cálido (`#FBF8F4`), tinta principal `#2B2622`, acento primario `#E8785C` (coral suave, no saturado)
-- **Color por categoría/canal** — tonos suaves y elegantes, no candy/neón:
-  - Gastronomía `#E8785C` · Cultura `#8B7CE0` · Vida nocturna `#E0669A` · Deportes `#4FA383` · Naturaleza `#4FA3A0` · Glamping `#B8875A` · Hoteles `#5B94C9` · Música `#D9A83F` · Familiar `#E0966A` · Pet friendly `#7BAE8C`
-- **Tipografía:** "Fraunces" (serif editorial, elegante) para títulos y logo; "Inter" para cuerpo de texto y navegación — evitar fuentes redondeadas/infantiles tipo "Baloo"
-- **Iconografía:** siempre íconos vectoriales (Lucide o similar), nunca emojis como íconos de UI — los emojis se ven bien solo como acento puntual (ej. junto a un título), no como reemplazo de íconos de categoría, mapa o navegación
-- **Círculos de categoría:** fondo con tinte suave del color (8-15% opacidad) en estado inactivo, relleno sólido solo en estado activo — no bloques de color sólido por defecto
-- **Estilo de tarjetas:** esquinas muy redondeadas (16–24px), sombra suave y de bajo contraste, mucho espacio en blanco
-- **Referencia de calidad:** debe sentirse como Apple Maps + Airbnb + Instagram — premium, minimalista, fotografías grandes, nunca recargado
+### 1. Onboarding / Auth
+- Pantalla de bienvenida a pantalla completa con foto de Cuenca, texto "Descubre todo lo que pasa en Cuenca", botones: continuar con Google, continuar con Apple (maquetados pero deshabilitados por ahora), continuar con correo, y **"Explorar sin registrarme"** como opción secundaria
+- No obligar a crear cuenta para navegar — pedir registro solo al intentar guardar, comentar, publicar o dar like
+- Registro progresivo: tras el login (correo + contraseña funcional vía Supabase Auth), entra directo a explorar; los datos de perfil (intereses, ciudad, foto) se piden poco a poco, no todo de una vez
+- Pantalla "¿Cómo usarás la app?" con tarjetas: Vivo en Cuenca / Estoy visitando / Tengo un negocio / Organizo eventos — sirve para personalizar el contenido inicial
+- Pantalla de registro de negocio separada (nombre, categoría, dirección, ubicación en mapa, WhatsApp, teléfono, Instagram, horario, foto, descripción), con nota "en revisión antes de publicar"
 
----
+### 2. Inicio — feed vertical estilo Instagram (esto es central, no lo conviertas en cuadrícula)
+- Scroll vertical infinito, un post grande a la vez, cada uno ocupa 80–90% de la pantalla (foto o video)
+- Mezcla orgánica de: eventos, restaurantes, cafeterías, hoteles, glampings, conciertos, museos, naturaleza, preguntas de la comunidad, estados/reportes en vivo — no agrupados por tipo, mezclados como en Instagram
+- Cada post incluye: nombre del lugar/evento, ubicación, fecha/hora si aplica, descripción corta, etiqueta llamativa (NUEVO / GRATIS / IMPERDIBLE / HOY / EVENTO / PROMOCIÓN)
+- Acciones verticales a la derecha del post: ❤️ me gusta, 💬 comentarios, 📤 compartir, 🔖 guardar
+- Botones contextuales abajo del post según tipo: Cómo llegar, Comprar entradas, Ver menú, Más información
+- Encabezado: logo, ícono de notificaciones, ícono de búsqueda
+- Debajo del encabezado, fila horizontal deslizable de categorías con ícono + nombre (Para ti, Eventos, Gastronomía, Cafés, Naturaleza, Hoteles, Cultura, Deportes, Vida nocturna, Más)
+- **Barra de IA fija**, visible mientras se hace scroll (no solo un botón flotante aparte): "✨ Pregúntale a la IA — ¿Qué quieres hacer hoy en Cuenca?"
 
-## Modelo de datos (punto de partida)
+### 3. Explorar — mapa + cuadrícula (pantalla distinta a Inicio)
+- Mapa ocupa ~75% de la pantalla, con ubicación real del usuario (geolocalización del navegador) y pines de colores por categoría (íconos vectoriales, nunca pines genéricos)
+- Barra de filtros horizontal por categoría, tipo píldora
+- Widget de clima flotante
+- Al tocar un lugar: se abre un **Bottom Sheet** (ventana deslizante desde abajo), nunca una pantalla nueva — el mapa siempre permanece visible detrás
+- El Bottom Sheet incluye: foto grande, nombre, categoría, ubicación, calificación, estado (abierto/cerrado/abre en X), distancia y tiempo caminando real (calculado con la ubicación del usuario)
+- Acciones: Cómo llegar (abre Google Maps con ruta real), Pedir Uber (deep link real), Llamar Taxi, Guardar, Compartir, y si aplica: Comprar entradas / Ver menú / Página web / Llamar
+- Sección "Cómo llegar" con tarjetas por modo: caminando, bici, tranvía (con parada más cercana y tarifa real de Cuenca), auto
+- Sección "Transporte disponible": tranvía y bus con línea, parada, próximo horario, costo
+- Sección "Otras opciones": Uber, Taxi Ejecutivo, Taxi Convencional, con tiempos y precios marcados explícitamente como estimados
+- **Botón "✨ Preguntar a la Guía IA" dentro del Bottom Sheet**, contextual a ese lugar específico (ej. "¿qué otro lugar parecido hay cerca?", "hazme una ruta desde aquí") — la IA responde usando el contexto de ese lugar, no un chat genérico aparte
 
-- **users**: id, username, password (hash, vía Supabase Auth — incluir OAuth Google/Apple), avatar_url, usage_mode (vivo_en_cuenca / visitante / negocio / organizador), interests (array), created_at
-- **businesses**: id, owner_id, name, category, address, lat, lng, whatsapp, phone, instagram, website, hours, image_url, description, status (pendiente/aprobado)
-- **places**: id, name, area (zona de la ciudad), channel_default, image_url, lat, lng
+### 4. Comunidad — preguntas, respuestas y estados en tiempo real
+- Preguntas ancladas a un lugar (ej. "¿qué hay hoy por San Blas?"), con respuestas de la comunidad, likes por respuesta, y marca de "respuesta verificada" (solo administradores por ahora)
+- Estados tipo Stories: reportes en vivo por lugar ("hay fila en el cine", "está lloviendo en Cajas"), con foto o video opcional
+- Cada lugar tiene su propio "muro" con historial de preguntas y estados — accesible desde el Bottom Sheet o desde el feed
+
+### 5. IA
+- Endpoint backend que llama a la API de Claude, con el contexto real de preguntas/respuestas/estados/lugares de la base de datos — nunca respuestas genéricas
+- Accesible desde la barra fija en Inicio, y contextualmente desde cada Bottom Sheet de lugar
+
+## Modelo de datos (punto de partida, ajústalo si tiene sentido técnico hacerlo distinto)
+
+- **users**: id, username, password (hash vía Supabase Auth, + OAuth Google/Apple), avatar_url, usage_mode, interests (array), created_at
+- **businesses**: id, owner_id, name, category, address, lat, lng, whatsapp, phone, instagram, website, hours, image_url, description, status
+- **places**: id, name, area, channel_default, image_url, lat, lng
 - **questions**: id, author_id, place_id, channel, text, created_at
-- **answers**: id, question_id, author_id, text, likes_count, verified (bool), created_at
-- **statuses**: id, author_id, place_id, channel, text, media_url, media_type (image/video), created_at
-- **editorial_posts**: id, title, image_url, items (array de texto), published_at
-- **channels**: id, label, emoji, color_hex
+- **answers**: id, question_id, author_id, text, likes_count, verified, created_at
+- **statuses**: id, author_id, place_id, channel, text, media_url, media_type, created_at
+- **editorial_posts**: id, title, image_url, items, published_at
+- **channels**: id, label, color_hex
+
+## Notas de producto a tener presentes
+
+- Arranque en frío: cargar contenido semilla real antes de invitar público; lanzar concentrado en una sola zona (Centro Histórico) en vez de toda Cuenca de golpe
+- Moderación de contenido desde el día 1
+- "Respuesta verificada" solo por administrador por ahora
+
+## Orden de construcción — ve fase por fase, no todo de golpe
+
+**Fase 1:** proyecto Vite + React, sistema de diseño como constantes reutilizables, conexión Supabase (dejo el proyecto sin crear — deja cliente, `.env.example` y esquema SQL listos para cuando yo cree el proyecto en supabase.com), esquema de base de datos, flujo de login/registro con "explorar sin registrarme" y registro progresivo.
+
+**Fase 2:** feed vertical de Inicio estilo Instagram (esto es lo más importante de construir bien — revisa la sección "Inicio" arriba antes de empezar), cuadrícula de Explorar, Bottom Sheet de lugar, crear pregunta/estado con foto o video, responder y dar like.
+
+**Fase 3:** mapa real con geolocalización y pines, "Cómo llegar" con Google Maps y Uber, tranvía/bus, barra de historias/estados en Inicio.
+
+**Fase 4:** endpoint de IA conectado a la API de Claude con contexto real, barra de IA fija en Inicio, botón de IA contextual en el Bottom Sheet.
+
+**Fase 5:** notificaciones push, perfil de usuario, registro de negocios, panel de administración simple, conversión a PWA instalable.
 
 ---
 
-## Funcionalidades — construir en este orden
+## Estado real de la implementación (actualizado por Claude Code)
 
-### Fase 1 — Base
-1. Proyecto Vite + React, estructura de carpetas, sistema de diseño (tokens de color, tipografía) como constantes reutilizables
-2. Conexión a Supabase, esquema de base de datos inicial (tablas de arriba)
-3. Login / registro real con Supabase Auth: correo + contraseña, y OAuth con Google/Apple. Permitir "explorar sin registrarme" — pedir cuenta solo al guardar, comentar, publicar o dar like
-4. Registro progresivo: tras el login, ir directo a explorar; pedir intereses/ciudad/foto de perfil poco a poco, no todo de una vez
+Las Fases 1, 2 (parcial), 3 (parcial), 4 y 5 ya están construidas — ver `README.md` para el detalle completo de qué existe hoy. Diferencias/decisiones tomadas respecto a este prompt maestro, documentadas para no perder contexto:
 
-### Fase 2 — Feed principal
-5. Cuadrícula de lugares tipo Instagram Explore, filtrable por zona
-6. Pantalla de "muro de lugar" (preguntas + estados ordenados por tiempo) — como **Bottom Sheet** deslizable desde abajo, no pantalla nueva, manteniendo el mapa/feed visible detrás
-7. Crear pregunta / crear estado (reporte en vivo), con opción de subir foto o video (Supabase Storage)
-8. Responder preguntas, dar like a respuestas
-
-### Fase 3 — Vivo y editorial
-8. Barra de "stories" con anillos de color por canal, mostrando estados recientes
-9. Tarjeta editorial curada ("Este fin de semana")
-10. Filtro por canal/categoría
-
-### Fase 4 — IA
-11. Endpoint backend que llama a la API de Claude, pasando como contexto las preguntas/respuestas/estados reales de la base de datos
-12. Chat de "guía IA" en el frontend, accesible desde una barra fija visible mientras se hace scroll (no solo un botón flotante)
-13. IA contextual dentro de cada ficha de lugar (Bottom Sheet): botón "Preguntar a la Guía IA" que responde usando el contexto de ese lugar específico (lugares similares cercanos, ruta sugerida, etc.)
-
-### Fase 5 — Pulido y lanzamiento
-14. Notificaciones push (Supabase Realtime + Web Push, o Firebase Cloud Messaging si se pasa a app nativa después)
-15. Perfil de usuario (historial, lugares guardados, seguir personas)
-16. Pantalla de registro de negocios (nombre, categoría, dirección, ubicación en mapa, contacto, horario, foto, descripción) con estado "en revisión" antes de publicar
-17. Panel de administración simple para moderar contenido y cargar lugares/eventos sin tocar código
-18. Convertir a PWA instalable (manifest, service worker)
-
----
-
-## Mejoras de UX incorporadas (de la revisión de prompts de diseño)
-
-- **Bottom Sheet en vez de pantalla completa**: al tocar un lugar en el mapa/explorar, la información aparece en una ventana deslizante desde abajo (estilo Apple Maps), no navega a una pantalla nueva. El mapa permanece siempre visible detrás.
-- **Barra de IA fija debajo del encabezado**, visible mientras se hace scroll por el feed — no solo un botón flotante aparte.
-- **"Preguntar a la Guía IA" dentro de la ficha de cada lugar** (no solo como chat genérico): ej. "¿qué otro lugar parecido hay cerca?", "hazme una ruta desde aquí". La IA responde usando el contexto de ese lugar específico.
-- **Explorar sin registrarme**: permitir navegar la app sin cuenta; pedir registro solo cuando el usuario intenta guardar, comentar, publicar o dar like. Reduce fricción inicial y ayuda con el arranque en frío.
-- **Registro progresivo**: entrar con Google/Apple/correo y pasar directo a explorar; pedir datos adicionales (intereses, ciudad, foto) poco a poco conforme el usuario usa funciones, no todo de una vez.
-- **Pantalla de registro de negocios separada** (nombre, categoría, dirección, ubicación en mapa, WhatsApp, teléfono, Instagram, horario, foto, descripción) con nota de "en revisión antes de publicar" — clave para el modelo de listados destacados.
-- **Pantalla "¿Cómo usarás la app?"** con tarjetas (Vivo en Cuenca / Estoy visitando / Tengo un negocio / Organizo eventos) en vez de un simple selector turista/local — personaliza el contenido inicial.
-
----
-
-
-- **Arranque en frío:** la app se siente "muerta" si no hay actividad. Antes de invitar público, cargar contenido semilla real (preguntas, estados, lugares) para la zona de lanzamiento.
-- **Lanzar concentrado**, no toda Cuenca de golpe — empezar en una sola zona (ej. Centro Histórico) para que se sienta viva más rápido.
-- **Moderación** desde el día 1 — preguntas/respuestas/fotos abiertas son vector de spam.
-- **"Respuesta verificada"**: por ahora, que solo el usuario administrador pueda marcarla (campo `verified` en la tabla `answers`), hasta definir un sistema de reputación comunitario más adelante.
-
----
-
-## Prompt para pegar en Claude Code (primer mensaje)
-
-```
-Quiero construir "Ahorita" (nombre de trabajo, también evaluamos "Cuenca Viva") — una red social hiperlocal para descubrir Cuenca, Ecuador en tiempo real. Toda la información de producto, diseño, modelo de datos y mejoras de UX está en el archivo ahorita-plan-claude-code.md que voy a subir a este repositorio.
-
-Empecemos por la Fase 1: configura el proyecto (Vite + React), define el sistema de diseño como constantes reutilizables (colores, tipografía Fraunces + Inter), conecta Supabase, crea el esquema de base de datos según el modelo de datos del documento, y construye el flujo de login/registro con Supabase Auth (correo + contraseña, con opción de "explorar sin registrarme").
-
-Ve paso a paso, pregúntame cuando necesites una decisión de producto, y avísame cuando cada parte esté lista para probar.
-```
-
-**Recomendación:** sube este mismo archivo `.md` al repositorio de GitHub (en la raíz, como `PROJECT.md` o similar) antes de pegar el prompt — así Claude Code tiene el documento completo como referencia permanente del proyecto, en vez de depender de que quede solo en el mensaje inicial.
+- **"Explorar" ya construido** (mapa + cuadrícula) corresponde a lo que este documento describe como Fase 3/pantalla 3. Falta agregar a esa pantalla: mapa real con geolocalización y pines, widget de clima, Uber, tranvía/bus, tiempo caminando real.
+- **"Inicio" (feed vertical estilo Instagram) es nuevo** — no existía antes de este prompt. Es la pieza central pendiente de construir.
+- **Mapa:** se usa Leaflet + OpenStreetMap (gratis, sin API key) en vez de Google Maps/Mapbox, para no depender de una cuenta/token que el usuario tendría que crear. "Cómo llegar" sigue abriendo Google Maps vía deep link (no requiere API key).
+- **Clima:** por ahora widget visual sin datos reales (requeriría una cuenta de OpenWeatherMap u similar); se deja preparado para conectar una API real cuando el usuario decida cuál usar.
+- **Tranvía/bus:** no existe una API pública de tiempo real para el tranvía/buses de Cuenca; se muestra información estática (parada más cercana, tarifa) en vez de "próximo horario" en vivo, para no inventar datos.

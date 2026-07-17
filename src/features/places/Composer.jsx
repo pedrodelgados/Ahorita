@@ -111,7 +111,7 @@ export default function Composer({ place, onCreated }) {
             alignItems: "center",
             gap: 8,
             fontSize: 13,
-            color: "#6b6360",
+            color: "#948A80",
             marginBottom: 10,
             cursor: "pointer",
           }}
@@ -134,7 +134,7 @@ export default function Composer({ place, onCreated }) {
         <button
           type="button"
           onClick={reset}
-          style={{ background: "none", border: "none", color: "#6b6360", fontSize: 14 }}
+          style={{ background: "none", border: "none", color: "#948A80", fontSize: 14 }}
         >
           Cancelar
         </button>
