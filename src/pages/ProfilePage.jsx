@@ -11,6 +11,7 @@ import Card from "../components/ui/Card";
 import CategoryChip from "../components/ui/CategoryChip";
 import PlaceCard from "../features/places/PlaceCard";
 import PlaceSheet from "../features/places/PlaceSheet";
+import PushToggle from "../features/notifications/PushToggle";
 
 export default function ProfilePage() {
   const { user, signOut } = useAuth();
@@ -153,6 +154,8 @@ export default function ProfilePage() {
               Panel de administración
             </Link>
           )}
+
+          <PushToggle userId={user.id} />
         </Card>
 
         <h2 style={{ fontSize: 16, marginBottom: 12 }}>Lugares guardados</h2>

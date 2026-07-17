@@ -3,6 +3,7 @@ import { Heart, Send } from "lucide-react";
 import { useAuth } from "../../contexts/AuthContext";
 import { createAnswer, likeAnswer } from "../../lib/questions";
 import { formatRelativeTime } from "../../lib/time";
+import { sendPush } from "../../lib/push";
 import AuthGate from "../../components/ui/AuthGate";
 import AuthorTag from "../social/AuthorTag";
 
@@ -23,6 +24,15 @@ export default function QuestionCard({ question, onUpdate }) {
     onUpdate({ ...question, answers: [...answers, answer] });
     setReplyText("");
     setShowReply(false);
+
+    if (question.author?.id && question.author.id !== user.id) {
+      sendPush({
+        userId: question.author.id,
+        title: "Nueva respuesta a tu pregunta en Ahorita",
+        body: answer.text,
+        url: "/",
+      });
+    }
   }
 
   async function handleLike(answer) {

@@ -25,6 +25,25 @@ supabase functions deploy ai-guide
 
 La función usa `claude-sonnet-5`. Recibe `{ messages, placeId? }`: sin `placeId` arma contexto de toda la ciudad (lugares + tarjeta editorial); con `placeId` arma contexto de ese lugar específico (preguntas, respuestas, estados recientes y lugares cercanos en la misma zona).
 
+## Notificaciones push (Edge Function)
+
+Genera tu propio par de claves VAPID (no requiere cuenta externa, es criptografía local):
+
+```bash
+npx web-push generate-vapid-keys
+```
+
+Pega la **Public Key** en `VITE_VAPID_PUBLIC_KEY` (`.env` del frontend) y configura ambas claves como secrets de la función:
+
+```bash
+supabase secrets set VAPID_PUBLIC_KEY=tu-public-key
+supabase secrets set VAPID_PRIVATE_KEY=tu-private-key
+supabase secrets set VAPID_SUBJECT=mailto:tu-correo@ejemplo.com
+supabase functions deploy send-push
+```
+
+`send-push` recibe `{ userId, title, body?, url? }` y le manda la notificación a todas las suscripciones guardadas de ese usuario (tabla `push_subscriptions`). Por ahora se dispara desde el cliente cuando alguien responde una pregunta — para producción, lo más robusto es moverlo a un [Database Webhook](https://supabase.com/docs/guides/database/webhooks) que llame a la función directamente al insertar en `answers`, en vez de depender del cliente.
+
 ## Notas sobre el esquema
 
 - `profiles` extiende `auth.users` (Supabase Auth ya maneja email/contraseña y OAuth). Un trigger crea el perfil automáticamente al registrarse.
@@ -39,6 +58,7 @@ La función usa `claude-sonnet-5`. Recibe `{ messages, placeId? }`: sin `placeId
 - `0006_author_profile_relations.sql` reapunta los FK de autor de `questions`/`answers`/`statuses` a `profiles` en vez de `auth.users`, para poder mostrar el nombre de usuario y el botón de "seguir".
 - `0007_feed_and_likes.sql` agrega `places.tag/hours/website/tickets_url/menu_url/description` (para las tarjetas del feed de Inicio) y `post_likes` (like genérico para cualquier tipo de contenido, con la vista `post_like_counts` para el conteo agregado).
 - `0008_seed_tags.sql` etiqueta algunos lugares semilla (`imperdible`, `gratis`, `hoy`) para que el feed de Inicio no se vea plano en el arranque en frío.
+- `0009_push_subscriptions.sql` agrega `push_subscriptions` (una fila por dispositivo suscrito a notificaciones push).
 
 ## Convertir tu cuenta en administradora
 
