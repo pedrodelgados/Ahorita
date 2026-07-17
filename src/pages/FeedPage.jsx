@@ -5,6 +5,7 @@ import { useAuth } from "../contexts/AuthContext";
 import { getFeed } from "../lib/feed";
 import { getProfile } from "../lib/profile";
 import { listMyLikedIds, likeTarget, unlikeTarget } from "../lib/postLikes";
+import { withViewTransition } from "../lib/viewTransition";
 import { COLORS, textStyle, TYPE } from "../styles/theme";
 import AppHeader from "../components/layout/AppHeader";
 import EmptyState from "../components/ui/EmptyState";
@@ -141,13 +142,17 @@ export default function FeedPage() {
             item={item}
             liked={likeState[item.id]?.liked ?? false}
             likeCount={likeState[item.id]?.count ?? 0}
+            isOpen={selectedEventId === item.eventId}
             onToggleLike={() => toggleLike(item)}
-            onOpenEvent={setSelectedEventId}
+            onOpenEvent={(id) => withViewTransition(() => setSelectedEventId(id))}
           />
         ))}
       </main>
 
-      <EventSheet eventId={selectedEventId} onClose={() => setSelectedEventId(null)} />
+      <EventSheet
+        eventId={selectedEventId}
+        onClose={() => withViewTransition(() => setSelectedEventId(null))}
+      />
     </div>
   );
 }

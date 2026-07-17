@@ -54,9 +54,13 @@ export default function MapView({ onSelectPlace }) {
         style={{ height: "70svh", width: "100%" }}
         zoomControl={false}
       >
+        {/* CARTO Positron: base muteada y elegante (gratis, sin API key) en vez
+            del estilo saturado por defecto de OpenStreetMap — más cerca de
+            Apple Maps, para que el mapa acompañe al contenido sin competir. */}
         <TileLayer
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>'
+          url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
+          subdomains="abcd"
         />
         {position && <Marker position={[position.lat, position.lng]} icon={userIcon()} />}
         {places

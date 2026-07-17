@@ -103,3 +103,18 @@ a {
     animation: none;
   }
 }
+
+/* Continuidad feed → detalle (ver src/lib/viewTransition.js). Suaviza el
+   cross-fade por defecto del navegador para que se sienta rápido y natural,
+   no genérico. Los navegadores sin soporte ignoran estas reglas sin error. */
+@media (prefers-reduced-motion: no-preference) {
+  ::view-transition-group(*) {
+    animation-duration: 320ms;
+    animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  ::view-transition-old(root),
+  ::view-transition-new(root) {
+    animation-duration: 200ms;
+  }
+}

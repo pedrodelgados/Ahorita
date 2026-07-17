@@ -7,6 +7,7 @@ import { CHANNELS, COLORS } from "../../styles/theme";
 import { formatEventDateTime, formatRelativeTime } from "../../lib/time";
 import BottomSheet from "../../components/layout/BottomSheet";
 import AuthGate from "../../components/ui/AuthGate";
+import ImageWithFallback from "../../components/ui/ImageWithFallback";
 import AuthorTag from "../social/AuthorTag";
 import DirectionsSection from "../places/DirectionsSection";
 
@@ -45,15 +46,20 @@ export default function EventSheet({ eventId, onClose }) {
     <BottomSheet open={!!eventId} onClose={onClose}>
       {event && (
         <div>
-          <img
+          <ImageWithFallback
             src={event.image_url}
             alt=""
+            iconSize={26}
             style={{
               width: "100%",
-              height: 180,
+              height: 220,
               objectFit: "cover",
               borderRadius: "var(--radius-card)",
               marginBottom: 14,
+              // Mismo nombre que la tarjeta del feed (FeedCard) — permite que
+              // la View Transitions API anime una imagen "expandiéndose"
+              // hacia el detalle en vez de mostrar un panel nuevo encima.
+              viewTransitionName: `ahorita-event-${event.id}`,
             }}
           />
 

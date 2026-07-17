@@ -2,22 +2,35 @@ import { useState } from "react";
 import { useAuth } from "../../contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { useSavedEvents } from "../../contexts/SavedEventsContext";
-import { CHANNEL_COLORS, COLORS, textStyle, TYPE } from "../../styles/theme";
+import { CHANNEL_COLORS, CHANNELS, COLORS, textStyle, TYPE } from "../../styles/theme";
 import { googleMapsDirectionsUrl } from "../../lib/directions";
 import { formatEventDateTime } from "../../lib/time";
 import ImageWithFallback from "../../components/ui/ImageWithFallback";
 import LocationMetadata from "../../components/ui/LocationMetadata";
 import SocialActions from "./SocialActions";
 
-export default function FeedCard({ item, liked, likeCount, onToggleLike, onOpenEvent }) {
+// Ritmo editorial: cada variante define cuánto "aire" y peso tipográfico
+// recibe la tarjeta. Ver getCardVariant en lib/feed.js — la variante viene
+// siempre de datos reales (posición/etiqueta/medio), nunca inventada aquí.
+const VARIANT_STYLES = {
+  portada: { height: "88svh", title: TYPE.cardTitlePortada, kicker: true, description: false, actionsBottom: 150 },
+  destacado: { height: "82svh", title: TYPE.cardTitleFeatured, kicker: true, description: true, actionsBottom: 140, ring: true },
+  historia: { height: "82svh", title: TYPE.cardTitle, kicker: false, description: false, actionsBottom: 140 },
+  rapida: { height: "54svh", title: TYPE.cardTitleCompact, kicker: false, description: false, actionsBottom: 96 },
+  normal: { height: "74svh", title: TYPE.cardTitle, kicker: false, description: true, actionsBottom: 140 },
+};
+
+export default function FeedCard({ item, liked, likeCount, isOpen, onToggleLike, onOpenEvent }) {
   const { isAuthenticated } = useAuth();
   const navigate = useNavigate();
   const { savedIds, toggleSave } = useSavedEvents();
   const [videoFailed, setVideoFailed] = useState(false);
   const channelColor = CHANNEL_COLORS[item.channel] ?? COLORS.accent;
+  const channelLabel = CHANNELS.find((c) => c.id === item.channel)?.label;
   const isSaved = savedIds.has(item.eventId);
   const isPaid = item.price != null && Number(item.price) > 0;
   const isVideo = item.mediaType === "video" && item.mediaUrl && !videoFailed;
+  const v = VARIANT_STYLES[item.variant] ?? VARIANT_STYLES.normal;
 
   function requireAuth(action) {
     if (!isAuthenticated) {
@@ -48,13 +61,14 @@ export default function FeedCard({ item, liked, likeCount, onToggleLike, onOpenE
     <section
       style={{
         position: "relative",
-        height: "82svh",
+        height: v.height,
         borderRadius: "var(--radius-card)",
         overflow: "hidden",
         marginBottom: 16,
         background: "#1c1a18",
         scrollSnapAlign: "start",
         flexShrink: 0,
+        boxShadow: v.ring ? `inset 0 0 0 2px ${channelColor}` : "none",
       }}
     >
       {isVideo ? (
@@ -72,7 +86,18 @@ export default function FeedCard({ item, liked, likeCount, onToggleLike, onOpenE
           src={item.image}
           alt={item.title}
           iconSize={32}
-          style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }}
+          style={{
+            position: "absolute",
+            inset: 0,
+            width: "100%",
+            height: "100%",
+            objectFit: "cover",
+            // Nombre de transición compartido: solo lo conserva la tarjeta
+            // mientras su ficha NO está abierta, para que al abrirse el
+            // EventSheet (mismo nombre) el navegador anime una sola imagen
+            // "expandiéndose" en vez de mostrar dos elementos a la vez.
+            viewTransitionName: isOpen ? "none" : `ahorita-event-${item.eventId}`,
+          }}
         />
       )}
 
@@ -107,6 +132,7 @@ export default function FeedCard({ item, liked, likeCount, onToggleLike, onOpenE
         likeCount={likeCount}
         commentCount={item.commentsCount}
         saved={isSaved}
+        bottom={v.actionsBottom}
         onToggleLike={() => requireAuth(onToggleLike)}
         onOpenComments={() => onOpenEvent(item.eventId)}
         onShare={handleShare}
@@ -120,8 +146,13 @@ export default function FeedCard({ item, liked, likeCount, onToggleLike, onOpenE
           meta={formatEventDateTime(item.startAt)}
           style={{ marginBottom: 6 }}
         />
-        <h2 style={textStyle(TYPE.h1, { color: "#FFFFFF", marginBottom: 6 })}>{item.title}</h2>
-        {item.description && (
+        {v.kicker && channelLabel && (
+          <p style={textStyle(TYPE.kicker, { color: "#FFFFFF", opacity: 0.85, margin: "0 0 2px" })}>
+            {channelLabel}
+          </p>
+        )}
+        <h2 style={textStyle(v.title, { color: "#FFFFFF", marginBottom: 6 })}>{item.title}</h2>
+        {v.description && item.description && (
           <p
             style={textStyle(TYPE.bodySmall, {
               color: "#FFFFFF",

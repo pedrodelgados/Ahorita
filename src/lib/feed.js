@@ -8,18 +8,37 @@ const TAG_LABELS = {
   promocion: "PROMOCIÓN",
 };
 
+// Ritmo editorial del feed: no todas las publicaciones tienen la misma
+// jerarquía visual (ver PROJECT.md, "Rediseño visual premium"). La variante
+// se deriva siempre de datos reales — posición en el orden ya definido por
+// proximidad en el tiempo, etiqueta del evento, o tipo de medio — nunca de
+// datos inventados.
+//   portada  → el evento más próximo en el tiempo, tratamiento de portada
+//   destacado → marcado como "imperdible" por un admin
+//   historia  → tiene video propio, se deja respirar sin texto de más
+//   rapida    → gratis u hoy, recomendación rápida y compacta
+//   normal    → todo lo demás
+function getCardVariant(event, index) {
+  if (index === 0) return "portada";
+  if (event.tag === "imperdible") return "destacado";
+  if (event.video_url) return "historia";
+  if (event.tag === "hoy" || event.tag === "gratis") return "rapida";
+  return "normal";
+}
+
 // Inicio es un feed exclusivamente de eventos (festivales, conciertos,
 // ferias, funciones, carreras...) — no de lugares fijos. Ver PROJECT.md.
 export async function getFeed({ channel } = {}) {
   const events = await listUpcomingEvents({ channel });
 
-  return events.map((event) => ({
+  return events.map((event, index) => ({
     id: `event-${event.id}`,
     type: "event",
     targetType: "event",
     targetId: event.id,
     eventId: event.id,
     channel: event.category,
+    variant: getCardVariant(event, index),
     image: event.image_url,
     mediaType: event.video_url ? "video" : "image",
     mediaUrl: event.video_url || event.image_url,

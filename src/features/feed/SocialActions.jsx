@@ -9,6 +9,7 @@ export default function SocialActions({
   likeCount,
   commentCount,
   saved,
+  bottom = 140,
   onToggleLike,
   onOpenComments,
   onShare,
@@ -28,7 +29,7 @@ export default function SocialActions({
       style={{
         position: "absolute",
         right: 12,
-        bottom: 140,
+        bottom,
         display: "flex",
         flexDirection: "column",
         alignItems: "center",

@@ -22,7 +22,7 @@ export const SPACE = { xxs: 4, xs: 8, sm: 12, md: 16, lg: 20, xl: 24, xxl: 32, x
 
 // Escala tipográfica nombrada. `font` referencia FONTS.display/body de abajo.
 export const TYPE = {
-  display: { fontSize: 30, fontWeight: 600, lineHeight: 1.15, font: "display" },
+  display: { fontSize: 34, fontWeight: 600, lineHeight: 1.1, font: "display" },
   h1: { fontSize: 22, fontWeight: 600, lineHeight: 1.25, font: "display" },
   h2: { fontSize: 19, fontWeight: 600, lineHeight: 1.3, font: "display" },
   h3: { fontSize: 16, fontWeight: 600, lineHeight: 1.35, font: "body" },
@@ -31,6 +31,16 @@ export const TYPE = {
   label: { fontSize: 12, fontWeight: 700, lineHeight: 1.2, font: "body", letterSpacing: 0.3 },
   metadata: { fontSize: 12.5, fontWeight: 500, lineHeight: 1.3, font: "body" },
   button: { fontSize: 15, fontWeight: 600, lineHeight: 1.2, font: "body" },
+
+  // Escala editorial de titulares de tarjeta — una por variante de ritmo
+  // del feed (ver getCardVariant en lib/feed.js). Deliberadamente separada
+  // de h1/h2 para no afectar títulos de otras pantallas (perfil, admin...).
+  cardTitleCompact: { fontSize: 18, fontWeight: 600, lineHeight: 1.2, font: "display" },
+  cardTitle: { fontSize: 23, fontWeight: 600, lineHeight: 1.15, font: "display" },
+  cardTitleFeatured: { fontSize: 28, fontWeight: 600, lineHeight: 1.1, font: "display" },
+  cardTitlePortada: { fontSize: 38, fontWeight: 600, lineHeight: 1.04, font: "display" },
+  // Antetítulo editorial (dek de revista): itálica, sobre la foto, antes del título.
+  kicker: { fontSize: 13.5, fontWeight: 500, lineHeight: 1.3, font: "display", fontStyle: "italic" },
 };
 
 export const CHANNELS = [
