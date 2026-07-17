@@ -96,10 +96,28 @@ a {
   animation: ahorita-like-pop 0.35s cubic-bezier(0.17, 0.89, 0.32, 1.49);
 }
 
+/* Respiración muy sutil — la Guía IA (ver GuideCapsule.jsx) nunca debe
+   sentirse estática, pero el movimiento debe ser casi imperceptible:
+   solo un cambio de opacidad, nunca escala ni rebote. */
+@keyframes ahorita-breathe {
+  0%,
+  100% {
+    opacity: 0.55;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+.ahorita-breathe {
+  animation: ahorita-breathe 2.6s ease-in-out infinite;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .ahorita-sheet,
   .ahorita-skeleton,
-  .ahorita-like-pop {
+  .ahorita-like-pop,
+  .ahorita-breathe {
     animation: none;
   }
 }

@@ -2,7 +2,7 @@ import { X } from "lucide-react";
 
 // Hoja deslizable desde abajo (estilo Apple Maps): el contenido detrás
 // (mapa/cuadrícula) permanece visible y montado.
-export default function BottomSheet({ open, onClose, children }) {
+export default function BottomSheet({ open, onClose, children, panelStyle }) {
   if (!open) return null;
 
   return (
@@ -25,6 +25,7 @@ export default function BottomSheet({ open, onClose, children }) {
           borderTopRightRadius: 24,
           boxShadow: "var(--shadow-sheet)",
           padding: "12px 20px 28px",
+          ...panelStyle,
         }}
       >
         <div

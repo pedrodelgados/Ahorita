@@ -11,8 +11,9 @@ import AppHeader from "../components/layout/AppHeader";
 import EmptyState from "../components/ui/EmptyState";
 import { FeedCardSkeleton } from "../components/ui/LoadingSkeleton";
 import CategoryPillsRow from "../features/feed/CategoryPillsRow";
+import EditorialShelf from "../features/feed/EditorialShelf";
 import FeedCard from "../features/feed/FeedCard";
-import GuideBar from "../features/ai/GuideBar";
+import GuideCapsule from "../features/ai/GuideCapsule";
 import EventSheet from "../features/events/EventSheet";
 import InterestsPrompt from "../features/auth/InterestsPrompt";
 
@@ -100,7 +101,7 @@ export default function FeedPage() {
           <CategoryPillsRow selected={channel} onSelect={setChannel} />
         </div>
         <div style={{ padding: "0 16px 12px" }}>
-          <GuideBar />
+          <GuideCapsule context="inicio" />
         </div>
       </AppHeader>
 
@@ -136,17 +137,25 @@ export default function FeedPage() {
             description="No hay eventos próximos en esta categoría por ahora. Prueba con otra o vuelve pronto."
           />
         )}
-        {items.map((item) => (
-          <FeedCard
-            key={item.id}
-            item={item}
-            liked={likeState[item.id]?.liked ?? false}
-            likeCount={likeState[item.id]?.count ?? 0}
-            isOpen={selectedEventId === item.eventId}
-            onToggleLike={() => toggleLike(item)}
-            onOpenEvent={(id) => withViewTransition(() => setSelectedEventId(id))}
-          />
-        ))}
+        {/* item.kind permite intercalar bloques editoriales (Selección del
+            editor, rutas temáticas...) en el ritmo del feed más adelante —
+            el sistema visual ya está preparado, pero getFeed() hoy solo
+            produce eventos, así que este despacho no cambia nada todavía. */}
+        {items.map((item) =>
+          item.kind === "editorial-shelf" ? (
+            <EditorialShelf key={item.id} title={item.title} subtitle={item.subtitle} items={item.items} />
+          ) : (
+            <FeedCard
+              key={item.id}
+              item={item}
+              liked={likeState[item.id]?.liked ?? false}
+              likeCount={likeState[item.id]?.count ?? 0}
+              isOpen={selectedEventId === item.eventId}
+              onToggleLike={() => toggleLike(item)}
+              onOpenEvent={(id) => withViewTransition(() => setSelectedEventId(id))}
+            />
+          )
+        )}
       </main>
 
       <EventSheet

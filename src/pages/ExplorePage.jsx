@@ -4,6 +4,7 @@ import { COLORS } from "../styles/theme";
 import PlaceGrid from "../features/places/PlaceGrid";
 import PlaceSheet from "../features/places/PlaceSheet";
 import MapView from "../features/explore/MapView";
+import GuideCapsule from "../features/ai/GuideCapsule";
 
 export default function ExplorePage() {
   const [view, setView] = useState("map");
@@ -23,6 +24,10 @@ export default function ExplorePage() {
         <h1 style={{ fontSize: 22 }}>Explorar</h1>
         <ViewToggle view={view} onChange={setView} />
       </header>
+
+      <div style={{ padding: "10px 16px 0" }}>
+        <GuideCapsule context="explorar" />
+      </div>
 
       {view === "map" ? (
         <MapView onSelectPlace={setSelectedPlace} />
