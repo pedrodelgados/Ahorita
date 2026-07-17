@@ -1,6 +1,6 @@
 # Ahorita
 
-Red social hiperlocal para descubrir lo que pasa en Cuenca, Ecuador, en tiempo real. Ver `PROJECT.md` para el plan de producto completo.
+Red social hiperlocal para descubrir lo que pasa en Cuenca, Ecuador, en tiempo real. Ver `PROJECT.md` para el plan de producto completo, `ROADMAP.md` para qué fase sigue, y `CHANGELOG.md` para el registro de cambios.
 
 ## Stack
 

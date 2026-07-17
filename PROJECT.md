@@ -242,6 +242,41 @@ El hueco señalado en la nota anterior —solo se podía *crear* eventos, no edi
 
 Fuera de alcance de esta fase, explícitamente: negocios verificados, publicaciones de usuarios, Reels, carruseles sociales, monetización, Azu Taxi, nueva IA, nuevos bloques editoriales. Tampoco se agregó "galería" (múltiples fotos por evento/lugar) — no estaba en la lista de 20 puntos de esta fase.
 
+## ✅ FASE CERRADA — Administración de eventos y lugares (aprobada, terminada)
+
+**Estado: cerrada y aprobada por el usuario el 2026-07-17. No se le seguirán agregando mejoras en esta etapa.** Checkpoint estable en Git: tag `checkpoint-admin-eventos-lugares` (ver el final de esta sección). La siguiente fase (sistema social) tiene su propio bloque en `ROADMAP.md` y no empieza hasta que el usuario entregue arquitectura y requisitos definitivos.
+
+### Funcionalidades completas
+
+- **Eventos** (`/admin/eventos`): listar, buscar por título, filtrar por categoría/estado, crear, editar, duplicar, ocultar/publicar (un clic), eliminar (con confirmación). Editable: título, descripción, categoría, etiqueta, foto (subir/reemplazar/eliminar → cae en el fallback de categoría), ubicación (buscar dirección, tocar el mapa, o coordenadas avanzadas), fecha de inicio/fin, gratis o pagado + precio, enlace de entradas, organizador, estado (borrador/publicado/oculto/finalizado/cancelado), "Selección del editor", fecha de publicación programada, fecha de expiración.
+- **Lugares** (`/admin/lugares`): mismo patrón (listar/buscar/filtrar/crear/editar/duplicar/ocultar/eliminar). Editable: nombre, descripción, zona, categoría, etiqueta, foto, ubicación (mismo selector), horario, sitio web, enlace de entradas/menú (opcionales), estado (borrador/publicado/oculto).
+- Vista previa real (`FeedCard`/`PlaceCard`) con el estado en vivo del formulario, no una maqueta.
+- Estados de guardado (sin guardar / guardando / guardado / error) y confirmación antes de salir con cambios sin guardar.
+- Menú de acciones (⋮) por elemento, con metadatos de estado, última actualización y autor cuando existe.
+- Todas las imágenes y datos vienen de la base de datos — nada incrustado en los componentes visuales; los fallbacks locales (`CategoryFallback`, `public/demo-photos/`) son respaldo, no contenido definitivo.
+
+### Limitaciones actuales (conocidas, no bloqueantes)
+
+- **Sin galería multi-foto**: cada evento/lugar tiene una sola imagen principal (`image_url`) — no hay carrusel de fotos por elemento.
+- **Sin historial/auditoría**: se sabe *cuándo* se actualizó algo por última vez (`updated_at`) y opcionalmente *quién lo creó* (`created_by`), pero no hay un log de *qué* cambió ni versiones anteriores para revertir.
+- **Eliminar es permanente**: no hay papelera ni forma de recuperar un evento/lugar eliminado — por eso pide confirmación explícita.
+- **Sin acciones masivas**: cada duplicar/ocultar/eliminar es por elemento, uno a la vez — no hay selección múltiple.
+- **Sin paginación** en los listados de `/admin` — funciona bien con el volumen actual (semilla + pruebas), pero no se ha probado a escala con cientos de filas.
+- **Búsqueda de ubicación depende de un servicio externo gratuito** (Nominatim/OpenStreetMap) sin SLA — puede ser lenta o fallar puntualmente; el clic directo en el mapa siempre queda como alternativa que no depende de red externa.
+- **Sin pruebas automatizadas**: la verificación de esta fase fue manual (build, lint, y un flujo E2E puntual con Playwright + Supabase mockeado durante el desarrollo) — no quedaron tests en el repositorio.
+
+### Qué datos son reales, cuáles de prueba, y cuáles fallback
+
+- **Reales**: los nombres, zonas y coordenadas de los lugares y eventos semilla corresponden a sitios reales de Cuenca (Catedral de la Inmaculada, Parque Calderón, Museo Pumapungo, Barranco del Tomebamba, etc. — `0003_seed_places.sql`, `0012_seed_events.sql`). El esquema, las políticas RLS y la lógica de estados/visibilidad son reales y funcionan contra cualquier dato que un admin real cargue.
+- **De prueba / placeholder, pendiente de reemplazo antes de lanzar**: las fotos de los 10 lugares semilla usan `picsum.photos` (imágenes aleatorias, no fotos reales del lugar — señalado también en `supabase/README.md`); los enlaces de entradas de los eventos semilla (`https://example.com/...`) y algunos precios son ficticios, puestos solo para probar el flujo de "gratis vs. pagado".
+- **Fallback intencional (no es un placeholder temporal, es diseño permanente)**: cuando un evento/lugar no tiene foto real y coherente, `ImageWithFallback` muestra `CategoryFallback` — un degradado con el color e ícono de su categoría — en vez de forzar una imagen que no corresponde. Hoy eso incluye 2 de los 5 eventos semilla (los que no tienen foto local en `public/demo-photos/`), a propósito. Las 5 fotos en `public/demo-photos/` sí son reales y con licencia verificada, pero solo se usan donde son semánticamente coherentes (gastronomía, naturaleza) — el resto de categorías simplemente no tiene aún foto real asignada.
+
+### Checkpoint estable
+
+Tag de Git `checkpoint-admin-eventos-lugares` en el commit que cierra esta fase — usar `git checkout checkpoint-admin-eventos-lugares` para volver exactamente a este estado si una fase futura necesita revertirse.
+
+---
+
 ## Cierre de la fase administrativa: ajustes finales (implementado)
 
 Siete ajustes puntuales para cerrar correctamente la administración de eventos y lugares antes de pasar a publicaciones sociales. Ver `CHANGELOG.md` para el detalle técnico de cada archivo tocado.
