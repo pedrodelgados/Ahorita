@@ -12,7 +12,7 @@ Relación con los demás documentos: `ARCHITECTURE.md` responde *qué es Ahorita
 
 ## Decisiones estratégicas ya cerradas por el Product Owner (registro)
 
-Estas once decisiones fueron aprobadas antes de autorizar el inicio de la Fase 1 y ya están incorporadas en el detalle de cada fase más abajo. Se listan aquí también de forma compacta para que cualquier persona del equipo pueda verificarlas de un vistazo sin tener que leer las 13 fases completas:
+Estas dieciséis decisiones fueron aprobadas antes de autorizar la implementación de la Fase 1 y ya están incorporadas en el detalle de cada fase más abajo. Se listan aquí también de forma compacta para que cualquier persona del equipo pueda verificarlas de un vistazo sin tener que leer las 13 fases completas:
 
 1. **Se aprueba invertir en la Fase 1** aunque no produzca funcionalidad visible — prioridad: evitar reconstruir el sistema con usuarios y negocios reales ya activos.
 2. **Verificación de negocios con vigencia anual**, orientada a confirmar actividad continua y datos actualizados — **la renovación no implica un cobro automático** (Fase 2).
@@ -25,6 +25,16 @@ Estas once decisiones fueron aprobadas antes de autorizar el inicio de la Fase 1
 9. **Privacidad, consentimiento, acceso y eliminación de datos se adelantan a la Fase 1** — no quedan relegados a la Fase 13.
 10. **La Fase 5 se divide en Fase 5A (seguir negocios, depende solo de la Fase 3) y Fase 5B (comentarios/guardados/reacciones generalizados, depende de la Fase 4).**
 11. **Azu Taxi se trata como ventana de integración posible desde fases tempranas, pero no se implementa hasta verificar formalmente qué mecanismo ofrece** (aplicación con deep link, API, teléfono, WhatsApp) — la arquitectura debe permitir sustituir el proveedor o el mecanismo sin rediseñar el núcleo (Fase 12).
+
+**Decisiones adicionales, cerradas en la revisión arquitectónica previa a la Fase 1:**
+
+12. **Actor incorpora un tipo "Sistema/Institucional"**, con los actores **"Guía IA"** y **"Ahorita Editorial"** creados desde la Fase 1 (§9 de `ARCHITECTURE.md`).
+13. **Publicación se diseña con el patrón "núcleo genérico + tabla de detalle"** desde la Fase 1, aplicado primero a Eventos (`event_details`) y repetido para cada subtipo futuro. **Carrusel no se modela como subtipo de Publicación** — sigue siendo una vista sobre contenido real, nunca contenido en sí mismo.
+14. **Interacción incorpora "Compartir" como tipo desde la Fase 1**, y se deja preparada (columna de referencia opcional) para respuestas anidadas cuando la Fase 5B construya la tabla de detalle de comentarios. **Reportar se mantiene fuera de Interacción**, como su propia entidad dentro del sistema de moderación (Fase 13) — no encaja en la forma de una interacción simple porque necesita motivo, estado de revisión y resolución.
+15. **Ciudad incorpora una entidad Zona** (hija de Ciudad, con referencia opcional a otra Zona como padre para poder crecer sin comprometerse a una jerarquía de más niveles todavía) desde la Fase 1, reemplazando el campo de texto libre `places.area`.
+16. **La Guía IA es, desde la Fase 1, un Actor del sistema**, y se aprueba el principio de que en el futuro pueda generar contenido persistente (planes, itinerarios, recomendaciones) reutilizando la infraestructura de Publicación — implementación sin fase asignada todavía.
+
+**Visión futura documentada, sin implementar (registrada en `AI_PHILOSOPHY.md` §16):** la Guía IA deberá evolucionar hacia un **motor de experiencias** — su objetivo no será únicamente recomendar lugares o eventos individuales, sino combinar lugares, eventos, promociones y servicios en planes completos adaptados al contexto del usuario. Se deja constancia de esta visión para que ninguna decisión arquitectónica futura la contradiga, sin comprometer todavía ninguna fase ni ningún plazo de implementación.
 
 ---
 
@@ -48,33 +58,38 @@ Lo que ya existe y sobre lo cual se construye todo lo demás: identidad básica 
 
 ## Fase 1 — Unificación del modelo de datos fundacional + línea base de privacidad
 
-**Objetivo.** Introducir las cuatro abstracciones de `ARCHITECTURE.md` §9-11 — Actor, Publicación, Interacción, Ciudad — como estructura real de base de datos, sin cambiar el comportamiento visible de la aplicación; y establecer, desde esta misma fase, una línea base real de privacidad: consentimiento explícito, acceso y eliminación de datos personales a solicitud del usuario. **Ambas cosas se aprobaron para ir juntas en esta fase (decisiones 1 y 9)** — no como funcionalidades independientes, sino porque unificar el modelo de datos es precisamente lo que hace viable construir un mecanismo de acceso/borrado *único y consistente*, en vez de uno distinto por cada tabla dispersa.
+**Objetivo.** Introducir las abstracciones de `ARCHITECTURE.md` §9-11 — Actor (con sus tres tipos: Persona, Negocio/Organizador, y **Sistema/Institucional**), Publicación (con el patrón **núcleo genérico + tabla de detalle**), Interacción (con su catálogo ampliado de tipos), Ciudad y **Zona** — como estructura real de base de datos, sin cambiar el comportamiento visible de la aplicación; y establecer, desde esta misma fase, una línea base real de privacidad: consentimiento explícito, acceso y eliminación de datos personales a solicitud del usuario. Todo esto se aprobó para ir junto en esta fase (decisiones 1, 9, 12, 13, 14, 15, 16) — no como funcionalidades independientes, sino porque unificar el modelo de datos es precisamente lo que hace viable construir, de una sola vez y bien, cada una de estas piezas en vez de retrofitarlas después.
 
-**Problema que resuelve.** Dos problemas a la vez, deliberadamente: (a) cada fase social nueva sobre la estructura actual agrega deuda técnica exponencial (tablas paralelas por tipo de contenido e interacción); (b) el sistema ya empieza a recolectar datos personales reales desde el día uno, y dejar el marco de privacidad para el final del plan (como se pensaba originalmente en la Fase 13) es un riesgo real, no solo una imprecisión de orden — para cuando llegara la Fase 13, ya llevaríamos varias fases acumulando historial de interacciones y, más adelante, de conversación con la IA, sin un mecanismo real de consentimiento o borrado.
+**Problema que resuelve.** Tres problemas a la vez, deliberadamente: (a) cada fase social nueva sobre la estructura actual agrega deuda técnica exponencial; (b) el sistema ya empieza a recolectar datos personales reales desde el día uno, y dejar el marco de privacidad para el final del plan es un riesgo real; (c) varias piezas de la visión de largo plazo —una Guía IA que algún día genera contenido propio, una Zona territorial real para razonar sobre seguridad y para geocercas, una distinción clara entre "compartir" y "reportar"— necesitan que el modelo de datos ya las contemple, para no rediseñar la base cada vez que el ecosistema madura.
 
-**Módulos que incluye.** Modelo Actor (unifica identidad de persona y negocio). Modelo Publicación (generaliza eventos como su primer subtipo). Modelo Interacción (generaliza likes, guardados, comentarios y seguimiento). Entidad Ciudad. **Línea base de privacidad:** registro de consentimiento explícito al usar funciones que recolectan datos personales, mecanismo de exportación de los propios datos, mecanismo de eliminación de cuenta y datos asociados.
+**Módulos que incluye.**
+- **Modelo Actor**, con tres tipos: Persona, Negocio/Organizador, y **Sistema/Institucional** — este último poblado desde el inicio con dos filas reales: **"Guía IA"** y **"Ahorita Editorial"**. Un Actor de tipo Sistema no tiene verificación ni atributos de negocio/persona; los crea únicamente la administración.
+- **Modelo Publicación**, diseñado con el patrón **núcleo genérico + tabla de detalle por subtipo**: el núcleo conserva solo lo común a cualquier contenido (autor, categoría, ciudad, zona, medios, ubicación opcional, subtipo, estado editorial, fechas de vigencia, métricas, marca de curaduría editorial); lo específico de Evento (fecha de inicio obligatoria, fecha de fin, precio, enlace de entradas, organizador) se separa a su propia tabla de detalle (`event_details`) — el primer caso de un patrón que se repetirá igual para cada subtipo futuro (Promoción en la Fase 4, y a futuro un posible Plan/Itinerario generado por la Guía IA). **Carrusel no se incluye como subtipo** — sigue siendo una vista sobre contenido real, no contenido en sí mismo.
+- **Modelo Interacción**, generalizando likes, guardados y seguimiento, con un catálogo de tipos que desde ahora incluye **Compartir** (además de Me gusta, Quiero ir, Ya fui, Guardado, Seguimiento). **Reportar queda fuera de este modelo** — se mantiene como su propia entidad, planificada en la Fase 13.
+- **Entidad Ciudad**, y **Entidad Zona** (hija de Ciudad, con referencia opcional a otra Zona como padre), reemplazando el campo de texto libre `places.area`.
+- **Línea base de privacidad:** registro de consentimiento explícito, mecanismo de exportación de los propios datos, mecanismo de eliminación de cuenta y datos asociados.
 
 **De qué depende.** De nada dentro de esta nueva etapa — se apoya únicamente en la Fase 0 ya construida.
 
-**Qué bloquea hasta completarse.** Fase 2, Fase 3, Fase 4, Fase 5A, Fase 5B — en la práctica, casi todo el resto del plan. Y, específicamente por el bloque de privacidad: la Fase 7 (sesiones de IA con historial de conversación) hereda esta infraestructura ya lista en vez de tener que construirla bajo presión al mismo tiempo que construye memoria conversacional.
+**Qué bloquea hasta completarse.** Fase 2, Fase 3, Fase 4, Fase 5A, Fase 5B — en la práctica, casi todo el resto del plan. Específicamente: la Fase 4 hereda el patrón núcleo+detalle ya probado con Eventos para construir Promoción sin tener que inventarlo de nuevo; la Fase 5B hereda el catálogo de tipos de Interacción y agrega la tabla de detalle de comentarios con la referencia de respuesta anidada ya prevista; la Fase 7 hereda la línea base de privacidad ya lista para aplicarla al historial de conversación, y el Actor "Guía IA" ya existente para poder, en el futuro, autorar contenido propio.
 
-**Tablas nuevas.** `cities`. `actors`. `interactions` (polimórfica, generaliza `post_likes`/`saved_places`/`saved_events`/`follows`). `consent_records` (usuario, tipo de consentimiento otorgado, fecha, vigencia, y registro de cuándo se ejerció un derecho de acceso o eliminación).
+**Tablas nuevas.** `cities`. `zones` (referencia a `cities`, y una referencia opcional a otra `zone` como padre). `actors` (con tipo persona/negocio/organizador/sistema; incluye desde el inicio las filas "Guía IA" y "Ahorita Editorial"). `interactions` (polimórfica; tipos: me gusta, quiero ir, ya fui, guardado, seguimiento, compartir — el tipo "comentario" con su tabla de detalle llega en la Fase 5B, ya con la referencia de respuesta anidada prevista desde su creación). `event_details` (separa del núcleo de Publicación los campos específicos de Evento). `consent_records`.
 
-**Entidades nuevas.** Actor, Ciudad, Interacción unificada, Registro de consentimiento.
+**Entidades nuevas.** Actor (con su tipo Sistema/Institucional), Ciudad, Zona, Interacción unificada (con Compartir), Detalle de Evento (primer caso del patrón núcleo+detalle), Registro de consentimiento.
 
 **APIs externas necesarias.** Ninguna.
 
-**Migraciones que requerirá.** Migración de esquema que agrega `actors`/`cities`/`interactions`/`consent_records` y adapta `profiles`/`businesses` para referenciar `actors`. Migración de datos que traslada `post_likes`, `saved_places`, `saved_events` y `follows` hacia `interactions`, preservando cada fila. Migración que puebla `cities` con una fila ("Cuenca").
+**Migraciones que requerirá.** Migración de esquema que agrega `cities`/`zones`/`actors`/`interactions`/`event_details`/`consent_records`, adapta `profiles`/`businesses` para referenciar `actors`, y separa de `events` los campos que pasan a `event_details`. Migración de datos que traslada `post_likes`, `saved_places`, `saved_events` y `follows` hacia `interactions`, preservando cada fila. Migración que puebla `cities` con una fila ("Cuenca") y `zones` con las zonas ya conocidas y en uso hoy como texto libre en `places.area` (Centro Histórico, El Barranco, etc.), reasignando cada lugar existente a su zona correspondiente. Inserción de las dos filas de Actor tipo Sistema.
 
-**Riesgos.** El riesgo central ya identificado: migración de datos reales de usuarios activos, con posibilidad de pérdida o corrupción silenciosa de historial si no se ejecuta con cuidado. Riesgo adicional introducido por agregar el bloque de privacidad a una fase ya sensible: para no mezclar ambos riesgos en una sola ventana de cambio, el bloque de privacidad se trata como un sub-bloque de trabajo independiente dentro de la misma fase, verificable por separado de la migración de interacciones.
+**Riesgos.** El riesgo central ya identificado: migración de datos reales de usuarios activos, con posibilidad de pérdida o corrupción silenciosa de historial. Riesgo adicional de agregar varios bloques a una fase ya sensible: mitigado tratando cada bloque (esquema, identidad, interacciones, privacidad, zonas) como una unidad de trabajo independiente y verificable por separado, no como un solo cambio monolítico. Riesgo específico de la migración de zonas: convertir un campo de texto libre en una referencia estructurada requiere mapear correctamente cada valor de texto ya existente a la zona correcta — riesgo bajo porque la lista de zonas en uso hoy es finita y ya conocida, pero requiere una verificación uno a uno, no solo una migración automática.
 
-**Pruebas necesarias.** Conteo exacto de filas migradas por tipo de interacción. Regresión completa de toda la funcionalidad existente. Prueba de carga sobre `interactions`. **Prueba específica de privacidad:** un usuario solicita la exportación de sus datos y la recibe completa; un usuario solicita la eliminación de su cuenta y sus datos personales dejan de estar accesibles, de principio a fin.
+**Pruebas necesarias.** Conteo exacto de filas migradas por tipo de interacción. Regresión completa de toda la funcionalidad existente, incluyendo que ningún lugar pierda o cambie su zona visible al usuario. Prueba de carga sobre `interactions`. Verificación de que `event_details` contiene exactamente los mismos datos que antes tenían los eventos, sin pérdida de ningún campo. **Prueba específica de privacidad:** exportación y eliminación de datos de principio a fin.
 
-**Criterio de terminado.** Toda la funcionalidad existente funciona de forma idéntica para el usuario final. El equipo puede confirmar que agregar "seguir un negocio" o "comentar una promoción" no requiere una tabla nueva. **Existe, desde el lanzamiento de esta fase, un mecanismo funcional de consentimiento, exportación y eliminación de datos personales** — no una promesa para la Fase 13, sino algo que ya funciona.
+**Criterio de terminado.** Toda la funcionalidad existente funciona de forma idéntica para el usuario final. El equipo puede confirmar que agregar "seguir un negocio" o "comentar una promoción" no requiere una tabla nueva, y que agregar un subtipo de Publicación nuevo en el futuro (por ejemplo, un Plan generado por la Guía IA) tampoco la requeriría. Existen los dos Actores de tipo Sistema ("Guía IA", "Ahorita Editorial"). Cada lugar tiene una Zona real asignada, ya no un texto libre. Existe, desde el lanzamiento de esta fase, un mecanismo funcional de consentimiento, exportación y eliminación de datos personales.
 
-**Aporte a la Guía IA.** Le da a la Guía IA una sola forma consistente de leer cualquier tipo de contenido, sin lógica distinta por tabla. Adicionalmente, adelantar la línea base de privacidad significa que cuando la Guía IA empiece a acumular historial de conversación (Fase 7) —el dato más sensible que va a manejar todo el sistema, según `AI_PHILOSOPHY.md` §11— ya existirá la infraestructura de consentimiento y borrado lista para aplicarse, en vez de construirse recién en ese momento bajo presión de lanzamiento.
+**Aporte a la Guía IA.** Le da a la Guía IA una sola forma consistente de leer cualquier tipo de contenido. Le da una **identidad propia dentro del sistema** (Actor "Guía IA"), condición necesaria para que, en el futuro, pueda autorar contenido persistente sin necesitar un caso especial en el resto del sistema. Le da una **Zona real** sobre la cual razonar variables como seguridad por horario (`AI_PHILOSOPHY.md` §7), en vez de un texto libre sin estructura. Y adelantar la línea base de privacidad significa que cuando la Guía IA empiece a acumular historial de conversación (Fase 7) ya existirá la infraestructura de consentimiento y borrado lista para aplicarse.
 
-**Decisiones ya aprobadas aplicadas aquí:** 1, 9. No requiere aprobación adicional del Product Owner — solo ejecución.
+**Decisiones ya aprobadas aplicadas aquí:** 1, 9, 12, 13, 14, 15, 16. No requiere aprobación adicional del Product Owner — solo ejecución.
 
 ---
 
@@ -154,13 +169,13 @@ Lo que ya existe y sobre lo cual se construye todo lo demás: identidad básica 
 
 **Qué bloquea hasta completarse.** Fase 5B (necesita más de un tipo de contenido real), Fase 9 (promociones QR necesita que el subtipo Promoción ya exista).
 
-**Tablas nuevas.** Ninguna tabla nueva de fondo; se añade `promotion_details` como tabla auxiliar.
+**Tablas nuevas.** Ninguna tabla nueva de fondo; se añade `promotion_details`, siguiendo exactamente el mismo patrón núcleo+detalle que la Fase 1 ya estableció con `event_details` — la prueba de que ese patrón funciona igual para un segundo subtipo distinto.
 
 **Entidades nuevas.** Publicación regular y Promoción (subtipos), Detalle de promoción.
 
 **APIs externas necesarias.** Ninguna.
 
-**Migraciones que requerirá.** Agregar el campo de subtipo a la Publicación unificada; crear `promotion_details`.
+**Migraciones que requerirá.** Agregar el subtipo Promoción y Publicación regular al catálogo ya definido en la Fase 1; crear `promotion_details`.
 
 **Riesgos.** Sobrecargar el editor progresivo con demasiadas variantes de campos por subtipo.
 
@@ -220,13 +235,13 @@ Lo que ya existe y sobre lo cual se construye todo lo demás: identidad básica 
 
 **Qué bloquea hasta completarse.** Fase 6 (el feed y las recomendaciones usan estas interacciones como insumo directo), Fase 7 (la Guía IA aprende de estas mismas interacciones).
 
-**Tablas nuevas.** Ninguna de fondo — se amplía el enumerado de `interactions`. Se añade `interaction_comments` como tabla de detalle vinculada a una interacción tipo "comentario".
+**Tablas nuevas.** Ninguna de fondo — el tipo "comentario" se agrega al enumerado de `interactions` ya creado en la Fase 1 (que desde el inicio incluye Me gusta/Quiero ir/Ya fui/Guardado/Seguimiento/Compartir). Se añade `interaction_comments` como tabla de detalle vinculada a una interacción tipo "comentario" — **creada desde el inicio con una referencia opcional a otro comentario**, para soportar respuestas anidadas el día que se decida habilitarlas en la interfaz, sin tener que alterar esta tabla más adelante (decisión 14, preparada en la Fase 1 y ejecutada aquí).
 
-**Entidades nuevas.** Comentario como detalle de interacción. (Las reacciones "Quiero ir"/"Ya fui" son tipos dentro del enumerado ya existente, no entidades nuevas.)
+**Entidades nuevas.** Comentario como detalle de interacción, con su referencia de respuesta anidada. (Las reacciones "Quiero ir"/"Ya fui" y "Compartir" ya son tipos del enumerado desde la Fase 1, no entidades nuevas de esta fase.)
 
 **APIs externas necesarias.** Ninguna.
 
-**Migraciones que requerirá.** Ampliar el enumerado de tipos de interacción a exactamente Me gusta/Quiero ir/Ya fui/Guardado/Comentario/Seguimiento — sin dejar espacio abierto a tipos adicionales no revisados. Crear `interaction_comments`. Migrar `event_comments` existente hacia el nuevo esquema.
+**Migraciones que requerirá.** Agregar el tipo "comentario" al enumerado de interacción ya definido en la Fase 1 — catálogo final y cerrado: Me gusta/Quiero ir/Ya fui/Guardado/Seguimiento/Compartir/Comentario, sin espacio abierto a tipos adicionales no revisados. Crear `interaction_comments` con su columna de referencia a otro comentario. Migrar `event_comments` existente hacia el nuevo esquema.
 
 **Riesgos.** El abuso (spam de comentarios) crece con la superficie de contenido comentable — límites de tasa básicos deben entrar en esta misma fase, no esperar a la Fase 13.
 
@@ -280,7 +295,7 @@ Lo que ya existe y sobre lo cual se construye todo lo demás: identidad básica 
 
 **Módulos que incluye.** Sesión de IA persistente. Conexión al motor de recomendaciones y al perfil de afinidad de la Fase 6. Aplicación práctica de todos los principios de comportamiento definidos en `AI_PHILOSOPHY.md`.
 
-**De qué depende.** Fase 6. Y, por la decisión 9, hereda ya construida la línea base de privacidad de la Fase 1 — el consentimiento y el mecanismo de borrado no se construyen aquí desde cero, se aplican al nuevo tipo de dato (historial de conversación) sobre una infraestructura ya existente.
+**De qué depende.** Fase 6. Y, por la decisión 9, hereda ya construida la línea base de privacidad de la Fase 1 — el consentimiento y el mecanismo de borrado no se construyen aquí desde cero, se aplican al nuevo tipo de dato (historial de conversación) sobre una infraestructura ya existente. También hereda de la Fase 1 el Actor "Guía IA" ya existente como identidad del sistema — esta fase no necesita crearlo, solo empezar a usarlo activamente.
 
 **Qué bloquea hasta completarse.** Nada de forma dura; mejora sustancialmente la Fase 9 (Guía IA contextual en puntos turísticos vía QR).
 
@@ -498,13 +513,15 @@ Lo que ya existe y sobre lo cual se construye todo lo demás: identidad básica 
 
 # Matriz de dependencias de módulos
 
-**Identidad (Actor unificado)** depende de: ✔ Nada (Fase 1).
+**Identidad (Actor unificado, con tipo Sistema/Institucional)** depende de: ✔ Nada (Fase 1).
 
 **Ciudad** depende de: ✔ Nada (Fase 1).
 
+**Zona** depende de: ✔ Ciudad (Fase 1) — nivel único por ahora, con referencia opcional a otra Zona como padre para crecer sin comprometerse a más niveles todavía.
+
 **Privacidad y consentimiento** depende de: ✔ Identidad — **adelantada a la Fase 1 por decisión aprobada**, ya no depende de que el resto del plan avance para existir.
 
-**Verificación** depende de: ✔ Identidad.
+**Verificación** depende de: ✔ Identidad — nunca aplica al Actor de tipo Sistema, que no la necesita.
 
 **Negocios (perfil extendido)** depende de: ✔ Identidad, ✔ Verificación.
 
@@ -516,7 +533,9 @@ Lo que ya existe y sobre lo cual se construye todo lo demás: identidad básica 
 
 **Seguir (personas y negocios)** depende de: ✔ Identidad, ✔ Negocios (perfil) — **no depende de Publicaciones**, por eso es la Fase 5A y puede ir en paralelo con la Fase 4.
 
-**Comentarios / Guardados / Reacciones generalizadas** depende de: ✔ Identidad, ✔ Publicaciones — esta sí depende de que exista más de un tipo de contenido, por eso es la Fase 5B y sí necesita la Fase 4.
+**Comentarios / Guardados / Reacciones generalizadas / Compartir** depende de: ✔ Identidad, ✔ Publicaciones — Compartir ya está disponible como tipo desde la Fase 1 (no necesita esperar a la Fase 5B); Comentarios sí depende de que exista más de un tipo de contenido, por eso llega en la Fase 5B junto con la Fase 4.
+
+**Reportar** depende de: ✔ Publicaciones, ✔ Identidad — **no vive dentro de Interacción**, es su propia entidad en el sistema de moderación (Fase 13), porque necesita motivo, estado de revisión y resolución, una forma de dato que una interacción simple no tiene.
 
 **Feed / Descubrimiento** depende de: ✔ Publicaciones, ✔ Interacciones (5A+5B), ✔ Categorías, ✔ Ubicación.
 
@@ -524,7 +543,9 @@ Lo que ya existe y sobre lo cual se construye todo lo demás: identidad básica 
 
 **Recomendaciones** depende de: ✔ Interacciones, ✔ Feed, ✔ Categorías, ✔ Identidad.
 
-**Guía IA** depende de: ✔ Identidad, ✔ Negocios, ✔ Publicaciones, ✔ Categorías, ✔ Ubicación, ✔ Feed, ✔ Recomendaciones, ✔ Privacidad y consentimiento (para el historial de sesión).
+**Guía IA** depende de: ✔ Identidad (incluye su propio Actor de tipo Sistema desde la Fase 1), ✔ Negocios, ✔ Publicaciones, ✔ Categorías, ✔ Ubicación, ✔ Zona, ✔ Feed, ✔ Recomendaciones, ✔ Privacidad y consentimiento (para el historial de sesión).
+
+**Plan/Itinerario generado por la Guía IA (motor de experiencias — visión futura, sin fase asignada)** depende de: ✔ Guía IA (con su Actor propio), ✔ Publicaciones (patrón núcleo+detalle), ✔ Interacciones (para guardar/compartir un plan como cualquier otro contenido). No depende de ningún módulo que no exista ya desde la Fase 1 y la Fase 6-7 — es, deliberadamente, una capacidad que la arquitectura ya sostiene sin necesitar nada nuevo estructural cuando se decida implementarla.
 
 **Historias** depende de: ✔ Publicaciones.
 
@@ -591,6 +612,7 @@ Lo que ya existe y sobre lo cual se construye todo lo demás: identidad básica 
 - **Multi-ciudad real.**
 - **Precio final de la suscripción de negocio** — diferido explícitamente hasta validar valor medible (decisión 8), no una omisión.
 - **Elección definitiva de proveedor de pagos y de transporte** — diferida explícitamente hasta investigar condiciones reales en Ecuador (decisiones 7 y 11).
+- **La Guía IA como motor de experiencias** (generación de planes/itinerarios persistentes, decisión 16 y visión registrada en `AI_PHILOSOPHY.md` §16) — el modelo de datos ya la soporta desde la Fase 1 (Actor "Guía IA", patrón núcleo+detalle de Publicación), pero su implementación no tiene todavía una fase asignada; queda como visión de largo plazo a retomar cuando el resto del sistema social esté maduro.
 
 ---
 

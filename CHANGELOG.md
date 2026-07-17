@@ -2,6 +2,18 @@
 
 Registro de cambios notables de Ahorita (Cuenca Viva). Formato libre, en español, más cercano a un registro de fases de producto que a versiones semánticas — ver `PROJECT.md` para el plan completo y el estado real de la implementación.
 
+## 2026-07-17 — Revisión arquitectónica previa a la Fase 1: cinco decisiones + visión de motor de experiencias
+
+Antes de autorizar la implementación, el Product Owner pidió analizar cinco puntos de diseño de largo plazo (Actor, Publicación, Interacción, Ciudad, Guía IA) y aprobó las cinco recomendaciones. Se actualiza la documentación fundacional para incorporarlas.
+
+### Cambiado
+- `ARCHITECTURE.md` (§9-11, §36): Actor gana un tercer tipo, **Sistema/Institucional**, con las identidades "Guía IA" y "Ahorita Editorial"; Publicación se formaliza con el patrón **núcleo genérico + tabla de detalle por subtipo** (Carrusel queda explícitamente excluido como subtipo); Interacción incorpora **Compartir** y una preparación para respuestas anidadas, dejando **Reportar** fuera, como su propia entidad de moderación; se agrega la entidad **Zona** como hija de Ciudad (un solo nivel, con referencia opcional a una zona padre para crecer sin comprometerse a más niveles todavía); se documenta la visión de la Guía IA como Actor y como futuro motor de experiencias.
+- `AI_PHILOSOPHY.md`: nueva sección 16, "La Guía IA como Actor del sistema y motor de experiencias (visión futura, no implementada)" — deja constancia de que la Guía IA deberá evolucionar hacia combinar lugares, eventos, promociones y servicios en planes completos, sin comprometer todavía ninguna fase ni plazo. La sección de cierre "La visión definitiva" pasa a ser la 17.
+- `MASTERPLAN.md`: registro de decisiones ampliado con los puntos 12-16; Fase 1 rediseñada para incluir Actor tipo Sistema (con sus dos filas), el patrón núcleo+detalle aplicado primero a Eventos (`event_details`), la entidad Zona (con migración del campo de texto libre `places.area`), y el tipo de interacción Compartir; Fase 4 y Fase 5B actualizadas para reflejar que heredan estas piezas de la Fase 1 en vez de crearlas; matriz de dependencias y sección de v2.0 actualizadas.
+
+### Nota
+Ningún archivo de código ni migración real se tocó — puramente planificación y arquitectura, tal como se pidió explícitamente. La implementación de la Fase 1 (Bloque 1) espera la aprobación final de la propuesta de ejecución presentada.
+
 ## 2026-07-17 — Filosofía y comportamiento de la Guía IA (AI_PHILOSOPHY.md)
 
 Tras aprobar el MASTERPLAN, el usuario pidió definir "el corazón del proyecto" antes de autorizar la Fase 1: un documento completamente independiente, autoridad absoluta sobre toda decisión relacionada con la IA, puramente de comportamiento de producto — sin modelos, APIs, LLMs ni arquitectura técnica.

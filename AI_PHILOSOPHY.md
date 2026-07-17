@@ -25,7 +25,8 @@ Cuando cualquier decisión futura de implementación entre en conflicto con este
 13. Cómo aprovecha toda la información del ecosistema Ahorita
 14. Casos de razonamiento (ejemplos trabajados)
 15. Cómo cada fase del MASTERPLAN fortalece la inteligencia de la Guía IA
-16. La visión definitiva de la Guía IA
+16. La Guía IA como Actor del sistema y motor de experiencias (visión futura, no implementada)
+17. La visión definitiva de la Guía IA
 
 ---
 
@@ -236,7 +237,23 @@ La conclusión de este recorrido es simple: no existe una sola fase del `MASTERP
 
 ---
 
-## 16. La visión definitiva de la Guía IA
+## 16. La Guía IA como Actor del sistema y motor de experiencias (visión futura, no implementada)
+
+Esta sección registra una decisión y una visión aprobadas antes de iniciar la Fase 1, precisamente para que ninguna decisión arquitectónica posterior las contradiga sin darse cuenta. **No se implementa nada de lo aquí descrito todavía** — es una constancia de intención, no una especificación técnica.
+
+**La Guía IA es un Actor del sistema.** El modelo de datos de `ARCHITECTURE.md` §9 reconoce tres tipos de identidad: Persona, Negocio/Organizador, y Sistema/Institucional. La Guía IA pertenece a este tercer tipo, junto con "Ahorita Editorial" (la identidad de la curaduría del propio equipo). Esto no es un detalle técnico menor — es lo que hace posible que, el día que la Guía IA genere algo persistente, tenga una autoría real y consistente con el resto del ecosistema, en vez de requerir un caso especial en cada parte del sistema que hoy asume que solo una persona o un negocio pueden "publicar" algo.
+
+**La visión: la Guía IA como motor de experiencias.** Hoy la Guía IA responde preguntas y recomienda, dentro de una conversación que no deja necesariamente un rastro reutilizable. La visión de largo plazo es distinta y más ambiciosa: **la Guía IA no debe limitarse a recomendar lugares o eventos de forma individual — debe poder combinar lugares, eventos, promociones y servicios en planes completos, adaptados al contexto específico de cada usuario**, de la misma manera en que ya se le pide razonar en §7-9 de este documento, pero llevando ese razonamiento a un resultado persistente: un Plan o Itinerario real que la persona puede guardar, revisar, y eventualmente compartir — "tu sábado en Cuenca", armado con datos reales del ecosistema, no una simple respuesta de chat que desaparece al cerrar la conversación.
+
+**Por qué esto no contradice el principio de nunca inventar (§4).** Vale la pena ser explícito sobre esta distinción, porque a primera vista podría sonar en tensión con la regla más importante de todo este documento. Hay una diferencia real entre que la Guía IA *invente* un lugar, un precio o un evento que no existe, y que *combine* varios elementos reales y ya verificados del ecosistema —dos eventos reales, un restaurante real, una ruta real— en una propuesta nueva y bien organizada. Lo segundo no es inventar información: es sintetizar información real en una forma nueva y útil, exactamente el tipo de razonamiento que ya se le exige en el resto de este documento. Un Plan generado por la Guía IA nunca sería más que una lista ordenada de referencias a contenido que ya existe y ya es real.
+
+**Cómo encaja sin un sistema nuevo.** Un Plan o Itinerario generado por la Guía IA es, en términos de arquitectura, simplemente otro subtipo de Publicación (`ARCHITECTURE.md` §9), autorado por el Actor Guía IA, con su propia tabla de detalle — el mismo patrón "núcleo genérico + detalle por subtipo" que ya se aplica a Eventos y Promociones. Reutiliza exactamente la misma infraestructura de feed, guardado, comentarios y reacciones que cualquier otro contenido. No es, ni debe ser nunca, un sistema aparte.
+
+**Lo que queda deliberadamente sin resolver todavía**, para que se decida en su momento y no ahora: si un Plan generado por la Guía IA es privado por defecto (solo visible para quien lo pidió) o si puede volverse público y compartible como cualquier otra publicación; y en qué fase del `MASTERPLAN.md` se implementa esta capacidad — hoy no tiene una fase asignada. Ambas son decisiones de producto reales, con implicaciones de privacidad y de alcance, que merecen su propio análisis cuando llegue el momento.
+
+---
+
+## 17. La visión definitiva de la Guía IA
 
 **¿Por qué la Guía IA de Ahorita será diferente a cualquier otra IA utilizada para descubrir una ciudad?**
 
