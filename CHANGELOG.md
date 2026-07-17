@@ -2,6 +2,27 @@
 
 Registro de cambios notables de Ahorita (Cuenca Viva). Formato libre, en español, más cercano a un registro de fases de producto que a versiones semánticas — ver `PROJECT.md` para el plan completo y el estado real de la implementación.
 
+## 2026-07-17 — Fase 2, Bloque A: esquema de verificación y roles granulares
+
+Primer bloque de la Fase 2 del `MASTERPLAN.md`. Aditivo y deliberadamente invisible: `profiles.is_admin`/`public.is_admin()` permanecen exactamente iguales, ninguna política RLS existente se toca.
+
+### Agregado
+- `supabase/migrations/0020_fase2_bloqueA_verificacion_roles.sql`: `roles` (catálogo, agregar un rol nuevo es un `INSERT`), `actor_roles` (asignación many-to-many sobre `Actor`, nunca se borra una fila — se revoca con `revoked_at`), `verifications` (asociada a `Actor`, no a `businesses`; evidencia solo referenciada, nunca almacenada en la tabla), `role_audit_log` (poblada únicamente por trigger). Trigger que impide asignar un rol o verificación a un actor tipo `sistema`. RLS que impide que cualquiera —incluido un administrador real— apruebe su propia verificación. Backfill: administradores actuales → rol `administrador`; negocios aprobados → verificación `aprobado` con un año de vigencia (`origin='migracion'` en ambos casos).
+- `AI_PHILOSOPHY.md`: la Guía IA distingue tres estados de confianza (verificado/vencido/no verificado, nunca el criterio principal de recomendación, solo desempate); documentada la visión futura de cuentas oficiales institucionales vía verificación de Actor, sin privilegios administrativos adicionales.
+
+### Verificado
+- Las 20 migraciones (`0001`-`0020`) contra Postgres 16 real, con 2 administradores, 2 usuarios normales, 1 negocio aprobado y 1 pendiente.
+- Reconciliación exacta del backfill; tablas existentes completamente intactas.
+- Escalada de privilegios rechazada (auto-asignación y asignación a terceros por un no-admin); asignación y revocación reales por un admin, con auditoría automática y motivo conservado.
+- Ningún actor tipo `sistema` puede recibir rol ni verificación.
+- Auto-aprobación de verificación rechazada incluso para un administrador real sobre su propia verificación; un segundo administrador sí pudo aprobarla.
+- `role_audit_log` visible solo para administradores.
+- Reversión completa ejecutada de verdad, sin errores (a diferencia del Bloque 5, no toca ninguna restricción de tabla existente).
+- Build y lint sin cambios; `git status` confirma que `src/` no fue tocado.
+
+### Nota
+Análisis técnico previo completo (comparación de tres modelos de roles, matriz de permisos por módulo, justificación de Actor sobre Business para verificación, alcance de Editor/Curador vs. Moderador) presentado y aprobado antes de escribir la migración — incluida la decisión de no crear un rol "Partner"/"Institución" nuevo, resuelto en cambio con un futuro valor de `verification_type`.
+
 ## 2026-07-17 — FASE 1 CERRADA: ecosistema social, modelo de datos fundacional
 
 Cierre formal de la Fase 1 completa del `MASTERPLAN.md`, tras la aprobación de los cinco bloques (esquema, identidad, contenido, interacciones y territorio, privacidad). Checkpoint de Git: tag `checkpoint-fase1-ecosistema-social`.

@@ -615,3 +615,70 @@ Registrada explícitamente como **requisito de validación obligatorio**, no com
 - **La interfaz futura que construya el flujo de solicitud de eliminación debe comunicar claramente este punto al usuario** antes de que confirme la solicitud — no es responsabilidad de este bloque (que no construyó ninguna interfaz), pero queda como requisito no negociable para la fase que sí la construya.
 - **Los códigos QR deberán invalidarse cuando ese módulo exista** (Fase 9 del `MASTERPLAN.md`) — no existe la entidad hoy, así que no hay nada que invalidar todavía, pero el diseño de esa fase debe incluir su propia invalidación al eliminar una cuenta, sin excepción.
 - **Los archivos de Storage deberán eliminarse mediante un flujo explícito antes de producción** — borrar la fila que referencia `image_url`/`avatar_url` no borra el archivo binario en el bucket `media`; eso requiere una llamada aparte a la API de Storage, todavía no construida.
+
+---
+
+## Fase 2, Bloque A — Esquema de verificación y roles granulares (implementado)
+
+Primer bloque de la Fase 2 del `MASTERPLAN.md`. Aditivo, deliberadamente invisible: no toca ninguna columna de `profiles`/`businesses`/`actors`, no modifica ninguna política RLS existente. `profiles.is_admin` y `public.is_admin()` permanecen exactamente iguales — el nuevo sistema de roles convive en paralelo, sin ser todavía la fuente de verdad de nada.
+
+### Análisis técnico previo (resumen de las decisiones tomadas)
+
+Antes de escribir la migración se presentó y aprobó un análisis técnico completo cubriendo: comparación de tres alternativas de modelo de roles (columna enum vs. catálogo+asignación vs. híbrido), una matriz de permisos por acción y luego por módulo (Feed, Promociones, Eventos, Lugares, Comentarios, Historias, Reels, IA, QR, Mapa, Verificaciones, Analíticas, Panel administrativo, Publicidad, Monetización, Azu Taxi), la relación de `verifications` con Actor vs. Business, el tratamiento de negocios ya aprobados, el alcance de Editor/Curador frente a Moderador, las políticas RLS previstas, la necesidad de una tabla de auditoría, y la estrategia de migración completa.
+
+**Decisiones cerradas:**
+1. **Modelo de roles**: catálogo `roles` + asignación `actor_roles` (many-to-many sobre `Actor`), no una columna enum en `profiles` — permite múltiples roles por actor y agregar un rol nuevo con un simple `INSERT`, sin migración de esquema.
+2. **`verifications` se asocia a `Actor`, no a `businesses`** — para poder verificar en el futuro distintos tipos de entidad (organizador, y potencialmente una institución) sin rediseñar. Un actor tipo `sistema` nunca puede recibir un rol ni ser verificado — son ejes distintos (identidad de autoría vs. control de plataforma/confianza comercial) que no deben mezclarse.
+3. **Evidencias de verificación**: nunca se guardan en la tabla — solo una referencia (`evidence_ref`) a un objeto en un bucket de Storage privado, a crear en una migración de Storage aparte (fuera de este bloque, que es solo base de datos).
+4. **Auditoría**: `role_audit_log`, poblada únicamente por trigger (nunca por la aplicación), a partir de cambios en `actor_roles`.
+5. **Negocios ya aprobados**: se migran como `verifications` con `origin='migracion'`, vigencia de un año desde el momento de la migración (nunca una fecha retroactiva inventada) y `status='aprobado'`.
+6. **Editor/Curador y Moderador son roles distintos** — superficies de riesgo distintas (contenido editorial propio vs. contenido/cuentas de terceros); Editor explícitamente no puede modificar roles, acceder a datos privados, aprobar verificaciones, borrar usuarios, cambiar configuración crítica ni procesar eliminaciones de cuenta.
+7. **No se crea un rol "Partner"/"Institución"** — se resuelve con un futuro valor de `verification_type` (p. ej. `'institucion'`, no agregado todavía, sin caso de uso aprobado) en vez de un rol nuevo, evitando inventar capacidades de plataforma no aprobadas.
+
+**Dos aclaraciones adicionales incorporadas a `AI_PHILOSOPHY.md`** (documentación pura, sin código):
+- La Guía IA distingue explícitamente **tres estados** de confianza — verificado (vigente), verificación vencida, y no verificado — nunca trata una verificación vencida igual que una vigente, y nunca asume que "no verificado" significa incorrecto o poco confiable. La verificación es una señal adicional de confianza y vigencia de los datos, nunca el criterio principal; la relevancia real siempre tiene prioridad, y la verificación solo desempata entre opciones de relevancia equivalente.
+- Se documentó la visión futura de **cuentas oficiales institucionales** (Municipio de Cuenca, ETAPA, Turismo Cuenca, Universidad de Cuenca, etc.), representadas mediante el sistema de verificación y la identidad del Actor — nunca mediante privilegios administrativos adicionales. Su existencia sirve para comunicar confianza e identidad, no para otorgar permisos.
+
+### `supabase/migrations/0020_fase2_bloqueA_verificacion_roles.sql` (nuevo)
+
+- **`roles`**: catálogo (`key`, `label`, `description`), sin `check` enumerado sobre `key` — agregar un rol nuevo es un `INSERT`. Poblada con `administrador`, `editor`, `moderador`.
+- **`actor_roles`**: `actor_id`, `role_id`, `granted_at`/`granted_by`, `revoked_at`/`revoked_by`/`revocation_reason`, `origin` (`asignacion`/`migracion`). Nunca se borra una fila — se revoca con `revoked_at`, mismo principio de auditoría inmutable que `consent_records`/`data_requests` (Bloque 5). Índice único parcial que impide asignaciones activas duplicadas sin impedir el historial de reasignaciones.
+- **`verifications`**: `actor_id`, `verification_type` (`negocio`/`organizador`), `status`, `evidence_ref` (solo referencia), `requested_at`, `reviewed_by`, `decided_at`, `rejection_reason`, `revocation_reason`, `expires_at`, `renewal_of` (auto-referencial — cada renovación es una fila nueva, nunca un `UPDATE` que pierda historial), `internal_notes`, `scope`, `origin` (`revision_nueva`/`migracion`).
+- **`role_audit_log`**: `actor_id`, `role_id`, `action` (`asignado`/`revocado`), `performed_by`, `performed_at`, `reason`. Sin ninguna política de insert/update/delete para usuarios — se llena únicamente por el trigger `log_role_change` (`security definer`, mismo patrón que `handle_new_profile_actor`).
+- **Trigger `prevent_system_actor_assignment`**: bloquea cualquier `insert`/`update` en `actor_roles` o `verifications` cuyo `actor_id` sea de tipo `sistema`.
+- **RLS crítica**: la política de `insert`/`update` de `actor_roles` exige `public.is_admin()` — cierra la escalada de privilegios en su origen, un no-admin nunca la pasa. La política de `update` de `verifications` exige `public.is_admin()` **y** que `actor_id` no pertenezca al perfil que ejecuta la operación — impide que cualquiera, incluido un administrador real, apruebe/rechace/revoque su propia verificación.
+- **Backfill**: cada `profile.is_admin=true` recibe una fila en `actor_roles` con el rol `administrador` (`origin='migracion'`); cada `business.status='aprobado'` recibe una fila en `verifications` `aprobado` (`origin='migracion'`, un año de vigencia desde el momento de la migración).
+
+### Verificación realizada
+
+Postgres 16 real, las 20 migraciones (`0001`-`0020`, saltando `0002`) en orden contra una base limpia, con datos de prueba reales: 2 administradores, 2 usuarios normales, 1 negocio aprobado y 1 pendiente.
+
+- **Reconciliación exacta**: 2 `profiles.is_admin=true` → 2 filas activas en `actor_roles` con rol `administrador`; 1 `business` aprobado → 1 `verifications` `aprobado`; el trigger de auditoría registró automáticamente ambas asignaciones del backfill (2 filas `asignado`) sin intervención manual.
+- **Tablas existentes completamente intactas**: mismos conteos de `profiles`, `profiles.is_admin`, `businesses`, `businesses.status='aprobado'` antes y después.
+- **Escalada de privilegios rechazada, con dos variantes reales**: un usuario normal intentando auto-asignarse el rol `administrador` fue rechazado por RLS; el mismo usuario intentando asignarle ese rol a *otra* persona también fue rechazado.
+- **Asignación real por un admin verificada de punta a punta**: un administrador real asignó el rol `editor` a un usuario normal — la fila se creó, y el trigger de auditoría registró `asignado` con el admin correcto en `performed_by`, automáticamente.
+- **Revocación con motivo verificada**: se revocó ese mismo rol con un `revocation_reason` — el trigger registró `revocado` con el motivo exacto, y la fila original de `actor_roles` **no se borró** (el historial completo de asignación+revocación queda visible).
+- **Ningún actor de tipo `sistema` puede recibir un rol ni ser verificado**: se intentó asignar un rol y crear una verificación para el actor "Guía IA" — ambos intentos fueron rechazados por el trigger `prevent_system_actor_assignment`, con el mensaje de error esperado.
+- **Auto-aprobación de verificación rechazada, incluso para un administrador real**: un usuario normal solicitó su propia verificación (permitido) y luego intentó auto-aprobarla (rechazado, 0 filas afectadas, la verificación siguió `pendiente`) — un administrador real la aprobó sin problema. Más crítico aún: un **administrador real** solicitó su propia verificación y también intentó auto-aprobarla — rechazado igual (0 filas afectadas) — y un *segundo* administrador sí pudo aprobarla, confirmando que la regla "nadie aprueba su propia verificación" se sostiene incluso para quien ya tiene el rol más alto del sistema.
+- **`role_audit_log` visible solo para administradores**: un usuario normal vio 0 filas; un administrador vio las 4 filas reales generadas durante la verificación.
+- **Estrategia de reversión ejecutada de verdad**: se revirtieron las 4 tablas nuevas, sus funciones y triggers — reversión limpia sin ningún error (a diferencia del Bloque 5, este bloque no toca ninguna restricción de tabla existente, por lo que no hay el tipo de bloqueo por integridad que se encontró ahí). Las tablas existentes quedaron con los mismos conteos exactos de antes de aplicar la migración.
+- **Build y lint del frontend**: sin cambios, ambos limpios; `git status` confirma que `src/` no fue tocado — los únicos cambios son la migración y `AI_PHILOSOPHY.md`.
+
+### Incidencias encontradas
+
+Ninguna no anticipada. Todas las decisiones de diseño (modelo de roles, relación Actor↔verificación, exclusión de un rol Partner) fueron resueltas en el análisis previo, no descubiertas durante la implementación.
+
+### Deuda técnica detectada
+
+- **Bucket de Storage privado para evidencias**: `verifications.evidence_ref` está prevista pero el bucket en sí (con sus políticas de acceso: el propio actor y quien tenga permiso de revisar evidencias) no se crea en este bloque — es una migración de Storage aparte, análoga a `0002_storage.sql`.
+- **Sin interfaz de usuario todavía**: ni para solicitar verificación, ni para que un admin gestione roles/revisiones — este bloque es solo el esquema de backend.
+- **`is_admin()` sigue siendo la única fuente de verdad real** en todas las políticas RLS existentes — el nuevo sistema de roles no reemplaza nada todavía. El "punto de no retorno" (cuándo el nuevo sistema pasa a ser la fuente de verdad) es una decisión de una fase posterior, con su propia propuesta y aprobación.
+- **`verification_type` no incluye `'institucion'` todavía** — se documentó como visión futura (ver arriba), no se implementa hasta que exista un caso de uso aprobado.
+- **Ciclo de renovación anual, avisos de vencimiento, interfaz de solicitud/revisión** — explícitamente fuera de alcance de este bloque, quedan para el Bloque B.
+
+### Recomendaciones para el Bloque B (ciclo de vida, vigencia y renovación anual)
+
+- Definir el mecanismo de disparo temporal para detectar verificaciones vencidas (mismo tipo de decisión pendiente que ya quedó anotada para `process-account-deletions` en el Bloque 5 de la Fase 1 — posiblemente resoluble con el mismo mecanismo cuando se elija).
+- Diseñar el periodo de gracia con aviso antes de marcar una verificación como `vencida` (ya anticipado como riesgo en el `MASTERPLAN.md`, Fase 2).
+- Decidir si la renovación anual requiere nueva evidencia o es solo una confirmación (el campo `renewal_of` ya está preparado para encadenar cualquiera de los dos casos sin cambios de esquema).
+- Evaluar en ese momento, no antes, si conviene ya iniciar el diseño del bucket de Storage privado para evidencias, dado que el ciclo de vida completo de una verificación probablemente lo necesite antes de tener una interfaz real.
