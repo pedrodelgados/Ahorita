@@ -105,7 +105,7 @@ export default function FeedPage() {
         </div>
       </AppHeader>
 
-      <main style={{ maxWidth: 560, margin: "0 auto", padding: "12px 12px 84px" }}>
+      <main style={{ maxWidth: 560, margin: "0 auto", padding: "12px 12px calc(84px + env(safe-area-inset-bottom))" }}>
         {showInterestsPrompt && (
           <InterestsPrompt userId={user.id} onDone={() => setDismissedPrompt(true)} />
         )}

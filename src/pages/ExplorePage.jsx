@@ -32,7 +32,7 @@ export default function ExplorePage() {
       {view === "map" ? (
         <MapView onSelectPlace={setSelectedPlace} />
       ) : (
-        <main style={{ maxWidth: 720, margin: "0 auto", padding: "20px 20px 84px" }}>
+        <main style={{ maxWidth: 720, margin: "0 auto", padding: "20px 20px calc(84px + env(safe-area-inset-bottom))" }}>
           <PlaceGrid onSelectPlace={setSelectedPlace} />
         </main>
       )}

@@ -78,7 +78,7 @@ export default function ProfilePage() {
         </Button>
       </header>
 
-      <main style={{ maxWidth: 720, margin: "0 auto", padding: "24px 24px 84px" }}>
+      <main style={{ maxWidth: 720, margin: "0 auto", padding: "24px 24px calc(84px + env(safe-area-inset-bottom))" }}>
         <Card style={{ marginBottom: 20 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 16 }}>
             <div

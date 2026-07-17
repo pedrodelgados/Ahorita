@@ -19,6 +19,7 @@ const VARIANTS = {
 };
 
 export default function Button({
+  as: Tag = "button",
   variant = "primary",
   disabled = false,
   fullWidth = false,
@@ -30,8 +31,8 @@ export default function Button({
   const styles = VARIANTS[variant] ?? VARIANTS.primary;
 
   return (
-    <button
-      disabled={disabled}
+    <Tag
+      disabled={Tag === "button" ? disabled : undefined}
       style={{
         display: "inline-flex",
         alignItems: "center",
@@ -43,6 +44,7 @@ export default function Button({
         fontWeight: 600,
         fontSize: 15,
         opacity: disabled ? 0.5 : 1,
+        textDecoration: "none",
         transition: "opacity 0.15s ease, transform 0.1s ease",
         ...styles,
         ...style,
@@ -51,6 +53,6 @@ export default function Button({
     >
       {icon}
       {children}
-    </button>
+    </Tag>
   );
 }

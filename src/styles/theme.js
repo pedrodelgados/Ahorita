@@ -133,3 +133,12 @@ export function tint(hexColor, alpha = 0.12) {
 export function photoOverlay({ strong = 0.8, soft = 0.06, mid = 0.26 } = {}) {
   return `linear-gradient(to top, ${tint(COLORS.ink, strong)} 0%, ${tint(COLORS.ink, soft)} 42%, ${tint(COLORS.ink, mid)} 100%)`;
 }
+
+// Variante del degradado de marca para tarjetas pequeñas (p. ej. el shelf
+// editorial): cubre solo la franja inferior donde vive el texto y deja el
+// resto de la fotografía sin oscurecer — la foto es la protagonista, el
+// overlay es solo para garantizar contraste, no un filtro sobre toda la
+// imagen.
+export function bottomFade({ strong = 0.88, stop = 42 } = {}) {
+  return `linear-gradient(to top, ${tint(COLORS.ink, strong)} 0%, transparent ${stop}%)`;
+}

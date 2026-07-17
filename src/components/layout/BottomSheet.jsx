@@ -24,7 +24,7 @@ export default function BottomSheet({ open, onClose, children, panelStyle }) {
           borderTopLeftRadius: 24,
           borderTopRightRadius: 24,
           boxShadow: "var(--shadow-sheet)",
-          padding: "12px 20px 28px",
+          padding: "12px 20px calc(24px + env(safe-area-inset-bottom))",
           ...panelStyle,
         }}
       >

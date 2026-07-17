@@ -3,9 +3,13 @@
 -- sin importar cuándo se corra esta migración.
 --
 -- Imágenes: banco de fotografía de demostración local (public/demo-photos/),
--- fotografía real con licencia libre elegida por tema — no genéricos, no
--- rectángulos de color. Temporales: se reemplazan por el banco fotográfico
--- real de Cuenca más adelante. Ver PROJECT.md, "Banco de fotografía de
+-- fotografía real (no ilustraciones, no rectángulos de color). Elegidas
+-- deliberadamente para NO mostrar ningún lugar/monumento identificable de
+-- otra región (se descartaron Venecia y Portofino de una versión anterior
+-- por romper la coherencia territorial con Cuenca/Azuay) — son escenas
+-- genéricas (mesa, café, comida, montaña) que no afirman ser un lugar
+-- específico. Temporales: se reemplazan por el banco fotográfico real de
+-- Cuenca más adelante. Ver PROJECT.md, "Banco de fotografía de
 -- demostración (temporal)".
 
 insert into public.events
@@ -15,7 +19,7 @@ values
     'Festival de las Flores',
     'Feria de artesanías y flores en la Plaza de las Flores, con música en vivo y puestos de comida típica.',
     'cultura',
-    '/demo-photos/cultura-pueblo.jpg',
+    '/demo-photos/cafeteria-barista.jpg',
     null,
     'Plaza de las Flores, Centro Histórico',
     -2.8983, -79.0045,
@@ -29,7 +33,7 @@ values
     'Concierto en el Teatro Sucre',
     'Orquesta Sinfónica de Cuenca presenta un repertorio de música clásica ecuatoriana.',
     'musica',
-    '/demo-photos/arquitectura-patrimonio.jpg',
+    '/demo-photos/eventos-cena.jpg',
     null,
     'Teatro Sucre, Centro Histórico',
     -2.8974, -79.0037,
@@ -43,7 +47,7 @@ values
     'Feria Gastronómica de Calle Larga',
     'Los mejores restaurantes de Calle Larga sacan sus platos estrella a la calle por una noche.',
     'gastronomia',
-    '/demo-photos/gastronomia-bowl.jpg',
+    '/demo-photos/gastronomia-wraps.jpg',
     null,
     'Calle Larga, Centro Histórico',
     -2.9005, -79.0018,
@@ -71,7 +75,7 @@ values
     'Noche de Jazz en el Barranco',
     'Trío de jazz en vivo con vista al río, en una terraza del Barranco al atardecer.',
     'vida_nocturna',
-    '/demo-photos/eventos-cena.jpg',
+    '/demo-photos/parrilla-nocturna.jpg',
     null,
     'El Barranco',
     -2.9024, -79.0042,

@@ -3,11 +3,13 @@ import { Send, Bookmark } from "lucide-react";
 import { getEvent, listEventComments, createEventComment } from "../../lib/events";
 import { useAuth } from "../../contexts/AuthContext";
 import { useSavedEvents } from "../../contexts/SavedEventsContext";
-import { CHANNELS, COLORS } from "../../styles/theme";
+import { CHANNELS, COLORS, SPACE, textStyle, TYPE } from "../../styles/theme";
 import { formatEventDateTime, formatRelativeTime } from "../../lib/time";
 import BottomSheet from "../../components/layout/BottomSheet";
 import AuthGate from "../../components/ui/AuthGate";
 import ImageWithFallback from "../../components/ui/ImageWithFallback";
+import LocationMetadata from "../../components/ui/LocationMetadata";
+import Button from "../../components/ui/Button";
 import AuthorTag from "../social/AuthorTag";
 import DirectionsSection from "../places/DirectionsSection";
 
@@ -55,7 +57,7 @@ export default function EventSheet({ eventId, onClose }) {
               height: 220,
               objectFit: "cover",
               borderRadius: "var(--radius-card)",
-              marginBottom: 14,
+              marginBottom: SPACE.lg,
               // Mismo nombre que la tarjeta del feed (FeedCard) — permite que
               // la View Transitions API anime una imagen "expandiéndose"
               // hacia el detalle en vez de mostrar un panel nuevo encima.
@@ -64,7 +66,7 @@ export default function EventSheet({ eventId, onClose }) {
           />
 
           <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 10 }}>
-            <h2 style={{ fontSize: 19, paddingRight: 24 }}>{event.title}</h2>
+            <h2 style={textStyle(TYPE.cardTitle, { paddingRight: 24 })}>{event.title}</h2>
             <button
               onClick={() => toggleSave(event.id)}
               style={{
@@ -83,49 +85,49 @@ export default function EventSheet({ eventId, onClose }) {
             </button>
           </div>
 
-          <p style={{ fontSize: 13, color: COLORS.inkSoft, margin: "4px 0 2px" }}>
-            {formatEventDateTime(event.start_at)}
-            {channel && ` · ${channel.label}`}
-          </p>
-          {event.location_name && (
-            <p style={{ fontSize: 13, color: COLORS.inkSoft, margin: "0 0 10px" }}>{event.location_name}</p>
-          )}
+          <div style={{ margin: `${SPACE.xs}px 0 ${SPACE.md}px` }}>
+            <LocationMetadata
+              location={event.location_name}
+              meta={formatEventDateTime(event.start_at)}
+              color={COLORS.inkSoft}
+              iconColor={COLORS.inkSoft}
+            />
+            {channel && (
+              <p style={textStyle(TYPE.kicker, { color: COLORS.inkSoft, margin: "3px 0 0" })}>{channel.label}</p>
+            )}
+          </div>
 
-          <p style={{ fontSize: 14, fontWeight: 700, color: isPaid ? COLORS.ink : "#4FA383", marginBottom: 10 }}>
+          <p
+            style={textStyle(TYPE.h3, {
+              color: isPaid ? COLORS.ink : COLORS.success,
+              margin: `0 0 ${SPACE.md}px`,
+            })}
+          >
             {isPaid ? `$${event.price}` : "Gratis"}
           </p>
 
           {event.description && (
-            <p style={{ fontSize: 14, marginBottom: 16, lineHeight: 1.5 }}>{event.description}</p>
+            <p style={textStyle(TYPE.body, { margin: `0 0 ${SPACE.lg}px` })}>{event.description}</p>
           )}
 
           {isPaid && event.ticket_url && (
-            <a
+            <Button
+              as="a"
               href={event.ticket_url}
               target="_blank"
               rel="noreferrer"
-              style={{
-                display: "inline-block",
-                padding: "9px 18px",
-                borderRadius: "var(--radius-full)",
-                background: COLORS.accent,
-                color: "#FFFFFF",
-                fontSize: 13,
-                fontWeight: 600,
-                textDecoration: "none",
-                marginBottom: 20,
-              }}
+              style={{ padding: "10px 20px", fontSize: 14, marginBottom: SPACE.xl }}
             >
               Comprar entradas
-            </a>
+            </Button>
           )}
 
           <DirectionsSection place={{ lat: event.lat, lng: event.lng, name: event.title, area: event.location_name }} />
 
-          <h3 style={{ fontSize: 15, marginBottom: 10 }}>Comentarios</h3>
+          <h3 style={textStyle(TYPE.h3, { margin: `0 0 ${SPACE.md}px` })}>Comentarios</h3>
 
           <AuthGate prompt="Inicia sesión para comentar">
-            <form onSubmit={submitComment} style={{ display: "flex", gap: 8, marginBottom: 16 }}>
+            <form onSubmit={submitComment} style={{ display: "flex", gap: 8, marginBottom: SPACE.lg }}>
               <input
                 value={commentText}
                 onChange={(e) => setCommentText(e.target.value)}
@@ -158,24 +160,21 @@ export default function EventSheet({ eventId, onClose }) {
           </AuthGate>
 
           {!loading && comments.length === 0 && (
-            <p style={{ color: COLORS.inkSoft, fontSize: 14 }}>Sé el primero en comentar.</p>
+            <p style={textStyle(TYPE.bodySmall, { color: COLORS.inkSoft })}>Sé el primero en comentar.</p>
           )}
 
-          {comments.map((comment) => (
+          {comments.map((comment, i) => (
             <div
               key={comment.id}
               style={{
-                background: "#FFFFFF",
-                borderRadius: "var(--radius-sm)",
-                padding: "10px 12px",
-                marginBottom: 8,
-                boxShadow: "var(--shadow-card)",
+                padding: `${SPACE.sm}px 0`,
+                borderTop: i === 0 ? "none" : "1px solid rgba(43, 38, 34, 0.08)",
               }}
             >
-              <p style={{ fontSize: 14, margin: "0 0 6px" }}>{comment.text}</p>
+              <p style={textStyle(TYPE.bodySmall, { margin: `0 0 ${SPACE.xxs}px` })}>{comment.text}</p>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                 <AuthorTag author={comment.author} />
-                <span style={{ fontSize: 11, color: COLORS.inkSoft }}>
+                <span style={textStyle(TYPE.metadata, { color: COLORS.inkSoft })}>
                   {formatRelativeTime(comment.created_at)}
                 </span>
               </div>
