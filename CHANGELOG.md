@@ -2,6 +2,14 @@
 
 Registro de cambios notables de Ahorita (Cuenca Viva). Formato libre, en español, más cercano a un registro de fases de producto que a versiones semánticas — ver `PROJECT.md` para el plan completo y el estado real de la implementación.
 
+## 2026-07-17 — FASE 1 CERRADA: ecosistema social, modelo de datos fundacional
+
+Cierre formal de la Fase 1 completa del `MASTERPLAN.md`, tras la aprobación de los cinco bloques (esquema, identidad, contenido, interacciones y territorio, privacidad). Checkpoint de Git: tag `checkpoint-fase1-ecosistema-social`.
+
+Completa en arquitectura, migraciones (`0015`-`0019`), restricciones, RLS, lógica PostgreSQL, documentación y pruebas locales contra Postgres 16 real. **No lista para producción** hasta validar contra un proyecto Supabase real: `export-user-data`, `process-account-deletions`, autenticación JWT real, `auth.admin.deleteUser`, variables de entorno/secretos, permisos de las Edge Functions, ejecución programada del periodo de gracia, eliminación real de archivos en Storage, exportación completa de datos reales, y el flujo extremo a extremo de solicitud/cancelación/eliminación — registrado como deuda técnica obligatoria, no como mejora opcional, en `PROJECT.md`.
+
+Queda documentado expresamente: una eliminación definitiva es irreversible; no existe restauración completa tras anonimizar/borrar datos personales; la futura interfaz de eliminación debe comunicar esto al usuario; los QR deberán invalidarse cuando esa entidad exista (Fase 9); los archivos de Storage requieren un flujo de borrado explícito antes de producción.
+
 ## 2026-07-17 — Fase 1, Bloque 5: privacidad (consentimiento, exportación y eliminación de cuenta)
 
 Quinto y último bloque de la Fase 1 del `MASTERPLAN.md`. A diferencia de los Bloques 1-4, introduce comportamiento real — es su propósito explícito: activar el mecanismo de `consent_records`, que se adelantó vacío desde el Bloque 1.

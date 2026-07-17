@@ -565,3 +565,53 @@ Ninguna no anticipada. Los dos hallazgos críticos y la limitación de reversió
 ### Qué sigue
 
 Con el Bloque 5 completo, la Fase 1 del ecosistema social queda terminada en su capa de base de datos. Sigue pendiente, sin autorizar todavía: la fase separada de "cambio de fuente de verdad" para `interactions`/`places.zone_id`/`event_details` (condición ya establecida en los Bloques 3 y 4), la interfaz de usuario para consentimiento/exportación/eliminación, la verificación end-to-end de las Edge Functions contra un proyecto real, y la Fase 2 del `MASTERPLAN.md`.
+
+---
+
+## FASE 1 CERRADA — Ecosistema social: modelo de datos fundacional (2026-07-17)
+
+Cierre formal de la Fase 1 completa del `MASTERPLAN.md`, aprobado explícitamente tras el Bloque 5. Checkpoint de Git: tag `checkpoint-fase1-ecosistema-social`.
+
+### Resumen ejecutivo
+
+La Fase 1 unificó el modelo de datos fundacional del ecosistema social de Ahorita en cinco bloques independientes, cada uno propuesto, implementado, verificado contra Postgres real y aprobado por separado:
+
+1. **Bloque 1 — Esquema fundacional**: seis tablas nuevas (`cities`, `zones`, `actors`, `interactions`, `event_details`, `consent_records`), ninguna conectada todavía a la aplicación — deliberadamente invisible.
+2. **Bloque 2 — Identidad**: vincula `profiles`/`businesses` con `actors` (backfill + triggers para todo registro futuro).
+3. **Bloque 3 — Contenido**: primer caso real del patrón "núcleo genérico + tabla de detalle" (`event_details`), aditivo y sin sincronización en vivo.
+4. **Bloque 4 — Interacciones y territorio**: `post_likes`/`saved_places`/`saved_events`/`follows` → `interactions`; `places.area` → `places.zone_id`; privacidad de "guardado" preservada explícitamente.
+5. **Bloque 5 — Privacidad**: consentimiento versionado, `data_requests`, anonimización de contenido colaborativo, negocios sin propietaria, y el mecanismo real (Edge Functions) de exportación/eliminación.
+
+En los cinco bloques, absolutamente ninguna línea de `src/` fue tocada hasta el Bloque 5 (que sí introdujo comportamiento nuevo real, a propósito) — la aplicación en producción se comportó exactamente igual durante toda la fase, salvo por el mecanismo de privacidad que el propio Bloque 5 tenía como objetivo activar.
+
+La Fase 1 está completa en su capa de:
+- **Arquitectura** — Actor, Publicación (núcleo+detalle), Interacción, Ciudad/Zona, línea base de privacidad, todos con su justificación documentada en `ARCHITECTURE.md`.
+- **Migraciones** — `0015` a `0019`, cada una diseñada, propuesta y aprobada antes de escribirse.
+- **Restricciones** — `check`, `unique`, `foreign key` con el `on delete` correcto para cada relación (incluyendo las dos correcciones de cascada del Bloque 5).
+- **RLS** — cada tabla y cada cambio de política probado con roles de bajo privilegio reales, nunca con el superusuario.
+- **Lógica PostgreSQL** — triggers `security definer` (Bloque 2), triggers de transición de estado (`handle_orphaned_business`, Bloque 5), todos verificados con inserciones/eliminaciones reales.
+- **Documentación** — `PROJECT.md`, `CHANGELOG.md`, `supabase/README.md` actualizados en cada bloque con el mismo nivel de detalle.
+- **Pruebas locales** — Postgres 16 real, nunca solo revisión visual de SQL, en los cinco bloques.
+
+### Deuda técnica obligatoria antes de producción (no es una mejora opcional)
+
+Registrada explícitamente como **requisito de validación obligatorio**, no como una lista de "nice to have". Nada de lo siguiente se probó contra un proyecto Supabase real — todo lo demás en esta fase sí se probó contra Postgres real:
+
+1. `export-user-data` — validar end-to-end contra un proyecto Supabase real.
+2. `process-account-deletions` — validar end-to-end contra un proyecto Supabase real.
+3. Autenticación con JWT real (esta fase se verificó contra un stub local de `auth.uid()`, no contra Supabase Auth real).
+4. `auth.admin.deleteUser` — confirmar que produce exactamente las cascadas/anonimizaciones diseñadas contra una base de datos real de Supabase, no solo contra la simulación local (`DELETE FROM auth.users`).
+5. Variables de entorno y secretos (`CRON_SECRET`, `SUPABASE_SERVICE_ROLE_KEY`, etc.) — configurar y confirmar en el proyecto real.
+6. Permisos de las Edge Functions (quién puede invocarlas, verificación de que `process-account-deletions` rechaza correctamente una llamada sin el secreto correcto contra el runtime real de Supabase, no solo en el código).
+7. Ejecución programada al vencer el periodo de gracia de 30 días — no existe todavía ningún disparador temporal (`pg_cron` u otro) configurado.
+8. Eliminación real de archivos personales en Supabase Storage (avatares, fotos de estados/negocios) — hoy solo se anonimizan/eliminan las filas que los referencian, no el archivo binario.
+9. Exportación completa de datos reales — confirmar contra datos de producción (o un entorno de staging con datos realistas), no solo los datos de prueba sintéticos usados en la verificación local.
+10. Flujo extremo a extremo de solicitud, cancelación y eliminación definitiva — probado por partes contra Postgres real y con una simulación de la llamada a Auth, pero nunca como un flujo continuo real de principio a fin.
+
+### Documentación expresa de irreversibilidad
+
+- **Una eliminación definitiva es irreversible.** Una vez que `process-account-deletions` ejecuta `auth.admin.deleteUser` tras el periodo de gracia, no existe ningún mecanismo de restauración.
+- **Después de anonimizar o borrar datos personales no existe una restauración completa.** El `author_id` de una pregunta/respuesta/estado/comentario anonimizado no puede recuperarse — se probó explícitamente en la verificación del Bloque 5 que ni siquiera revertir la migración restaura ese dato, porque nunca se guarda en ningún otro lugar.
+- **La interfaz futura que construya el flujo de solicitud de eliminación debe comunicar claramente este punto al usuario** antes de que confirme la solicitud — no es responsabilidad de este bloque (que no construyó ninguna interfaz), pero queda como requisito no negociable para la fase que sí la construya.
+- **Los códigos QR deberán invalidarse cuando ese módulo exista** (Fase 9 del `MASTERPLAN.md`) — no existe la entidad hoy, así que no hay nada que invalidar todavía, pero el diseño de esa fase debe incluir su propia invalidación al eliminar una cuenta, sin excepción.
+- **Los archivos de Storage deberán eliminarse mediante un flujo explícito antes de producción** — borrar la fila que referencia `image_url`/`avatar_url` no borra el archivo binario en el bucket `media`; eso requiere una llamada aparte a la API de Storage, todavía no construida.
