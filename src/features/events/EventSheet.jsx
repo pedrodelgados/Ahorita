@@ -52,6 +52,7 @@ export default function EventSheet({ eventId, onClose }) {
             src={event.image_url}
             alt=""
             iconSize={26}
+            category={event.category}
             style={{
               width: "100%",
               height: 220,

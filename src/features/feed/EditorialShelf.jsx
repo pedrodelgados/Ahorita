@@ -63,6 +63,7 @@ export default function EditorialShelf({ title, subtitle, items = [], onOpenItem
               src={item.image}
               alt={item.title}
               iconSize={22}
+              category={item.category}
               style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }}
             />
             {/* Overlay solo en la franja inferior — la foto respira, el

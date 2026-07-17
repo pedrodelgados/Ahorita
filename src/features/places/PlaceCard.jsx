@@ -26,6 +26,7 @@ export default function PlaceCard({ place, onClick }) {
         alt={place.name}
         loading="lazy"
         iconSize={22}
+        category={place.channel_default}
         style={{
           width: "100%",
           height: "100%",

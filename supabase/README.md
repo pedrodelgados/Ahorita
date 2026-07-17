@@ -60,7 +60,7 @@ supabase functions deploy send-push
 - `0008_seed_tags.sql` etiqueta algunos lugares semilla (`imperdible`, `gratis`, `hoy`) para que el feed de Inicio no se vea plano en el arranque en frío.
 - `0009_push_subscriptions.sql` agrega `push_subscriptions` (una fila por dispositivo suscrito a notificaciones push).
 - `0010_events.sql` — **corrección de producto**: Inicio pasa a ser un feed solo de eventos. Elimina `editorial_posts` y agrega `events` (con `likes_count`/`comments_count` desnormalizados, mantenidos por trigger), `event_comments` y `saved_events`. Solo administradores o el dueño de un negocio ya aprobado pueden crear eventos.
-- `0011_seed_events.sql` precarga 4 eventos de ejemplo (festival, concierto, feria gastronómica, carrera) con fechas relativas a "ahora" para que siempre aparezcan como próximos.
+- `0012_seed_events.sql` precarga 4 eventos de ejemplo (festival, concierto, feria gastronómica, carrera) con fechas relativas a "ahora" para que siempre aparezcan como próximos.
 
 ## Convertir tu cuenta en administradora
 

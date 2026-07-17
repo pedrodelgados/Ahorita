@@ -39,6 +39,7 @@ const emptyEvent = {
   price: "",
   ticket_url: "",
   tag: "",
+  editor_pick: false,
 };
 
 export default function AdminPage() {
@@ -115,6 +116,7 @@ export default function AdminPage() {
         price: eventForm.price ? Number(eventForm.price) : null,
         ticket_url: eventForm.ticket_url.trim() || null,
         tag: eventForm.tag || null,
+        editor_pick: eventForm.editor_pick,
         created_by: user.id,
       });
       setEventForm(emptyEvent);
@@ -367,6 +369,14 @@ export default function AdminPage() {
                 style={{ ...inputStyle, flex: 1 }}
               />
             </div>
+            <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13 }}>
+              <input
+                type="checkbox"
+                checked={eventForm.editor_pick}
+                onChange={(e) => setEventForm({ ...eventForm, editor_pick: e.target.checked })}
+              />
+              Incluir en "Selección del editor"
+            </label>
             <Button type="submit" disabled={savingEvent} style={{ padding: "10px 18px", fontSize: 14 }}>
               {savingEvent ? "Guardando…" : "Crear evento"}
             </Button>

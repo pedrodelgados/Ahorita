@@ -65,5 +65,5 @@ Para crear el esquema de base de datos, ve a `supabase/README.md`.
 - Cada tarjeta de evento (`src/features/feed/FeedCard.jsx`) tiene like/comentar/compartir/guardar, etiqueta (NUEVO/GRATIS/HOY/IMPERDIBLE/PROMOCIÓN) y botones contextuales "Cómo llegar" / "Comprar entradas" (solo si es pago) / "Más información"
 - Ficha de evento como Bottom Sheet (`src/features/events/EventSheet.jsx`): descripción, precio o "Gratis", comentarios, "Cómo llegar" (reutiliza `DirectionsSection`) y guardar evento (`SavedEventsContext`)
 - Píldoras de categoría en Inicio filtran solo por canales de evento (Música, Gastronómico, Cultural, Deportivo, Nocturno), no por toda la taxonomía de lugares
-- Migración `supabase/migrations/0010_events.sql`: tabla `events` (reemplaza `editorial_posts`), `event_comments`, `saved_events`, triggers que mantienen `likes_count`/`comments_count` sincronizados; datos semilla en `0011_seed_events.sql`
+- Migración `supabase/migrations/0010_events.sql`: tabla `events` (reemplaza `editorial_posts`), `event_comments`, `saved_events`, triggers que mantienen `likes_count`/`comments_count` sincronizados; datos semilla en `0012_seed_events.sql`
 - Panel de administración (`/admin`): sección "Cargar un evento nuevo" para publicar eventos sin tocar código, siguiendo el mismo patrón que "Cargar un lugar nuevo"

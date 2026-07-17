@@ -86,6 +86,7 @@ export default function FeedCard({ item, liked, likeCount, isOpen, onToggleLike,
           src={item.image}
           alt={item.title}
           iconSize={32}
+          category={item.channel}
           style={{
             position: "absolute",
             inset: 0,

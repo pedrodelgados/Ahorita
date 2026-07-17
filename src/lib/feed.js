@@ -27,11 +27,17 @@ function getCardVariant(event, index) {
 }
 
 // "Selección del editor": no es contenido inventado — es un recorte de los
-// mismos eventos reales del feed (los marcados nuevo/imperdible por un
-// admin, o los próximos si no hay suficientes con esas etiquetas), mostrado
-// en un formato distinto para romper el ritmo vertical. Solo aparece si hay
-// al menos 3 eventos reales elegibles.
+// mismos eventos reales del feed. Prioridad de la fuente:
+//   1. Curaduría manual real (events.editor_pick = true, marcado por un
+//      admin desde el panel) — así queda preparada la arquitectura para que
+//      el equipo elija a mano qué aparece aquí, sin que el código decida.
+//   2. Si no hay al menos 3 marcados a mano, cae al heurístico automático
+//      de antes (nuevo/imperdible, o los próximos eventos).
+// Solo aparece si hay al menos 3 eventos reales elegibles.
 function pickEditorSelection(events) {
+  const curated = events.filter((e) => e.editor_pick);
+  if (curated.length >= 3) return curated.slice(0, 5);
+
   const featured = events.filter((e) => e.tag === "imperdible" || e.tag === "nuevo");
   const pool = featured.length >= 3 ? featured : events;
   return pool.slice(0, 5);
@@ -81,6 +87,7 @@ export async function getFeed({ channel } = {}) {
         title: e.title,
         location: e.location_name || e.business?.name,
         image: e.image_url,
+        category: e.category,
       })),
     });
   }
