@@ -1,5 +1,5 @@
 import { Sparkles } from "lucide-react";
-import { CHANNELS, COLORS, tint } from "../../styles/theme";
+import { CHANNELS, COLORS, textStyle, tint, TYPE } from "../../styles/theme";
 import { CHANNEL_ICONS } from "./channelIcons";
 
 // Inicio filtra por categoría de EVENTO (Música, Gastronómico, Cultural,
@@ -53,7 +53,9 @@ function Pill({ label, Icon, color, active, onClick }) {
       >
         <Icon size={19} color={active ? "#FFFFFF" : color} />
       </div>
-      <span style={{ fontSize: 11, color: COLORS.ink, fontWeight: active ? 700 : 500 }}>{label}</span>
+      <span style={textStyle(TYPE.metadata, { fontSize: 11, color: COLORS.ink, fontWeight: active ? 700 : 500 })}>
+        {label}
+      </span>
     </button>
   );
 }

@@ -1,11 +1,14 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { Bell, Search } from "lucide-react";
+import { Bell, CalendarX2, Search } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
 import { getFeed } from "../lib/feed";
 import { getProfile } from "../lib/profile";
 import { listMyLikedIds, likeTarget, unlikeTarget } from "../lib/postLikes";
-import { COLORS } from "../styles/theme";
+import { COLORS, textStyle, TYPE } from "../styles/theme";
+import AppHeader from "../components/layout/AppHeader";
+import EmptyState from "../components/ui/EmptyState";
+import { FeedCardSkeleton } from "../components/ui/LoadingSkeleton";
 import CategoryPillsRow from "../features/feed/CategoryPillsRow";
 import FeedCard from "../features/feed/FeedCard";
 import GuideBar from "../features/ai/GuideBar";
@@ -78,41 +81,27 @@ export default function FeedPage() {
 
   return (
     <div style={{ minHeight: "100svh" }}>
-      <div
-        style={{
-          position: "sticky",
-          top: 0,
-          zIndex: 10,
-          background: "var(--color-bg)",
-          borderBottom: "1px solid rgba(43, 38, 34, 0.08)",
-        }}
-      >
-        <header
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            padding: "16px 20px 2px",
-          }}
-        >
-          <h1 style={{ fontSize: 22 }}>Ahorita</h1>
-          <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+      <AppHeader
+        title="Ahorita"
+        display
+        right={
+          <>
             <Link to="/buscar" aria-label="Buscar" style={{ display: "flex" }}>
               <Search size={20} />
             </Link>
             <Link to="/notificaciones" aria-label="Notificaciones" style={{ display: "flex" }}>
               <Bell size={20} />
             </Link>
-          </div>
-        </header>
-
+          </>
+        }
+      >
         <div style={{ padding: "4px 12px 0" }}>
           <CategoryPillsRow selected={channel} onSelect={setChannel} />
         </div>
         <div style={{ padding: "0 16px 12px" }}>
           <GuideBar />
         </div>
-      </div>
+      </AppHeader>
 
       <main style={{ maxWidth: 560, margin: "0 auto", padding: "12px 12px 84px" }}>
         {showInterestsPrompt && (
@@ -122,12 +111,11 @@ export default function FeedPage() {
         {isGuest && (
           <p
             style={{
-              fontSize: 13,
-              color: COLORS.inkSoft,
               background: "#FFFFFF",
               borderRadius: "var(--radius-sm)",
               padding: "10px 14px",
               marginBottom: 16,
+              ...textStyle(TYPE.bodySmall, { color: COLORS.inkSoft, margin: 0, marginBottom: 16 }),
             }}
           >
             Estás explorando sin cuenta. Crea una para guardar eventos, comentar y publicar.
@@ -135,12 +123,17 @@ export default function FeedPage() {
         )}
 
         {loading && (
-          <p style={{ textAlign: "center", color: COLORS.inkSoft, padding: "40px 0" }}>Cargando…</p>
+          <>
+            <FeedCardSkeleton />
+            <FeedCardSkeleton />
+          </>
         )}
         {!loading && items.length === 0 && (
-          <p style={{ textAlign: "center", color: COLORS.inkSoft, padding: "40px 0" }}>
-            No hay eventos próximos en esta categoría todavía.
-          </p>
+          <EmptyState
+            icon={<CalendarX2 size={22} />}
+            title="Todavía no hay eventos aquí"
+            description="No hay eventos próximos en esta categoría por ahora. Prueba con otra o vuelve pronto."
+          />
         )}
         {items.map((item) => (
           <FeedCard

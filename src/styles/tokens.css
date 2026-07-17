@@ -6,6 +6,15 @@
   --color-ink: #2b2622;
   --color-ink-soft: #948a80;
   --color-accent: #e8785c;
+  --color-accent-pressed: #d4664a;
+  --color-surface: #ffffff;
+  --color-border-subtle: rgba(43, 38, 34, 0.08);
+
+  /* Acento exclusivo de la Guía IA — nunca reutilizar en otro contexto */
+  --color-ai-accent: #8b7ce0;
+  --color-success: #4fa383;
+  --color-warning: #b8875a;
+  --color-error: #c0392b;
 
   /* Categorías / canales */
   --color-gastronomia: #e8785c;
@@ -29,4 +38,5 @@
   --radius-full: 999px;
   --shadow-card: 0 4px 20px rgba(43, 38, 34, 0.06);
   --shadow-sheet: 0 -8px 30px rgba(43, 38, 34, 0.12);
+  --shadow-modal: 0 12px 40px rgba(43, 38, 34, 0.14);
 }

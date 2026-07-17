@@ -59,3 +59,47 @@ a {
 .ahorita-sheet {
   animation: ahorita-slide-up 0.25s ease-out;
 }
+
+@keyframes ahorita-shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.ahorita-skeleton {
+  background: linear-gradient(
+    90deg,
+    rgba(43, 38, 34, 0.06) 25%,
+    rgba(43, 38, 34, 0.1) 37%,
+    rgba(43, 38, 34, 0.06) 63%
+  );
+  background-size: 400% 100%;
+  animation: ahorita-shimmer 1.4s ease infinite;
+}
+
+@keyframes ahorita-like-pop {
+  0% {
+    transform: scale(1);
+  }
+  35% {
+    transform: scale(1.35);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.ahorita-like-pop {
+  animation: ahorita-like-pop 0.35s cubic-bezier(0.17, 0.89, 0.32, 1.49);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ahorita-sheet,
+  .ahorita-skeleton,
+  .ahorita-like-pop {
+    animation: none;
+  }
+}

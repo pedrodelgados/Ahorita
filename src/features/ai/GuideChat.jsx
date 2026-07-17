@@ -47,7 +47,7 @@ export default function GuideChat({ placeId, placeholder, suggestions = [] }) {
               marginBottom: 10,
             }}
           >
-            <Sparkles size={14} color={COLORS.accent} />
+            <Sparkles size={14} color={COLORS.aiAccent} />
             Pregúntame lo que quieras
           </p>
           <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
@@ -86,7 +86,7 @@ export default function GuideChat({ placeId, placeholder, suggestions = [] }) {
               key={i}
               style={{
                 alignSelf: m.role === "user" ? "flex-end" : "flex-start",
-                background: m.role === "user" ? COLORS.accent : "#FFFFFF",
+                background: m.role === "user" ? COLORS.aiAccent : "#FFFFFF",
                 color: m.role === "user" ? "#FFFFFF" : COLORS.ink,
                 padding: "10px 14px",
                 borderRadius: 14,
@@ -129,7 +129,7 @@ export default function GuideChat({ placeId, placeholder, suggestions = [] }) {
           type="submit"
           disabled={loading}
           style={{
-            background: COLORS.accent,
+            background: COLORS.aiAccent,
             border: "none",
             borderRadius: "50%",
             width: 40,

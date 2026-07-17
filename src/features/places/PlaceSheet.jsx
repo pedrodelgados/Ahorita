@@ -3,7 +3,7 @@ import { Sparkles, Globe, Ticket, UtensilsCrossed } from "lucide-react";
 import { listQuestions } from "../../lib/questions";
 import { listStatuses } from "../../lib/statuses";
 import { isOpenNow } from "../../lib/directions";
-import { CHANNELS, COLORS } from "../../styles/theme";
+import { CHANNELS, COLORS, tint } from "../../styles/theme";
 import BottomSheet from "../../components/layout/BottomSheet";
 import AuthGate from "../../components/ui/AuthGate";
 import Composer from "./Composer";
@@ -144,14 +144,14 @@ export default function PlaceSheet({ place, onClose }) {
                 width: "100%",
                 padding: "10px 16px",
                 borderRadius: "var(--radius-full)",
-                border: "1px solid rgba(43, 38, 34, 0.1)",
-                background: "#FFFFFF",
+                border: `1px solid ${tint(COLORS.aiAccent, 0.35)}`,
+                background: tint(COLORS.aiAccent, 0.07),
                 color: "#948A80",
                 fontSize: 14,
                 marginBottom: 16,
               }}
             >
-              <Sparkles size={16} color={COLORS.accent} />
+              <Sparkles size={16} color={COLORS.aiAccent} />
               Preguntar a la Guía IA
             </button>
           )}

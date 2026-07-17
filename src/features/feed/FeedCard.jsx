@@ -1,18 +1,23 @@
-import { Heart, MessageCircle, Send, Bookmark, MapPin } from "lucide-react";
+import { useState } from "react";
 import { useAuth } from "../../contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { useSavedEvents } from "../../contexts/SavedEventsContext";
-import { CHANNEL_COLORS, COLORS } from "../../styles/theme";
+import { CHANNEL_COLORS, COLORS, textStyle, TYPE } from "../../styles/theme";
 import { googleMapsDirectionsUrl } from "../../lib/directions";
 import { formatEventDateTime } from "../../lib/time";
+import ImageWithFallback from "../../components/ui/ImageWithFallback";
+import LocationMetadata from "../../components/ui/LocationMetadata";
+import SocialActions from "./SocialActions";
 
 export default function FeedCard({ item, liked, likeCount, onToggleLike, onOpenEvent }) {
   const { isAuthenticated } = useAuth();
   const navigate = useNavigate();
   const { savedIds, toggleSave } = useSavedEvents();
+  const [videoFailed, setVideoFailed] = useState(false);
   const channelColor = CHANNEL_COLORS[item.channel] ?? COLORS.accent;
   const isSaved = savedIds.has(item.eventId);
   const isPaid = item.price != null && Number(item.price) > 0;
+  const isVideo = item.mediaType === "video" && item.mediaUrl && !videoFailed;
 
   function requireAuth(action) {
     if (!isAuthenticated) {
@@ -47,24 +52,26 @@ export default function FeedCard({ item, liked, likeCount, onToggleLike, onOpenE
         borderRadius: "var(--radius-card)",
         overflow: "hidden",
         marginBottom: 16,
-        background: "#111",
+        background: "#1c1a18",
         scrollSnapAlign: "start",
         flexShrink: 0,
       }}
     >
-      {item.mediaType === "video" && item.mediaUrl ? (
+      {isVideo ? (
         <video
           src={item.mediaUrl}
           autoPlay
           muted
           loop
           playsInline
+          onError={() => setVideoFailed(true)}
           style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }}
         />
       ) : (
-        <img
+        <ImageWithFallback
           src={item.image}
           alt={item.title}
+          iconSize={32}
           style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }}
         />
       )}
@@ -74,7 +81,7 @@ export default function FeedCard({ item, liked, likeCount, onToggleLike, onOpenE
           position: "absolute",
           inset: 0,
           background:
-            "linear-gradient(to top, rgba(0,0,0,0.75) 0%, rgba(0,0,0,0.15) 45%, rgba(0,0,0,0.35) 100%)",
+            "linear-gradient(to top, rgba(0,0,0,0.78) 0%, rgba(0,0,0,0.1) 42%, rgba(0,0,0,0.3) 100%)",
         }}
       />
 
@@ -86,67 +93,45 @@ export default function FeedCard({ item, liked, likeCount, onToggleLike, onOpenE
             left: 16,
             background: channelColor,
             color: "#FFFFFF",
-            fontSize: 11,
-            fontWeight: 700,
-            letterSpacing: 0.4,
-            padding: "5px 12px",
+            padding: "6px 13px",
             borderRadius: "var(--radius-full)",
+            ...textStyle(TYPE.label, { letterSpacing: 0.5 }),
           }}
         >
           {item.tag}
         </span>
       )}
 
-      {/* Acciones verticales */}
-      <div
-        style={{
-          position: "absolute",
-          right: 12,
-          bottom: 140,
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          gap: 18,
-        }}
-      >
-        <ActionButton
-          icon={<Heart size={24} fill={liked ? COLORS.accent : "none"} color={liked ? COLORS.accent : "#FFFFFF"} />}
-          label={likeCount > 0 ? String(likeCount) : "Me gusta"}
-          onClick={() => requireAuth(onToggleLike)}
-        />
-        <ActionButton
-          icon={<MessageCircle size={24} color="#FFFFFF" />}
-          label={item.commentsCount > 0 ? String(item.commentsCount) : "Comentar"}
-          onClick={() => onOpenEvent(item.eventId)}
-        />
-        <ActionButton icon={<Send size={22} color="#FFFFFF" />} label="Compartir" onClick={handleShare} />
-        <ActionButton
-          icon={<Bookmark size={24} fill={isSaved ? "#FFFFFF" : "none"} color="#FFFFFF" />}
-          label="Guardar"
-          onClick={() => requireAuth(() => toggleSave(item.eventId))}
-        />
-      </div>
+      <SocialActions
+        liked={liked}
+        likeCount={likeCount}
+        commentCount={item.commentsCount}
+        saved={isSaved}
+        onToggleLike={() => requireAuth(onToggleLike)}
+        onOpenComments={() => onOpenEvent(item.eventId)}
+        onShare={handleShare}
+        onToggleSave={() => requireAuth(() => toggleSave(item.eventId))}
+      />
 
       {/* Contenido inferior */}
       <div style={{ position: "absolute", left: 16, right: 84, bottom: 20, color: "#FFFFFF" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 12, opacity: 0.9, marginBottom: 4 }}>
-          <MapPin size={12} />
-          {item.location}
-          <span>· {formatEventDateTime(item.startAt)}</span>
-        </div>
-        <h2 style={{ fontSize: 21, marginBottom: 6, lineHeight: 1.15 }}>{item.title}</h2>
+        <LocationMetadata
+          location={item.location}
+          meta={formatEventDateTime(item.startAt)}
+          style={{ marginBottom: 6 }}
+        />
+        <h2 style={textStyle(TYPE.h1, { color: "#FFFFFF", marginBottom: 6 })}>{item.title}</h2>
         {item.description && (
           <p
-            style={{
-              fontSize: 13.5,
-              lineHeight: 1.4,
+            style={textStyle(TYPE.bodySmall, {
+              color: "#FFFFFF",
               margin: "0 0 12px",
               display: "-webkit-box",
               WebkitLineClamp: 2,
               WebkitBoxOrient: "vertical",
               overflow: "hidden",
               opacity: 0.95,
-            }}
+            })}
           >
             {item.description}
           </p>
@@ -166,36 +151,16 @@ export default function FeedCard({ item, liked, likeCount, onToggleLike, onOpenE
   );
 }
 
-function ActionButton({ icon, label, onClick }) {
-  return (
-    <button
-      onClick={onClick}
-      style={{
-        background: "none",
-        border: "none",
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        gap: 3,
-      }}
-    >
-      {icon}
-      <span style={{ fontSize: 10, color: "#FFFFFF", textShadow: "0 1px 3px rgba(0,0,0,0.4)" }}>{label}</span>
-    </button>
-  );
-}
-
 function PillButton({ href, onClick, solid, children }) {
   const style = {
-    padding: "8px 14px",
+    padding: "9px 15px",
     borderRadius: "var(--radius-full)",
-    fontSize: 12.5,
-    fontWeight: 600,
     border: "none",
     background: solid ? COLORS.accent : "rgba(255, 255, 255, 0.18)",
     color: "#FFFFFF",
     backdropFilter: solid ? "none" : "blur(6px)",
     whiteSpace: "nowrap",
+    ...textStyle(TYPE.metadata, { fontWeight: 600 }),
   };
 
   if (href) {

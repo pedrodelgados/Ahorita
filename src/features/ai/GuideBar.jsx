@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Sparkles } from "lucide-react";
 import BottomSheet from "../../components/layout/BottomSheet";
 import GuideChat from "./GuideChat";
-import { COLORS } from "../../styles/theme";
+import { COLORS, textStyle, tint, TYPE } from "../../styles/theme";
 
 const SUGGESTIONS = [
   "¿Qué hacer hoy en Cuenca?",
@@ -24,19 +24,22 @@ export default function GuideBar() {
           width: "100%",
           padding: "10px 16px",
           borderRadius: "var(--radius-full)",
-          border: "1px solid rgba(43, 38, 34, 0.1)",
-          background: "#FFFFFF",
-          color: "#948A80",
-          fontSize: 14,
+          border: `1px solid ${tint(COLORS.aiAccent, 0.35)}`,
+          background: tint(COLORS.aiAccent, 0.07),
+          color: COLORS.inkSoft,
           textAlign: "left",
+          ...textStyle(TYPE.body, { fontSize: 14 }),
         }}
       >
-        <Sparkles size={16} color={COLORS.accent} />
+        <Sparkles size={16} color={COLORS.aiAccent} />
         Pregúntale a la Guía IA sobre Cuenca…
       </button>
 
       <BottomSheet open={open} onClose={() => setOpen(false)}>
-        <h2 style={{ fontSize: 19, marginBottom: 14 }}>Guía IA</h2>
+        <h2 style={textStyle(TYPE.h2, { display: "flex", alignItems: "center", gap: 8, marginBottom: 14 })}>
+          <Sparkles size={17} color={COLORS.aiAccent} />
+          Guía IA
+        </h2>
         <GuideChat
           placeholder="Pregúntale a la Guía IA…"
           suggestions={SUGGESTIONS}
