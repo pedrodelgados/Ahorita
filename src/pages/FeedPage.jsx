@@ -137,13 +137,18 @@ export default function FeedPage() {
             description="No hay eventos próximos en esta categoría por ahora. Prueba con otra o vuelve pronto."
           />
         )}
-        {/* item.kind permite intercalar bloques editoriales (Selección del
-            editor, rutas temáticas...) en el ritmo del feed más adelante —
-            el sistema visual ya está preparado, pero getFeed() hoy solo
-            produce eventos, así que este despacho no cambia nada todavía. */}
+        {/* item.kind despacha entre una tarjeta de evento normal y un bloque
+            editorial horizontal ("Selección del editor" hoy; el sistema
+            queda listo para más bloques de este tipo más adelante). */}
         {items.map((item) =>
           item.kind === "editorial-shelf" ? (
-            <EditorialShelf key={item.id} title={item.title} subtitle={item.subtitle} items={item.items} />
+            <EditorialShelf
+              key={item.id}
+              title={item.title}
+              subtitle={item.subtitle}
+              items={item.items}
+              onOpenItem={(id) => withViewTransition(() => setSelectedEventId(id))}
+            />
           ) : (
             <FeedCard
               key={item.id}

@@ -26,12 +26,23 @@ function getCardVariant(event, index) {
   return "normal";
 }
 
+// "Selección del editor": no es contenido inventado — es un recorte de los
+// mismos eventos reales del feed (los marcados nuevo/imperdible por un
+// admin, o los próximos si no hay suficientes con esas etiquetas), mostrado
+// en un formato distinto para romper el ritmo vertical. Solo aparece si hay
+// al menos 3 eventos reales elegibles.
+function pickEditorSelection(events) {
+  const featured = events.filter((e) => e.tag === "imperdible" || e.tag === "nuevo");
+  const pool = featured.length >= 3 ? featured : events;
+  return pool.slice(0, 5);
+}
+
 // Inicio es un feed exclusivamente de eventos (festivales, conciertos,
 // ferias, funciones, carreras...) — no de lugares fijos. Ver PROJECT.md.
 export async function getFeed({ channel } = {}) {
   const events = await listUpcomingEvents({ channel });
 
-  return events.map((event, index) => ({
+  const items = events.map((event, index) => ({
     id: `event-${event.id}`,
     type: "event",
     targetType: "event",
@@ -56,4 +67,23 @@ export async function getFeed({ channel } = {}) {
     commentsCount: event.comments_count,
     raw: event,
   }));
+
+  const selection = pickEditorSelection(events);
+  if (selection.length >= 3) {
+    items.splice(1, 0, {
+      id: "editorial-seleccion-del-editor",
+      kind: "editorial-shelf",
+      title: "Selección del editor",
+      subtitle: "Curado por el equipo",
+      items: selection.map((e) => ({
+        id: e.id,
+        eventId: e.id,
+        title: e.title,
+        location: e.location_name || e.business?.name,
+        image: e.image_url,
+      })),
+    });
+  }
+
+  return items;
 }

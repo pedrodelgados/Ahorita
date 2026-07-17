@@ -184,9 +184,19 @@ Se rechazó explícitamente el patrón de FAB/chatbot flotante (tipo Intercom/Dr
 - **Nota honesta:** los mensajes de ejemplo del usuario que requieren datos reales (distancia a un evento, clima) no se implementaron todavía — necesitan geolocalización/clima real, que es funcionalidad nueva fuera del alcance de "solo diseño" de esta etapa. Los mensajes actuales son genéricos por sección, no inventan datos.
 - `BottomSheet.jsx` ganó un prop opcional `panelStyle` (retrocompatible) para poder aplicar el `viewTransitionName` al panel sin acoplar la lógica de la IA al componente genérico.
 
-## Sistema editorial del feed: preparado, no implementado
+## Banco de fotografía de demostración (temporal)
 
-Se aprobó la idea de bloques editoriales (Selección del editor, Imperdibles de hoy, Planes para hoy, Gratis esta semana, Escápate este fin de semana, Ruta gastronómica, Ruta del café, Cinco lugares para una cita, Lo nuevo en Cuenca, Joyas escondidas, Descubre cerca de ti) como un patrón estructural futuro que rompa el ritmo del feed — explícitamente **no implementado todavía**, solo preparado:
+Se agregó `public/demo-photos/` con 6 fotografías reales (no ilustraciones, no rectángulos de color), optimizadas (JPEG, ancho máx. 1000-1400px, calidad 80), con licencia libre, obtenidas de proyectos de código abierto de referencia (plantillas web MIT: `codewithsadee/foodhub-restaurant-website`, `codewithsadee/tourly`, `codewithsadee/grilli`) y verificadas visualmente una por una antes de usarlas:
 
-- `src/features/feed/EditorialShelf.jsx` (nuevo): bloque horizontal deslizable con encabezado editorial (kicker + título), tarjetas con el mismo duotono/`ImageWithFallback` que el resto de la app. Genérico — recibe `title`/`subtitle`/`items`, no sabe nada de "Selección del editor" específicamente.
-- `FeedPage.jsx` ya sabe despachar por `item.kind` (`"editorial-shelf"` → `EditorialShelf`, cualquier otra cosa → `FeedCard` como hoy) — pero `lib/feed.js#getFeed()` **no genera ningún item de este tipo todavía**, así que no hay cambio de comportamiento visible en producción. Cuando se decida cuál de estos bloques construir primero (y con qué lógica de curaduría/datos), solo hace falta que `getFeed()` (o una función nueva) produzca items con ese `kind` — el sistema visual ya está listo para recibirlos.
+- `cafeteria-barista.jpg`, `gastronomia-bowl.jpg`, `naturaleza-andes.jpg`, `arquitectura-patrimonio.jpg`, `cultura-pueblo.jpg`, `eventos-cena.jpg`.
+
+**Son temporales y genéricas a propósito** (no son fotos reales de Cuenca — p. ej. "arquitectura-patrimonio" es Venecia, "cultura-pueblo" es Portofino) — sirven para evaluar el diseño con fotografía real de calidad mientras se construye el banco fotográfico propio de Cuenca. `supabase/migrations/0011_seed_events.sql` ahora referencia estas rutas locales (`/demo-photos/...`) en vez de URLs externas de Unsplash — esto además resuelve el problema de que el sandbox de desarrollo bloquea CDNs de imágenes externos, así que las capturas ahora sí muestran el resultado visual real.
+
+## Sistema editorial del feed: "Selección del editor" (primer bloque real)
+
+Se implementó el primer bloque editorial real (no solo preparado) dentro del feed en producción:
+
+- `src/features/feed/EditorialShelf.jsx`: bloque horizontal deslizable, tarjetas de 172×228 con mucho aire entre sí, kicker+título con la misma personalidad tipográfica de Fraunces del resto de la app, y un desvanecido sutil en el borde derecho (`mask-image`, no una flecha ni un punto) que insinúa que se puede seguir deslizando. Cada tarjeta es un botón real: al tocarla abre el mismo `EventSheet` que una tarjeta normal del feed.
+- `src/lib/feed.js#getFeed()`: `pickEditorSelection()` arma "Selección del editor" con los **mismos eventos reales** del feed (los marcados `nuevo`/`imperdible`; si hay menos de 3 con esas etiquetas, usa los próximos eventos en general) — nunca contenido inventado. El bloque se inserta en la posición 1 del feed (justo después de la portada) para romper el ritmo vertical temprano, y solo aparece si hay al menos 3 eventos reales elegibles.
+- Verificado: scroll vertical del feed intacto, scroll horizontal independiente dentro del bloque, apertura del detalle tanto desde una tarjeta del shelf como desde una tarjeta normal, con fotografía real visible en ambos casos (capturas revisadas una por una).
+- **Deliberadamente no incluido todavía:** el resto de los bloques editoriales listados (Imperdibles de hoy, Planes para hoy, Ruta del café, etc.) — el usuario pidió validar primero que "Selección del editor" tenga el nivel esperado antes de construir cualquier otro. `FeedPage.jsx` ya despacha genéricamente por `item.kind`, así que agregar el siguiente bloque no requiere tocar esa lógica de nuevo.
