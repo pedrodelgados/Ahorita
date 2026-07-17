@@ -1,6 +1,6 @@
 # Ahorita
 
-Red social hiperlocal para descubrir lo que pasa en Cuenca, Ecuador, en tiempo real. Ver `PROJECT.md` para el plan de producto completo, `ROADMAP.md` para qué fase sigue, y `CHANGELOG.md` para el registro de cambios.
+Ecosistema urbano inteligente para Cuenca, Ecuador. Ver `ARCHITECTURE.md` para la visión y arquitectura completa del ecosistema (documento fundacional, sin código), `PROJECT.md` para el plan de producto e implementación fase por fase, `ROADMAP.md` para qué fase sigue, y `CHANGELOG.md` para el registro de cambios.
 
 ## Stack
 

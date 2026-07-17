@@ -1,5 +1,7 @@
 # Ahorita (Cuenca Viva) — Prompt maestro
 
+> **Ver `ARCHITECTURE.md` primero.** Ese documento es la visión y arquitectura fundacional del ecosistema completo (sin código) y es la autoridad de producto para las fases futuras. Este archivo (`PROJECT.md`) es el registro fase por fase de lo ya implementado — se actualiza para reflejar cada fase construida, pero cuando entra en conflicto con `ARCHITECTURE.md`, este archivo es el que debe ajustarse.
+
 Quiero construir **"Ahorita"** (nombre de trabajo, también evaluamos "Cuenca Viva") — una red social hiperlocal para descubrir Cuenca, Ecuador en tiempo real. No es una guía turística: es una red social donde todo gira alrededor de lugares — preguntas, respuestas, reportes en vivo y contenido curado — con una IA que responde usando datos reales de la app, no genéricos.
 
 ## Stack técnico
