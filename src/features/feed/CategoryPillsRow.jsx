@@ -2,11 +2,16 @@ import { Sparkles } from "lucide-react";
 import { CHANNELS, COLORS, tint } from "../../styles/theme";
 import { CHANNEL_ICONS } from "./channelIcons";
 
+// Inicio filtra por categoría de EVENTO (Música, Gastronómico, Cultural,
+// Deportivo, Nocturno) — no por toda la taxonomía de lugares de Explorar.
+const EVENT_CHANNEL_IDS = ["musica", "gastronomia", "cultura", "deportes", "vida_nocturna"];
+const EVENT_CHANNELS = CHANNELS.filter((c) => EVENT_CHANNEL_IDS.includes(c.id));
+
 export default function CategoryPillsRow({ selected, onSelect }) {
   return (
     <div style={{ display: "flex", gap: 14, overflowX: "auto", padding: "2px 4px 12px" }}>
       <Pill label="Para ti" Icon={Sparkles} color={COLORS.accent} active={!selected} onClick={() => onSelect(null)} />
-      {CHANNELS.map((c) => (
+      {EVENT_CHANNELS.map((c) => (
         <Pill
           key={c.id}
           label={c.label}

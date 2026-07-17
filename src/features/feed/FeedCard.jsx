@@ -1,17 +1,18 @@
 import { Heart, MessageCircle, Send, Bookmark, MapPin } from "lucide-react";
 import { useAuth } from "../../contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
-import { useSavedPlaces } from "../../contexts/SavedPlacesContext";
+import { useSavedEvents } from "../../contexts/SavedEventsContext";
 import { CHANNEL_COLORS, COLORS } from "../../styles/theme";
 import { googleMapsDirectionsUrl } from "../../lib/directions";
-import { formatRelativeTime } from "../../lib/time";
+import { formatEventDateTime } from "../../lib/time";
 
-export default function FeedCard({ item, liked, likeCount, onToggleLike, onOpenPlace }) {
+export default function FeedCard({ item, liked, likeCount, onToggleLike, onOpenEvent }) {
   const { isAuthenticated } = useAuth();
   const navigate = useNavigate();
-  const { savedIds, toggleSave } = useSavedPlaces();
+  const { savedIds, toggleSave } = useSavedEvents();
   const channelColor = CHANNEL_COLORS[item.channel] ?? COLORS.accent;
-  const isSaved = item.placeId && savedIds.has(item.placeId);
+  const isSaved = savedIds.has(item.eventId);
+  const isPaid = item.price != null && Number(item.price) > 0;
 
   function requireAuth(action) {
     if (!isAuthenticated) {
@@ -25,7 +26,7 @@ export default function FeedCard({ item, liked, likeCount, onToggleLike, onOpenP
     const shareData = {
       title: item.title,
       text: item.description || item.title,
-      url: window.location.origin + "/explorar",
+      url: window.location.origin + "/",
     };
     if (navigator.share) {
       try {
@@ -51,9 +52,9 @@ export default function FeedCard({ item, liked, likeCount, onToggleLike, onOpenP
         flexShrink: 0,
       }}
     >
-      {item.mediaType === "video" && item.image ? (
+      {item.mediaType === "video" && item.mediaUrl ? (
         <video
-          src={item.image}
+          src={item.mediaUrl}
           autoPlay
           muted
           loop
@@ -101,7 +102,7 @@ export default function FeedCard({ item, liked, likeCount, onToggleLike, onOpenP
         style={{
           position: "absolute",
           right: 12,
-          bottom: 130,
+          bottom: 140,
           display: "flex",
           flexDirection: "column",
           alignItems: "center",
@@ -113,21 +114,17 @@ export default function FeedCard({ item, liked, likeCount, onToggleLike, onOpenP
           label={likeCount > 0 ? String(likeCount) : "Me gusta"}
           onClick={() => requireAuth(onToggleLike)}
         />
-        {item.placeId && (
-          <ActionButton
-            icon={<MessageCircle size={24} color="#FFFFFF" />}
-            label="Comentar"
-            onClick={() => onOpenPlace(item.placeId)}
-          />
-        )}
+        <ActionButton
+          icon={<MessageCircle size={24} color="#FFFFFF" />}
+          label={item.commentsCount > 0 ? String(item.commentsCount) : "Comentar"}
+          onClick={() => onOpenEvent(item.eventId)}
+        />
         <ActionButton icon={<Send size={22} color="#FFFFFF" />} label="Compartir" onClick={handleShare} />
-        {item.placeId && (
-          <ActionButton
-            icon={<Bookmark size={24} fill={isSaved ? "#FFFFFF" : "none"} color="#FFFFFF" />}
-            label="Guardar"
-            onClick={() => requireAuth(() => toggleSave(item.placeId))}
-          />
-        )}
+        <ActionButton
+          icon={<Bookmark size={24} fill={isSaved ? "#FFFFFF" : "none"} color="#FFFFFF" />}
+          label="Guardar"
+          onClick={() => requireAuth(() => toggleSave(item.eventId))}
+        />
       </div>
 
       {/* Contenido inferior */}
@@ -135,7 +132,7 @@ export default function FeedCard({ item, liked, likeCount, onToggleLike, onOpenP
         <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 12, opacity: 0.9, marginBottom: 4 }}>
           <MapPin size={12} />
           {item.location}
-          <span>· {formatRelativeTime(item.createdAt)}</span>
+          <span>· {formatEventDateTime(item.startAt)}</span>
         </div>
         <h2 style={{ fontSize: 21, marginBottom: 6, lineHeight: 1.15 }}>{item.title}</h2>
         {item.description && (
@@ -159,13 +156,10 @@ export default function FeedCard({ item, liked, likeCount, onToggleLike, onOpenP
           {item.lat && item.lng && (
             <PillButton href={googleMapsDirectionsUrl(item.lat, item.lng)}>Cómo llegar</PillButton>
           )}
-          {item.ticketsUrl && <PillButton href={item.ticketsUrl}>Comprar entradas</PillButton>}
-          {item.menuUrl && <PillButton href={item.menuUrl}>Ver menú</PillButton>}
-          {item.placeId && (
-            <PillButton onClick={() => onOpenPlace(item.placeId)} solid>
-              Más información
-            </PillButton>
-          )}
+          {isPaid && item.ticketUrl && <PillButton href={item.ticketUrl}>Comprar entradas</PillButton>}
+          <PillButton onClick={() => onOpenEvent(item.eventId)} solid>
+            Más información
+          </PillButton>
         </div>
       </div>
     </section>

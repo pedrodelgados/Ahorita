@@ -3,14 +3,13 @@ import { Link } from "react-router-dom";
 import { Bell, Search } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
 import { getFeed } from "../lib/feed";
-import { getPlace } from "../lib/places";
 import { getProfile } from "../lib/profile";
-import { listLikeCounts, listMyLikedIds, likeTarget, unlikeTarget } from "../lib/postLikes";
+import { listMyLikedIds, likeTarget, unlikeTarget } from "../lib/postLikes";
 import { COLORS } from "../styles/theme";
 import CategoryPillsRow from "../features/feed/CategoryPillsRow";
 import FeedCard from "../features/feed/FeedCard";
 import GuideBar from "../features/ai/GuideBar";
-import PlaceSheet from "../features/places/PlaceSheet";
+import EventSheet from "../features/events/EventSheet";
 import InterestsPrompt from "../features/auth/InterestsPrompt";
 
 export default function FeedPage() {
@@ -19,7 +18,7 @@ export default function FeedPage() {
   const [items, setItems] = useState([]);
   const [likeState, setLikeState] = useState({});
   const [loading, setLoading] = useState(true);
-  const [selectedPlace, setSelectedPlace] = useState(null);
+  const [selectedEventId, setSelectedEventId] = useState(null);
   const [profile, setProfile] = useState(null);
   const [dismissedPrompt, setDismissedPrompt] = useState(false);
 
@@ -46,25 +45,19 @@ export default function FeedPage() {
   }, [channel]);
 
   async function loadLikeState(feedItems) {
-    const idsByType = {};
+    const state = {};
     for (const item of feedItems) {
-      (idsByType[item.targetType] ??= []).push(item.targetId);
+      state[item.id] = { liked: false, count: item.likesCount ?? 0 };
     }
 
-    const state = {};
-    await Promise.all(
-      Object.entries(idsByType).map(async ([targetType, ids]) => {
-        const [counts, likedIds] = await Promise.all([
-          listLikeCounts(targetType, ids),
-          isAuthenticated ? listMyLikedIds(user.id, targetType) : Promise.resolve([]),
-        ]);
-        const likedSet = new Set(likedIds);
-        for (const item of feedItems) {
-          if (item.targetType !== targetType) continue;
-          state[item.id] = { liked: likedSet.has(item.targetId), count: counts[item.targetId] ?? 0 };
-        }
-      })
-    );
+    if (isAuthenticated) {
+      const likedIds = await listMyLikedIds(user.id, "event");
+      const likedSet = new Set(likedIds);
+      for (const item of feedItems) {
+        if (likedSet.has(item.targetId)) state[item.id].liked = true;
+      }
+    }
+
     setLikeState(state);
   }
 
@@ -81,11 +74,6 @@ export default function FeedPage() {
     } catch {
       setLikeState((prev) => ({ ...prev, [item.id]: current }));
     }
-  }
-
-  async function handleOpenPlace(placeId) {
-    const place = await getPlace(placeId);
-    setSelectedPlace(place);
   }
 
   return (
@@ -142,7 +130,7 @@ export default function FeedPage() {
               marginBottom: 16,
             }}
           >
-            Estás explorando sin cuenta. Crea una para guardar lugares, comentar y publicar.
+            Estás explorando sin cuenta. Crea una para guardar eventos, comentar y publicar.
           </p>
         )}
 
@@ -151,7 +139,7 @@ export default function FeedPage() {
         )}
         {!loading && items.length === 0 && (
           <p style={{ textAlign: "center", color: COLORS.inkSoft, padding: "40px 0" }}>
-            Todavía no hay actividad en esta categoría.
+            No hay eventos próximos en esta categoría todavía.
           </p>
         )}
         {items.map((item) => (
@@ -161,12 +149,12 @@ export default function FeedPage() {
             liked={likeState[item.id]?.liked ?? false}
             likeCount={likeState[item.id]?.count ?? 0}
             onToggleLike={() => toggleLike(item)}
-            onOpenPlace={handleOpenPlace}
+            onOpenEvent={setSelectedEventId}
           />
         ))}
       </main>
 
-      <PlaceSheet place={selectedPlace} onClose={() => setSelectedPlace(null)} />
+      <EventSheet eventId={selectedEventId} onClose={() => setSelectedEventId(null)} />
     </div>
   );
 }

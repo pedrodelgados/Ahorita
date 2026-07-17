@@ -33,15 +33,26 @@ Quiero construir **"Ahorita"** (nombre de trabajo, también evaluamos "Cuenca Vi
 - Pantalla "¿Cómo usarás la app?" con tarjetas: Vivo en Cuenca / Estoy visitando / Tengo un negocio / Organizo eventos — sirve para personalizar el contenido inicial
 - Pantalla de registro de negocio separada (nombre, categoría, dirección, ubicación en mapa, WhatsApp, teléfono, Instagram, horario, foto, descripción), con nota "en revisión antes de publicar"
 
-### 2. Inicio — feed vertical estilo Instagram (esto es central, no lo conviertas en cuadrícula)
-- Scroll vertical infinito, un post grande a la vez, cada uno ocupa 80–90% de la pantalla (foto o video)
-- Mezcla orgánica de: eventos, restaurantes, cafeterías, hoteles, glampings, conciertos, museos, naturaleza, preguntas de la comunidad, estados/reportes en vivo — no agrupados por tipo, mezclados como en Instagram
-- Cada post incluye: nombre del lugar/evento, ubicación, fecha/hora si aplica, descripción corta, etiqueta llamativa (NUEVO / GRATIS / IMPERDIBLE / HOY / EVENTO / PROMOCIÓN)
+### 2. Inicio — feed vertical de EVENTOS, estilo Instagram (esto es central, no lo conviertas en cuadrícula ni lo mezcles con lugares en general)
+
+**Alcance del feed:** Inicio muestra únicamente **eventos** — festivales, conciertos, ferias, funciones de teatro, carreras, inauguraciones, pases y celebraciones puntuales. No incluye restaurantes, cafés, hoteles ni lugares fijos como posts del feed; esos viven en "Explorar" (mapa + cuadrícula) y en "Comunidad" (preguntas/respuestas/estados), no en el feed principal.
+
+Esta distinción es intencional y resuelve un problema real de contenido: un evento es temporal y normalmente ya viene con foto/flyer del organizador, así que el feed se renueva solo con el calendario de la ciudad — no depende de que alguien fotografíe cada rincón de Cuenca para que Inicio se sienta lleno. Con 10-15 eventos activos el feed ya se siente vivo.
+
+**Comportamiento:**
+- Scroll vertical infinito, un evento grande a la vez, cada uno ocupa 80–90% de la pantalla (foto o video del evento)
+- Ordenado por relevancia/proximidad en el tiempo (lo de hoy y esta semana primero)
+- Cada post incluye: nombre del evento, lugar, fecha y hora, descripción corta, etiqueta llamativa (NUEVO / GRATIS / HOY / IMPERDIBLE / PROMOCIÓN)
 - Acciones verticales a la derecha del post: ❤️ me gusta, 💬 comentarios, 📤 compartir, 🔖 guardar
-- Botones contextuales abajo del post según tipo: Cómo llegar, Comprar entradas, Ver menú, Más información
+- Botones contextuales abajo del post: Cómo llegar, Comprar entradas (si es pagado), Más información
+- Fuente del contenido: curado por el equipo/administradores + eventos que suben organizadores/negocios verificados (vía el registro de negocios) — no contenido abierto de cualquier usuario, para mantener la calidad del feed principal
 - Encabezado: logo, ícono de notificaciones, ícono de búsqueda
-- Debajo del encabezado, fila horizontal deslizable de categorías con ícono + nombre (Para ti, Eventos, Gastronomía, Cafés, Naturaleza, Hoteles, Cultura, Deportes, Vida nocturna, Más)
-- **Barra de IA fija**, visible mientras se hace scroll (no solo un botón flotante aparte): "✨ Pregúntale a la IA — ¿Qué quieres hacer hoy en Cuenca?"
+- Debajo del encabezado, fila horizontal deslizable de categorías de evento (Para ti, Música, Gastronómico, Cultural, Deportivo, Nocturno, Más) — filtra el feed de eventos, no categorías de lugares
+- **Barra de IA fija**, visible mientras se hace scroll (no solo un botón flotante aparte): "✨ Pregúntale a la IA — ¿Qué plan me recomiendas para hoy?"
+
+**Dónde vive todo lo demás (para que quede claro que no falta, solo está en otra pantalla):**
+- Restaurantes, cafés, hoteles, glampings y lugares fijos → pestaña **Explorar** (mapa + cuadrícula tipo Instagram Explore)
+- Preguntas, respuestas y reportes en vivo de la comunidad → pestaña **Comunidad**, y el "muro" de cada lugar accesible desde su Bottom Sheet en Explorar
 
 ### 3. Explorar — mapa + cuadrícula (pantalla distinta a Inicio)
 - Mapa ocupa ~75% de la pantalla, con ubicación real del usuario (geolocalización del navegador) y pines de colores por categoría (íconos vectoriales, nunca pines genéricos)
@@ -72,7 +83,7 @@ Quiero construir **"Ahorita"** (nombre de trabajo, también evaluamos "Cuenca Vi
 - **questions**: id, author_id, place_id, channel, text, created_at
 - **answers**: id, question_id, author_id, text, likes_count, verified, created_at
 - **statuses**: id, author_id, place_id, channel, text, media_url, media_type, created_at
-- **editorial_posts**: id, title, image_url, items, published_at
+- **events**: id, business_id (nullable si lo carga el equipo), title, description, category, image_url, video_url, location_name, lat, lng, start_at, end_at, price (nullable si es gratis), ticket_url, tag (NUEVO/GRATIS/HOY/IMPERDIBLE/PROMOCIÓN), likes_count, comments_count, created_by
 - **channels**: id, label, color_hex
 
 ## Notas de producto a tener presentes
@@ -104,3 +115,5 @@ Las Fases 1, 2 (parcial), 3 (parcial), 4 y 5 ya están construidas — ver `READ
 - **Mapa:** se usa Leaflet + OpenStreetMap (gratis, sin API key) en vez de Google Maps/Mapbox, para no depender de una cuenta/token que el usuario tendría que crear. "Cómo llegar" sigue abriendo Google Maps vía deep link (no requiere API key).
 - **Clima:** por ahora widget visual sin datos reales (requeriría una cuenta de OpenWeatherMap u similar); se deja preparado para conectar una API real cuando el usuario decida cuál usar.
 - **Tranvía/bus:** no existe una API pública de tiempo real para el tranvía/buses de Cuenca; se muestra información estática (parada más cercana, tarifa) en vez de "próximo horario" en vivo, para no inventar datos.
+- **Corrección importante (posterior):** Inicio se había construido mezclando lugares/estados/preguntas/editorial en el feed. Se corrigió para que sea **solo eventos**, según la reescritura de la sección "Inicio" de arriba. La tabla `editorial_posts` se eliminó y se reemplazó por `events`. Restaurantes/cafés/hoteles siguen viviendo en Explorar; preguntas/respuestas/estados siguen viviendo en el muro de cada lugar (Comunidad).
+- **Creación de eventos:** por ahora solo administradores desde `/admin`. La idea de "negocios verificados" suben sus propios eventos queda anotada para una fase posterior — el registro de negocios existente no distingue todavía un estado "verificado" separado de "aprobado".

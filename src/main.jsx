@@ -4,6 +4,7 @@ import { BrowserRouter } from "react-router-dom";
 import "./index.css";
 import { AuthProvider } from "./contexts/AuthContext";
 import { SavedPlacesProvider } from "./contexts/SavedPlacesContext";
+import { SavedEventsProvider } from "./contexts/SavedEventsContext";
 import { FollowProvider } from "./contexts/FollowContext";
 import App from "./App.jsx";
 
@@ -12,9 +13,11 @@ createRoot(document.getElementById("root")).render(
     <BrowserRouter>
       <AuthProvider>
         <SavedPlacesProvider>
-          <FollowProvider>
-            <App />
-          </FollowProvider>
+          <SavedEventsProvider>
+            <FollowProvider>
+              <App />
+            </FollowProvider>
+          </SavedEventsProvider>
         </SavedPlacesProvider>
       </AuthProvider>
     </BrowserRouter>
