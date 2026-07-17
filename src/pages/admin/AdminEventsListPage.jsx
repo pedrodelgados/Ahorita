@@ -1,13 +1,15 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Calendar, Copy, Plus, Search } from "lucide-react";
-import { listAllEventsForAdmin, createEvent, updateEvent } from "../../lib/events";
+import { ArrowLeft, Calendar, Copy, Eye, EyeOff, Pencil, Plus, Search, Trash2 } from "lucide-react";
+import { listAllEventsForAdmin, createEvent, updateEvent, deleteEvent } from "../../lib/events";
 import { useAuth } from "../../contexts/AuthContext";
 import { CHANNELS, COLORS, EVENT_STATUSES, textStyle, TYPE, tint } from "../../styles/theme";
-import { formatEventDateTime } from "../../lib/time";
+import { formatEventDateTime, formatRelativeTime } from "../../lib/time";
 import ImageWithFallback from "../../components/ui/ImageWithFallback";
 import EmptyState from "../../components/ui/EmptyState";
 import Button from "../../components/ui/Button";
+import ActionsMenu from "../../components/ui/ActionsMenu";
+import ConfirmationModal from "../../components/ui/ConfirmationModal";
 
 export default function AdminEventsListPage() {
   const navigate = useNavigate();
@@ -16,6 +18,7 @@ export default function AdminEventsListPage() {
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("");
   const [status, setStatus] = useState("");
+  const [pendingDelete, setPendingDelete] = useState(null);
 
   useEffect(() => {
     load();
@@ -31,9 +34,11 @@ export default function AdminEventsListPage() {
     const copy = { ...event };
     delete copy.id;
     delete copy.created_at;
+    delete copy.updated_at;
     delete copy.likes_count;
     delete copy.comments_count;
     delete copy.business;
+    delete copy.creator;
     const created = await createEvent({
       ...copy,
       title: `${event.title} (copia)`,
@@ -46,6 +51,12 @@ export default function AdminEventsListPage() {
   async function toggleHidden(event) {
     const next = event.status === "oculto" ? "publicado" : "oculto";
     await updateEvent(event.id, { status: next });
+    load();
+  }
+
+  async function confirmDelete() {
+    await deleteEvent(pendingDelete.id);
+    setPendingDelete(null);
     load();
   }
 
@@ -95,11 +106,12 @@ export default function AdminEventsListPage() {
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
             {events.map((event) => {
               const statusMeta = EVENT_STATUSES.find((s) => s.id === event.status) ?? EVENT_STATUSES[1];
+              const isHidden = event.status === "oculto";
               return (
                 <div key={event.id} style={rowStyle}>
                   <button
                     onClick={() => navigate(`/admin/eventos/${event.id}`)}
-                    style={{ display: "flex", gap: 12, flex: 1, background: "none", border: "none", textAlign: "left", padding: 0, cursor: "pointer" }}
+                    style={{ display: "flex", gap: 12, flex: 1, minWidth: 0, background: "none", border: "none", textAlign: "left", padding: 0, cursor: "pointer" }}
                   >
                     <div style={{ width: 56, height: 56, borderRadius: 12, overflow: "hidden", flexShrink: 0 }}>
                       <ImageWithFallback
@@ -117,6 +129,10 @@ export default function AdminEventsListPage() {
                       <p style={textStyle(TYPE.metadata, { color: COLORS.inkSoft, margin: 0 })}>
                         {formatEventDateTime(event.start_at)}
                       </p>
+                      <p style={textStyle(TYPE.metadata, { color: COLORS.inkSoft, margin: "2px 0 0", opacity: 0.85 })}>
+                        Actualizado {formatRelativeTime(event.updated_at ?? event.created_at)}
+                        {event.creator?.username ? ` · por ${event.creator.username}` : ""}
+                      </p>
                       <span
                         style={{
                           display: "inline-block",
@@ -132,20 +148,32 @@ export default function AdminEventsListPage() {
                       </span>
                     </div>
                   </button>
-                  <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                    <button onClick={() => duplicate(event)} style={iconButtonStyle} aria-label="Duplicar">
-                      <Copy size={15} />
-                    </button>
-                    <button onClick={() => toggleHidden(event)} style={{ ...iconButtonStyle, fontSize: 10 }}>
-                      {event.status === "oculto" ? "Mostrar" : "Ocultar"}
-                    </button>
-                  </div>
+                  <ActionsMenu
+                    actions={[
+                      { label: "Editar", icon: <Pencil size={15} />, onClick: () => navigate(`/admin/eventos/${event.id}`) },
+                      { label: "Duplicar", icon: <Copy size={15} />, onClick: () => duplicate(event) },
+                      {
+                        label: isHidden ? "Publicar" : "Ocultar",
+                        icon: isHidden ? <Eye size={15} /> : <EyeOff size={15} />,
+                        onClick: () => toggleHidden(event),
+                      },
+                      { label: "Eliminar", icon: <Trash2 size={15} />, onClick: () => setPendingDelete(event), danger: true },
+                    ]}
+                  />
                 </div>
               );
             })}
           </div>
         )}
       </main>
+
+      <ConfirmationModal
+        open={!!pendingDelete}
+        title="Eliminar evento"
+        message={`Esta acción no se puede deshacer. "${pendingDelete?.title}" se eliminará permanentemente.`}
+        onConfirm={confirmDelete}
+        onCancel={() => setPendingDelete(null)}
+      />
     </div>
   );
 }
@@ -186,17 +214,4 @@ const rowStyle = {
   borderRadius: "var(--radius-card)",
   boxShadow: "var(--shadow-card)",
   padding: 12,
-};
-
-const iconButtonStyle = {
-  background: "rgba(43, 38, 34, 0.06)",
-  border: "none",
-  borderRadius: "var(--radius-full)",
-  padding: "6px 10px",
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-  cursor: "pointer",
-  color: COLORS.ink,
-  fontWeight: 600,
 };

@@ -1,8 +1,9 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { ArrowLeft, Trash2 } from "lucide-react";
 import { createPlace, deletePlace, getPlace, updatePlace } from "../../lib/places";
 import { CHANNELS, textStyle, TYPE, COLORS } from "../../styles/theme";
+import { useUnsavedChangesGuard } from "../../hooks/useUnsavedChangesGuard";
 import PlaceCard from "../../features/places/PlaceCard";
 import Button from "../../components/ui/Button";
 import Card from "../../components/ui/Card";
@@ -10,6 +11,7 @@ import FormSection from "../../components/ui/FormSection";
 import MediaUploader from "../../components/ui/MediaUploader";
 import LocationPicker from "../../components/ui/LocationPicker";
 import ConfirmationModal from "../../components/ui/ConfirmationModal";
+import SaveStatusPill from "../../components/ui/SaveStatusPill";
 import { useAuth } from "../../contexts/AuthContext";
 
 const PLACE_TAGS = [
@@ -44,6 +46,10 @@ const emptyForm = {
   status: "publicado",
 };
 
+function snapshotOf(form) {
+  return JSON.stringify(form);
+}
+
 export default function AdminPlaceEditorPage() {
   const { id } = useParams();
   const isNew = !id;
@@ -52,24 +58,53 @@ export default function AdminPlaceEditorPage() {
 
   const [form, setForm] = useState(emptyForm);
   const [loading, setLoading] = useState(!isNew);
-  const [saving, setSaving] = useState(false);
+  const [saveStatus, setSaveStatus] = useState(null); // null | "saving" | "saved" | "error"
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [confirmLeave, setConfirmLeave] = useState(false);
+  const [savedSnapshot, setSavedSnapshot] = useState(isNew ? snapshotOf(emptyForm) : null);
+  const savedStatusTimeout = useRef(null);
 
   useEffect(() => {
     if (isNew) return;
     getPlace(id).then((place) => {
-      setForm({ ...emptyForm, ...place });
+      const loadedForm = { ...emptyForm, ...place };
+      setForm(loadedForm);
+      setSavedSnapshot(snapshotOf(loadedForm));
       setLoading(false);
     });
   }, [id, isNew]);
 
+  const dirty = savedSnapshot !== null && snapshotOf(form) !== savedSnapshot;
+
+  const handleBlockedBack = useCallback(() => setConfirmLeave(true), []);
+  useUnsavedChangesGuard(dirty, handleBlockedBack);
+
+  useEffect(() => () => clearTimeout(savedStatusTimeout.current), []);
+
+  // Cualquier edición limpia un "guardado"/"error" previo — ver el mismo
+  // patrón en AdminEventEditorPage.
   function set(field, value) {
     setForm((prev) => ({ ...prev, [field]: value }));
+    setSaveStatus(null);
+  }
+
+  function setLocation(lat, lng) {
+    setForm((prev) => ({ ...prev, lat, lng }));
+    setSaveStatus(null);
+  }
+
+  function goToList() {
+    navigate("/admin/lugares");
+  }
+
+  function handleBack() {
+    if (dirty) setConfirmLeave(true);
+    else goToList();
   }
 
   async function handleSave() {
     if (!form.name.trim()) return;
-    setSaving(true);
+    setSaveStatus("saving");
     try {
       const payload = {
         name: form.name.trim(),
@@ -87,20 +122,27 @@ export default function AdminPlaceEditorPage() {
         status: form.status,
       };
       if (isNew) {
-        const created = await createPlace(payload);
+        const created = await createPlace({ ...payload, created_by: user.id });
+        setSavedSnapshot(snapshotOf(form));
+        setSaveStatus("saved");
+        clearTimeout(savedStatusTimeout.current);
+        savedStatusTimeout.current = setTimeout(() => setSaveStatus(null), 2500);
         navigate(`/admin/lugares/${created.id}`, { replace: true });
       } else {
         await updatePlace(id, payload);
-        navigate("/admin/lugares");
+        setSavedSnapshot(snapshotOf(form));
+        setSaveStatus("saved");
+        clearTimeout(savedStatusTimeout.current);
+        savedStatusTimeout.current = setTimeout(() => setSaveStatus(null), 2500);
       }
-    } finally {
-      setSaving(false);
+    } catch {
+      setSaveStatus("error");
     }
   }
 
   async function handleDelete() {
     await deletePlace(id);
-    navigate("/admin/lugares");
+    goToList();
   }
 
   if (loading) return null;
@@ -116,10 +158,11 @@ export default function AdminPlaceEditorPage() {
   return (
     <div style={{ minHeight: "100svh" }}>
       <header style={headerStyle}>
-        <button onClick={() => navigate("/admin/lugares")} style={backButtonStyle} aria-label="Volver">
+        <button onClick={handleBack} style={backButtonStyle} aria-label="Volver">
           <ArrowLeft size={20} />
         </button>
         <h1 style={textStyle(TYPE.h1, { margin: 0, flex: 1 })}>{isNew ? "Nuevo lugar" : "Editar lugar"}</h1>
+        <SaveStatusPill status={saveStatus} dirty={dirty} />
         {!isNew && (
           <button onClick={() => setConfirmDelete(true)} style={deleteButtonStyle} aria-label="Eliminar">
             <Trash2 size={18} />
@@ -189,7 +232,7 @@ export default function AdminPlaceEditorPage() {
             <LocationPicker
               lat={form.lat}
               lng={form.lng}
-              onChange={(lat, lng) => setForm((prev) => ({ ...prev, lat, lng }))}
+              onChange={setLocation}
             />
           </Card>
         </FormSection>
@@ -235,8 +278,8 @@ export default function AdminPlaceEditorPage() {
       </main>
 
       <div style={footerStyle}>
-        <Button fullWidth disabled={saving} onClick={handleSave} style={{ padding: "14px 20px" }}>
-          {saving ? "Guardando…" : "Guardar cambios"}
+        <Button fullWidth disabled={saveStatus === "saving"} onClick={handleSave} style={{ padding: "14px 20px" }}>
+          {saveStatus === "saving" ? "Guardando…" : "Guardar cambios"}
         </Button>
       </div>
 
@@ -246,6 +289,16 @@ export default function AdminPlaceEditorPage() {
         message="Esta acción no se puede deshacer. El lugar se eliminará permanentemente."
         onConfirm={handleDelete}
         onCancel={() => setConfirmDelete(false)}
+      />
+
+      <ConfirmationModal
+        open={confirmLeave}
+        title="Cambios sin guardar"
+        message="Si sales ahora perderás los cambios que no has guardado."
+        confirmLabel="Salir sin guardar"
+        cancelLabel="Seguir editando"
+        onConfirm={goToList}
+        onCancel={() => setConfirmLeave(false)}
       />
     </div>
   );

@@ -113,11 +113,22 @@ a {
   animation: ahorita-breathe 2.6s ease-in-out infinite;
 }
 
+@keyframes ahorita-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.ahorita-spin {
+  animation: ahorita-spin 0.8s linear infinite;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .ahorita-sheet,
   .ahorita-skeleton,
   .ahorita-like-pop,
-  .ahorita-breathe {
+  .ahorita-breathe,
+  .ahorita-spin {
     animation: none;
   }
 }

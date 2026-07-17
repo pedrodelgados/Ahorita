@@ -1,9 +1,10 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { ArrowLeft, Trash2 } from "lucide-react";
 import { useAuth } from "../../contexts/AuthContext";
 import { createEvent, deleteEvent, getEvent, updateEvent } from "../../lib/events";
 import { CHANNELS, textStyle, TYPE, COLORS } from "../../styles/theme";
+import { useUnsavedChangesGuard } from "../../hooks/useUnsavedChangesGuard";
 import FeedCard from "../../features/feed/FeedCard";
 import Button from "../../components/ui/Button";
 import Card from "../../components/ui/Card";
@@ -11,6 +12,7 @@ import FormSection from "../../components/ui/FormSection";
 import MediaUploader from "../../components/ui/MediaUploader";
 import LocationPicker from "../../components/ui/LocationPicker";
 import ConfirmationModal from "../../components/ui/ConfirmationModal";
+import SaveStatusPill from "../../components/ui/SaveStatusPill";
 
 const EVENT_TAGS = [
   { id: "", label: "Sin etiqueta" },
@@ -56,6 +58,10 @@ function toLocalInput(iso) {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
+function snapshotOf(form, isFree) {
+  return JSON.stringify({ form, isFree });
+}
+
 export default function AdminEventEditorPage() {
   const { id } = useParams();
   const isNew = !id;
@@ -64,14 +70,17 @@ export default function AdminEventEditorPage() {
 
   const [form, setForm] = useState(emptyForm);
   const [loading, setLoading] = useState(!isNew);
-  const [saving, setSaving] = useState(false);
+  const [saveStatus, setSaveStatus] = useState(null); // null | "saving" | "saved" | "error"
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [confirmLeave, setConfirmLeave] = useState(false);
   const [isFree, setIsFree] = useState(true);
+  const [savedSnapshot, setSavedSnapshot] = useState(isNew ? snapshotOf(emptyForm, true) : null);
+  const savedStatusTimeout = useRef(null);
 
   useEffect(() => {
     if (isNew) return;
     getEvent(id).then((event) => {
-      setForm({
+      const loadedForm = {
         ...emptyForm,
         ...event,
         start_at: toLocalInput(event.start_at),
@@ -80,19 +89,52 @@ export default function AdminEventEditorPage() {
         expires_at: toLocalInput(event.expires_at),
         price: event.price ?? "",
         organizer: event.organizer ?? "",
-      });
-      setIsFree(!event.price || Number(event.price) === 0);
+      };
+      const loadedIsFree = !event.price || Number(event.price) === 0;
+      setForm(loadedForm);
+      setIsFree(loadedIsFree);
+      setSavedSnapshot(snapshotOf(loadedForm, loadedIsFree));
       setLoading(false);
     });
   }, [id, isNew]);
 
+  const dirty = savedSnapshot !== null && snapshotOf(form, isFree) !== savedSnapshot;
+
+  const handleBlockedBack = useCallback(() => setConfirmLeave(true), []);
+  useUnsavedChangesGuard(dirty, handleBlockedBack);
+
+  useEffect(() => () => clearTimeout(savedStatusTimeout.current), []);
+
+  // Cualquier edición limpia un "guardado"/"error" previo — el usuario ya
+  // volvió a tocar el formulario, así que ese estado quedó obsoleto y debe
+  // ceder el paso a "cambios sin guardar" (ver SaveStatusPill).
   function set(field, value) {
     setForm((prev) => ({ ...prev, [field]: value }));
+    setSaveStatus(null);
+  }
+
+  function setLocation(lat, lng) {
+    setForm((prev) => ({ ...prev, lat, lng }));
+    setSaveStatus(null);
+  }
+
+  function toggleFree(value) {
+    setIsFree(value);
+    setSaveStatus(null);
+  }
+
+  function goToList() {
+    navigate("/admin/eventos");
+  }
+
+  function handleBack() {
+    if (dirty) setConfirmLeave(true);
+    else goToList();
   }
 
   async function handleSave() {
     if (!form.title.trim() || !form.start_at) return;
-    setSaving(true);
+    setSaveStatus("saving");
     try {
       const payload = {
         title: form.title.trim(),
@@ -115,19 +157,26 @@ export default function AdminEventEditorPage() {
       };
       if (isNew) {
         const created = await createEvent({ ...payload, created_by: user.id });
+        setSavedSnapshot(snapshotOf(form, isFree));
+        setSaveStatus("saved");
+        clearTimeout(savedStatusTimeout.current);
+        savedStatusTimeout.current = setTimeout(() => setSaveStatus(null), 2500);
         navigate(`/admin/eventos/${created.id}`, { replace: true });
       } else {
         await updateEvent(id, payload);
-        navigate("/admin/eventos");
+        setSavedSnapshot(snapshotOf(form, isFree));
+        setSaveStatus("saved");
+        clearTimeout(savedStatusTimeout.current);
+        savedStatusTimeout.current = setTimeout(() => setSaveStatus(null), 2500);
       }
-    } finally {
-      setSaving(false);
+    } catch {
+      setSaveStatus("error");
     }
   }
 
   async function handleDelete() {
     await deleteEvent(id);
-    navigate("/admin/eventos");
+    goToList();
   }
 
   if (loading) return null;
@@ -156,10 +205,11 @@ export default function AdminEventEditorPage() {
   return (
     <div style={{ minHeight: "100svh" }}>
       <header style={headerStyle}>
-        <button onClick={() => navigate("/admin/eventos")} style={backButtonStyle} aria-label="Volver">
+        <button onClick={handleBack} style={backButtonStyle} aria-label="Volver">
           <ArrowLeft size={20} />
         </button>
         <h1 style={textStyle(TYPE.h1, { margin: 0, flex: 1 })}>{isNew ? "Nuevo evento" : "Editar evento"}</h1>
+        <SaveStatusPill status={saveStatus} dirty={dirty} />
         {!isNew && (
           <button onClick={() => setConfirmDelete(true)} style={deleteButtonStyle} aria-label="Eliminar">
             <Trash2 size={18} />
@@ -241,7 +291,7 @@ export default function AdminEventEditorPage() {
             <LocationPicker
               lat={form.lat}
               lng={form.lng}
-              onChange={(lat, lng) => setForm((prev) => ({ ...prev, lat, lng }))}
+              onChange={setLocation}
             />
           </Card>
         </FormSection>
@@ -249,7 +299,7 @@ export default function AdminEventEditorPage() {
         <FormSection index={5} title="Entradas y contacto">
           <Card style={{ display: "flex", flexDirection: "column", gap: 10 }}>
             <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13 }}>
-              <input type="checkbox" checked={isFree} onChange={(e) => setIsFree(e.target.checked)} />
+              <input type="checkbox" checked={isFree} onChange={(e) => toggleFree(e.target.checked)} />
               Es gratis
             </label>
             {!isFree && (
@@ -328,8 +378,8 @@ export default function AdminEventEditorPage() {
       </main>
 
       <div style={footerStyle}>
-        <Button fullWidth disabled={saving} onClick={handleSave} style={{ padding: "14px 20px" }}>
-          {saving ? "Guardando…" : "Guardar cambios"}
+        <Button fullWidth disabled={saveStatus === "saving"} onClick={handleSave} style={{ padding: "14px 20px" }}>
+          {saveStatus === "saving" ? "Guardando…" : "Guardar cambios"}
         </Button>
       </div>
 
@@ -339,6 +389,16 @@ export default function AdminEventEditorPage() {
         message="Esta acción no se puede deshacer. El evento se eliminará permanentemente."
         onConfirm={handleDelete}
         onCancel={() => setConfirmDelete(false)}
+      />
+
+      <ConfirmationModal
+        open={confirmLeave}
+        title="Cambios sin guardar"
+        message="Si sales ahora perderás los cambios que no has guardado."
+        confirmLabel="Salir sin guardar"
+        cancelLabel="Seguir editando"
+        onConfirm={goToList}
+        onCancel={() => setConfirmLeave(false)}
       />
     </div>
   );

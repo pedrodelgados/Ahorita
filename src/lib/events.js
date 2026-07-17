@@ -57,7 +57,7 @@ export async function createEventComment({ eventId, text, authorId }) {
 export async function listAllEventsForAdmin({ search, category, status, from, to } = {}) {
   let query = supabase
     .from("events")
-    .select("*, business:businesses(name)")
+    .select("*, business:businesses(name), creator:profiles!events_created_by_fkey(username)")
     .order("start_at", { ascending: false });
 
   if (search) query = query.ilike("title", `%${search}%`);

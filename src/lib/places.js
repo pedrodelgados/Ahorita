@@ -46,7 +46,10 @@ export async function createPlace(payload) {
 // --- Administración (/admin/lugares) -----------------------------------------
 
 export async function listAllPlacesForAdmin({ search, channel, status } = {}) {
-  let query = supabase.from("places").select("*").order("name");
+  let query = supabase
+    .from("places")
+    .select("*, creator:profiles!places_created_by_fkey(username)")
+    .order("name");
   if (search) query = query.ilike("name", `%${search}%`);
   if (channel) query = query.eq("channel_default", channel);
   if (status) query = query.eq("status", status);

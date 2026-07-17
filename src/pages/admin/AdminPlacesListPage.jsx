@@ -1,18 +1,24 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Copy, MapPin, Plus, Search } from "lucide-react";
-import { listAllPlacesForAdmin, createPlace, updatePlace } from "../../lib/places";
+import { ArrowLeft, Copy, Eye, EyeOff, MapPin, Pencil, Plus, Search, Trash2 } from "lucide-react";
+import { listAllPlacesForAdmin, createPlace, updatePlace, deletePlace } from "../../lib/places";
+import { useAuth } from "../../contexts/AuthContext";
 import { CHANNELS, COLORS, PLACE_STATUSES, textStyle, TYPE, tint } from "../../styles/theme";
+import { formatRelativeTime } from "../../lib/time";
 import ImageWithFallback from "../../components/ui/ImageWithFallback";
 import EmptyState from "../../components/ui/EmptyState";
 import Button from "../../components/ui/Button";
+import ActionsMenu from "../../components/ui/ActionsMenu";
+import ConfirmationModal from "../../components/ui/ConfirmationModal";
 
 export default function AdminPlacesListPage() {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [places, setPlaces] = useState(null);
   const [search, setSearch] = useState("");
   const [channel, setChannel] = useState("");
   const [status, setStatus] = useState("");
+  const [pendingDelete, setPendingDelete] = useState(null);
 
   useEffect(() => {
     load();
@@ -28,10 +34,13 @@ export default function AdminPlacesListPage() {
     const copy = { ...place };
     delete copy.id;
     delete copy.created_at;
+    delete copy.updated_at;
+    delete copy.creator;
     const created = await createPlace({
       ...copy,
       name: `${place.name} (copia)`,
       status: "borrador",
+      created_by: user.id,
     });
     navigate(`/admin/lugares/${created.id}`);
   }
@@ -39,6 +48,12 @@ export default function AdminPlacesListPage() {
   async function toggleHidden(place) {
     const next = place.status === "oculto" ? "publicado" : "oculto";
     await updatePlace(place.id, { status: next });
+    load();
+  }
+
+  async function confirmDelete() {
+    await deletePlace(pendingDelete.id);
+    setPendingDelete(null);
     load();
   }
 
@@ -88,11 +103,12 @@ export default function AdminPlacesListPage() {
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
             {places.map((place) => {
               const statusMeta = PLACE_STATUSES.find((s) => s.id === place.status) ?? PLACE_STATUSES[1];
+              const isHidden = place.status === "oculto";
               return (
                 <div key={place.id} style={rowStyle}>
                   <button
                     onClick={() => navigate(`/admin/lugares/${place.id}`)}
-                    style={{ display: "flex", gap: 12, flex: 1, background: "none", border: "none", textAlign: "left", padding: 0, cursor: "pointer" }}
+                    style={{ display: "flex", gap: 12, flex: 1, minWidth: 0, background: "none", border: "none", textAlign: "left", padding: 0, cursor: "pointer" }}
                   >
                     <div style={{ width: 56, height: 56, borderRadius: 12, overflow: "hidden", flexShrink: 0 }}>
                       <ImageWithFallback
@@ -110,6 +126,10 @@ export default function AdminPlacesListPage() {
                       <p style={textStyle(TYPE.metadata, { color: COLORS.inkSoft, margin: 0 })}>
                         {place.area || "Sin zona"}
                       </p>
+                      <p style={textStyle(TYPE.metadata, { color: COLORS.inkSoft, margin: "2px 0 0", opacity: 0.85 })}>
+                        Actualizado {formatRelativeTime(place.updated_at ?? place.created_at)}
+                        {place.creator?.username ? ` · por ${place.creator.username}` : ""}
+                      </p>
                       <span
                         style={{
                           display: "inline-block",
@@ -125,20 +145,32 @@ export default function AdminPlacesListPage() {
                       </span>
                     </div>
                   </button>
-                  <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                    <button onClick={() => duplicate(place)} style={iconButtonStyle} aria-label="Duplicar">
-                      <Copy size={15} />
-                    </button>
-                    <button onClick={() => toggleHidden(place)} style={{ ...iconButtonStyle, fontSize: 10 }}>
-                      {place.status === "oculto" ? "Mostrar" : "Ocultar"}
-                    </button>
-                  </div>
+                  <ActionsMenu
+                    actions={[
+                      { label: "Editar", icon: <Pencil size={15} />, onClick: () => navigate(`/admin/lugares/${place.id}`) },
+                      { label: "Duplicar", icon: <Copy size={15} />, onClick: () => duplicate(place) },
+                      {
+                        label: isHidden ? "Publicar" : "Ocultar",
+                        icon: isHidden ? <Eye size={15} /> : <EyeOff size={15} />,
+                        onClick: () => toggleHidden(place),
+                      },
+                      { label: "Eliminar", icon: <Trash2 size={15} />, onClick: () => setPendingDelete(place), danger: true },
+                    ]}
+                  />
                 </div>
               );
             })}
           </div>
         )}
       </main>
+
+      <ConfirmationModal
+        open={!!pendingDelete}
+        title="Eliminar lugar"
+        message={`Esta acción no se puede deshacer. "${pendingDelete?.name}" se eliminará permanentemente.`}
+        onConfirm={confirmDelete}
+        onCancel={() => setPendingDelete(null)}
+      />
     </div>
   );
 }
@@ -179,17 +211,4 @@ const rowStyle = {
   borderRadius: "var(--radius-card)",
   boxShadow: "var(--shadow-card)",
   padding: 12,
-};
-
-const iconButtonStyle = {
-  background: "rgba(43, 38, 34, 0.06)",
-  border: "none",
-  borderRadius: "var(--radius-full)",
-  padding: "6px 10px",
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-  cursor: "pointer",
-  color: COLORS.ink,
-  fontWeight: 600,
 };
