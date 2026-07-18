@@ -69,10 +69,6 @@ export async function getBusinessOpenStatus(businessId) {
   return data;
 }
 
-// Único punto de entrada real a este perfil en la Entrega 1: "Mis negocios"
-// en ProfilePage necesita el actor_id de un negocio para poder enlazar a
-// /actor/:actorId (la ruta trabaja siempre sobre actor_id, nunca business_id
-// directamente, para no bifurcar el concepto de "perfil").
 // Galería (actor_media, Fase 3 Bloque A) — solo medios activos, en el orden
 // que definió el propietario o administrador operativo.
 export async function listActorMedia(actorId) {
@@ -106,6 +102,50 @@ export async function updateActorProfileDetails(actorId, patch) {
     .single();
   if (error) throw error;
   return data;
+}
+
+// Negocios que el usuario puede gestionar desde el selector de perfil
+// (Entrega 5): los que posee legalmente (businesses.owner_id) más los que
+// administra de forma operativa y activa (actor_managers, Bloque A),
+// combinados en una sola lista — "propietario" tiene precedencia visual
+// sobre "administrador" si por algún motivo coincidieran.
+export async function listMyManagedActors(profileId) {
+  const [ownedResult, managedResult] = await Promise.all([
+    supabase
+      .from("actors")
+      .select("id, display_name, business_id, businesses!inner(id, name, category, image_url, status, owner_id)")
+      .eq("businesses.owner_id", profileId),
+    supabase
+      .from("actor_managers")
+      .select("actor_id, actors!inner(id, display_name, business_id, businesses(id, name, category, image_url, status))")
+      .eq("manager_profile_id", profileId)
+      .is("revoked_at", null),
+  ]);
+  if (ownedResult.error) throw ownedResult.error;
+  if (managedResult.error) throw managedResult.error;
+
+  const byActorId = new Map();
+
+  for (const row of ownedResult.data) {
+    byActorId.set(row.id, {
+      actorId: row.id,
+      displayName: row.display_name,
+      business: row.businesses,
+      role: "propietario",
+    });
+  }
+
+  for (const row of managedResult.data) {
+    if (byActorId.has(row.actors.id)) continue;
+    byActorId.set(row.actors.id, {
+      actorId: row.actors.id,
+      displayName: row.actors.display_name,
+      business: row.actors.businesses,
+      role: "administrador",
+    });
+  }
+
+  return Array.from(byActorId.values());
 }
 
 export async function getActorIdForBusiness(businessId) {

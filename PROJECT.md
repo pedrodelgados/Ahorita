@@ -1117,3 +1117,42 @@ Una, descrita arriba (`listBusinessCatalog` de la Entrega 2 no filtraba coleccio
 ### Qué sigue (Entrega 5, pendiente de aprobación)
 
 Selector entre perfil personal y negocios administrados. No se avanza automáticamente — a la espera de aprobación explícita.
+
+## Fase 3, Bloque C, Entrega 5 — Selector de perfil unificado (implementado)
+
+A partir de esta entrega cambia la metodología para el resto del proyecto (decisión explícita del usuario, aplicable a todas las fases restantes): antes de escribir código de cualquier entrega nueva se presenta primero un análisis de 18 puntos revisado simultáneamente como arquitecto de software, ingeniero senior, diseñador UX/UI, product designer y auditor técnico, cuestionando activamente si el diseño previo puede mejorarse — no solo confirmando que la funcionalidad pedida es implementable. Ver el análisis completo de esta entrega en el artefacto publicado antes de esta implementación.
+
+### Bifurcación identificada y resuelta con aprobación explícita
+
+El encargo original describía un "selector" para elegir entre el perfil personal y los negocios administrados. Construirlo literalmente sobre `ProfilePage.jsx` (la pantalla heredada de la Fase 1, con una estética de panel distinta a la del sistema editorial construido en las Entregas 1-4 del Bloque C) habría perpetuado una inconsistencia visual real: dos "perfiles" con dos lenguajes de diseño distintos en la misma app. Se presentaron dos opciones — (A) agregar el selector sobre `ProfilePage.jsx` sin tocar su estructura, o (B) unificar el perfil personal al mismo sistema que ya usa cualquier negocio (`/actor/:actorId`), retirando `ProfilePage.jsx` — junto con una sub-pregunta sobre si mover cuenta/intereses/guardados/notificaciones/cerrar sesión a una nueva ruta `/ajustes`. El usuario aprobó explícitamente la **Opción B** y `/ajustes`.
+
+### Frontend
+
+- **`src/hooks/useMyActorId.js`** (nuevo): resuelve y cachea el `actor_id` tipo persona del usuario autenticado (`actors` donde `profile_id = auth.uid()`) — punto único que necesitan tanto `BottomNav` como el selector para saber "cuál es mi propio perfil".
+- **`src/lib/actorProfile.js`**: `listMyManagedActors(profileId)` — combina los negocios que el usuario posee legalmente (`businesses.owner_id`) con los que administra de forma operativa y activa (`actor_managers`, sin `revoked_at`), deduplicados por `actor_id` (la propiedad legal tiene precedencia si coincidieran), cada uno etiquetado `propietario` o `administrador`. Dos consultas con embeds de PostgREST (`businesses!inner(...)` y `actors!inner(...)`), sin ninguna migración nueva — toda la seguridad y las tablas ya existían desde el Bloque A.
+- **`src/features/profile/ProfileSwitcherSheet.jsx`** (nuevo): hoja deslizable con "Tú" (marca activa si corresponde), un renglón por cada negocio propio/administrado (foto o respaldo teñido por categoría, nombre, rol) y "Registrar un negocio" siempre visible al final.
+- **`src/pages/ActorProfilePage.jsx`**: agrega dos íconos condicionales en el encabezado — el selector (visible en mi propio perfil o en cualquier negocio que pueda editar) y el engranaje de ajustes (visible únicamente en mi propio perfil de persona). El lápiz de edición (Entrega 3) no cambia.
+- **`src/pages/SettingsPage.jsx`** (nuevo, reemplaza a `ProfilePage.jsx`): cuenta (usuario/correo), intereses, lugares guardados, notificaciones push, panel de administración, cerrar sesión — todo lo que en `ProfilePage.jsx` NO era "el perfil en sí". La sección "Mis negocios" **no se traslada aquí**: queda completamente reemplazada por el selector, accesible directamente desde el perfil unificado.
+- **`src/pages/MyProfileRedirectPage.jsx`** (nuevo): `/perfil` deja de ser una pantalla propia pero se conserva como punto de entrada estable — resuelve `useMyActorId()` y redirige a `/actor/:miActorId`. Evita tener que actualizar los enlaces ya existentes hacia `/perfil` (`BusinessRegisterPage`, `AdminPage`).
+- **`src/components/layout/BottomNav.jsx`**: la pestaña "Perfil" ya no es una ruta fija — apunta a `/actor/:miActorId` una vez resuelto (con `/perfil` como respaldo mientras se resuelve o sin sesión, cubierto por `RequireAuth`). El estado activo se calcula a mano comparando `location.pathname`, porque el destino de `NavLink` ahora es dinámico.
+- **`src/pages/ProfilePage.jsx`** — eliminado. Ninguna otra pantalla lo importaba.
+- **`src/App.jsx`**: nueva ruta `/ajustes` (`RequireAuth` + `MainLayout`); `/perfil` pasa a `MyProfileRedirectPage` (sin `MainLayout`, ya que solo redirige).
+
+### Verificación realizada
+
+- **Build y lint**: limpios, sin advertencias nuevas.
+- **Playwright** (misma red interceptada de las entregas anteriores, con sesión autenticada real de supabase-js simulada): pestaña "Perfil" de `BottomNav` apunta a `/actor/:miActorId` y aparecen el selector y el engranaje de ajustes en mi propio perfil, sin el lápiz; el selector abierto muestra "Tú" (activo), un negocio propio ("Propietario"), un negocio administrado ("Administrador operativo") y "Registrar un negocio"; tocar el negocio administrado navega a su perfil; un negocio propio (visto como su editor, no como mi persona) muestra lápiz y selector pero no el engranaje; el negocio de un tercero sin relación no muestra ninguno de los tres íconos; `/perfil` autenticado redirige a `/actor/:miActorId`; `/ajustes` muestra usuario/intereses/guardados/cerrar sesión y **no** muestra "Mis negocios".
+- **Regresión**: las cuatro Playwright completas de las Entregas 1-4 (8 + 3 + 8 + 7 = 26 escenarios) se volvieron a correr después de esta entrega — todos siguen pasando sin cambios.
+
+### Limitación de entorno
+
+Misma de las entregas anteriores (sin Docker/Supabase real). No hubo migración nueva en esta entrega — toda la seguridad reutilizada (`actor_belongs_to_current_user`, `actor_managers`) ya se verificó contra Postgres real en el Bloque A; esta entrega solo prueba que el frontend arma correctamente las dos consultas de `listMyManagedActors` y las presenta bien, no vuelve a probar la lógica SQL en sí.
+
+### Deuda técnica detectada
+
+- Toda la de las Entregas 1-4 (sin cambios) — incluida la gestión de archivos huérfanos en Storage, registrada como obligatoria antes de producción.
+- **Sin interfaz para gestionar `actor_managers`** (invitar/revocar administradores operativos): el selector muestra los negocios ya administrados, pero no hay todavía ninguna pantalla para agregar o quitar un administrador — queda para un bloque dedicado futuro (ver el análisis de la Entrega 5, sección 12).
+
+### Qué sigue (Entrega 6, pendiente de aprobación y de su propio análisis de 18 puntos)
+
+A definir junto con el usuario. No se avanza automáticamente — a la espera de aprobación explícita.

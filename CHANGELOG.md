@@ -2,6 +2,30 @@
 
 Registro de cambios notables de Ahorita (Cuenca Viva). Formato libre, en español, más cercano a un registro de fases de producto que a versiones semánticas — ver `PROJECT.md` para el plan completo y el estado real de la implementación.
 
+## 2026-07-18 — Fase 3, Bloque C, Entrega 5: selector de perfil unificado
+
+A partir de esta entrega, nueva metodología para el resto del proyecto: cada entrega futura se presenta primero como un análisis de 18 puntos (arquitectura, UX/UI, product design, auditoría técnica) antes de escribir código, cuestionando activamente el diseño previo — no solo confirmando la funcionalidad pedida.
+
+Sin ninguna migración nueva — toda la seguridad (`actor_belongs_to_current_user`, `actor_managers`) ya existía desde el Bloque A.
+
+### Bifurcación resuelta con aprobación explícita
+El encargo original describía un selector agregado sobre `ProfilePage.jsx` (estética heredada de la Fase 1, inconsistente con el sistema editorial del Bloque C). Se propusieron dos opciones — agregarlo sin tocar la estructura, o unificar el perfil personal al mismo `/actor/:actorId` que ya usan los negocios, retirando `ProfilePage.jsx` — y una sub-pregunta sobre mover ajustes a `/ajustes`. El usuario aprobó la opción de unificación y `/ajustes`.
+
+### Agregado
+- `src/hooks/useMyActorId.js`: resuelve el `actor_id` persona del usuario autenticado.
+- `src/lib/actorProfile.js`: `listMyManagedActors(profileId)` — negocios propios + administrados (activos), deduplicados y etiquetados por rol.
+- `src/features/profile/ProfileSwitcherSheet.jsx`: hoja de selección — "Tú", cada negocio propio/administrado, "Registrar un negocio".
+- `src/pages/SettingsPage.jsx` (reemplaza a `ProfilePage.jsx`): cuenta, intereses, guardados, push, admin, cerrar sesión — sin "Mis negocios" (reemplazada por el selector).
+- `src/pages/MyProfileRedirectPage.jsx`: `/perfil` pasa a ser un punto de entrada estable que redirige a `/actor/:miActorId`.
+- `ActorProfilePage.jsx`: íconos de selector (mi perfil o cualquier negocio editable) y ajustes (solo mi perfil de persona) en el encabezado.
+- `BottomNav.jsx`: la pestaña "Perfil" apunta directamente a `/actor/:miActorId`.
+
+### Eliminado
+- `src/pages/ProfilePage.jsx` — sin más referencias en el código.
+
+### Verificado
+Build y lint limpios. Playwright: BottomNav y encabezado en mi propio perfil (selector + ajustes, sin lápiz); selector muestra "Tú"/negocio propio/negocio administrado/"Registrar un negocio"; clic en negocio administrado navega a su perfil; negocio propio visto como editor (lápiz + selector, sin ajustes); negocio de un tercero sin ninguno de los tres íconos; `/perfil` redirige a `/actor/:miActorId`; `/ajustes` sin "Mis negocios". Regresión completa de las Entregas 1-4 (26 escenarios) sigue pasando.
+
 ## 2026-07-18 — Fase 3, Bloque C, Entrega 4: edición de horarios y catálogo
 
 ### Agregado

@@ -4,7 +4,8 @@ import LoginPage from "./features/auth/LoginPage";
 import UsageModeScreen from "./features/auth/UsageModeScreen";
 import FeedPage from "./pages/FeedPage";
 import ExplorePage from "./pages/ExplorePage";
-import ProfilePage from "./pages/ProfilePage";
+import MyProfileRedirectPage from "./pages/MyProfileRedirectPage";
+import SettingsPage from "./pages/SettingsPage";
 import SearchPage from "./pages/SearchPage";
 import NotificationsPage from "./pages/NotificationsPage";
 import BusinessRegisterPage from "./pages/BusinessRegisterPage";
@@ -73,8 +74,16 @@ export default function App() {
         path="/perfil"
         element={
           <RequireAuth>
+            <MyProfileRedirectPage />
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/ajustes"
+        element={
+          <RequireAuth>
             <MainLayout>
-              <ProfilePage />
+              <SettingsPage />
             </MainLayout>
           </RequireAuth>
         }

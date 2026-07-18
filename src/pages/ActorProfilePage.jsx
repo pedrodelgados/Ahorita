@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, Pencil } from "lucide-react";
+import { ArrowLeft, ChevronsUpDown, Pencil, Settings } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
+import { useMyActorId } from "../hooks/useMyActorId";
 import { getPublicActorProfile, canEditActor } from "../lib/actorProfile";
 import { COLORS, SPACE } from "../styles/theme";
 import Card from "../components/ui/Card";
@@ -13,6 +14,7 @@ import EventsShelf from "../features/profile/EventsShelf";
 import GallerySection from "../features/profile/GallerySection";
 import GuideTeaser from "../features/profile/GuideTeaser";
 import AboutSection from "../features/profile/AboutSection";
+import ProfileSwitcherSheet from "../features/profile/ProfileSwitcherSheet";
 
 // Perfil público unificado (Fase 3, Bloque C): una sola ruta,
 // /actor/:actorId, sirve tanto a un actor persona como a un actor negocio —
@@ -29,9 +31,11 @@ import AboutSection from "../features/profile/AboutSection";
 export default function ActorProfilePage() {
   const { actorId } = useParams();
   const navigate = useNavigate();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
+  const myActorId = useMyActorId();
   const [state, setState] = useState({ loading: true, error: null, data: null });
   const [canEdit, setCanEdit] = useState(false);
+  const [switcherOpen, setSwitcherOpen] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -49,6 +53,12 @@ export default function ActorProfilePage() {
   }, [actorId]);
 
   const isNegocio = state.data?.actor.type !== "persona" && !!state.data?.business;
+  const isOwnPersona = isAuthenticated && !!myActorId && actorId === myActorId;
+  // El selector aparece siempre que este perfil sea "mío" en algún sentido:
+  // mi propia persona, o un negocio que poseo/administro (mismo criterio que
+  // habilita el lápiz de edición) — así el usuario siempre puede saltar de
+  // un perfil propio a otro sin volver primero a "Tú".
+  const canSwitch = isOwnPersona || canEdit;
 
   useEffect(() => {
     if (!isNegocio || !isAuthenticated) {
@@ -87,19 +97,36 @@ export default function ActorProfilePage() {
           <ArrowLeft size={20} />
         </button>
         <h2 style={{ fontSize: 16, flex: 1 }}>Perfil</h2>
-        {canEdit && (
-          <Link
-            to={`/actor/${actorId}/editar`}
-            aria-label="Editar perfil"
-            style={{
-              width: 36, height: 36, borderRadius: "50%", background: "rgba(43, 38, 34, 0.06)",
-              display: "flex", alignItems: "center", justifyContent: "center", color: COLORS.ink,
-            }}
-          >
-            <Pencil size={16} />
-          </Link>
-        )}
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          {canSwitch && (
+            <button
+              onClick={() => setSwitcherOpen(true)}
+              aria-label="Cambiar de perfil"
+              style={headerIconButtonStyle}
+            >
+              <ChevronsUpDown size={16} />
+            </button>
+          )}
+          {canEdit && (
+            <Link to={`/actor/${actorId}/editar`} aria-label="Editar perfil" style={headerIconButtonStyle}>
+              <Pencil size={16} />
+            </Link>
+          )}
+          {isOwnPersona && (
+            <Link to="/ajustes" aria-label="Ajustes" style={headerIconButtonStyle}>
+              <Settings size={16} />
+            </Link>
+          )}
+        </div>
       </header>
+
+      <ProfileSwitcherSheet
+        open={switcherOpen}
+        onClose={() => setSwitcherOpen(false)}
+        profileId={user?.id}
+        myActorId={myActorId}
+        activeActorId={actorId}
+      />
 
       <main style={{ maxWidth: 720, margin: "0 auto", padding: "24px 24px calc(84px + env(safe-area-inset-bottom))" }}>
         {state.loading && <p style={{ color: COLORS.inkSoft, fontSize: 14 }}>Cargando…</p>}
@@ -149,3 +176,14 @@ export default function ActorProfilePage() {
     </div>
   );
 }
+
+const headerIconButtonStyle = {
+  width: 36,
+  height: 36,
+  borderRadius: "50%",
+  background: "rgba(43, 38, 34, 0.06)",
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  color: COLORS.ink,
+};

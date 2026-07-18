@@ -4,8 +4,6 @@ import { ArrowLeft, ShieldCheck } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
 import { getProfile, updateProfile } from "../lib/profile";
 import { listSavedPlaces } from "../lib/savedPlaces";
-import { listMyBusinesses } from "../lib/businesses";
-import { getActorIdForBusiness } from "../lib/actorProfile";
 import { CHANNELS } from "../styles/theme";
 import Button from "../components/ui/Button";
 import Card from "../components/ui/Card";
@@ -14,7 +12,12 @@ import PlaceCard from "../features/places/PlaceCard";
 import PlaceSheet from "../features/places/PlaceSheet";
 import PushToggle from "../features/notifications/PushToggle";
 
-export default function ProfilePage() {
+// Ajustes (Fase 3, Bloque C, Entrega 5): todo lo que antes vivía en
+// ProfilePage y NO es "el perfil en sí" — cuenta, intereses, guardados,
+// notificaciones, cierre de sesión. "Mis negocios" no vive aquí: ahora se
+// gestiona desde el selector de perfil (ProfileSwitcherSheet), accesible
+// directamente desde el perfil unificado.
+export default function SettingsPage() {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
 
@@ -22,7 +25,6 @@ export default function ProfilePage() {
   const [username, setUsername] = useState("");
   const [savingUsername, setSavingUsername] = useState(false);
   const [savedPlaces, setSavedPlaces] = useState([]);
-  const [businesses, setBusinesses] = useState([]);
   const [selectedPlace, setSelectedPlace] = useState(null);
 
   useEffect(() => {
@@ -31,14 +33,6 @@ export default function ProfilePage() {
       setUsername(p.username ?? "");
     });
     listSavedPlaces(user.id).then(setSavedPlaces).catch(() => {});
-    listMyBusinesses(user.id)
-      .then(async (list) => {
-        const withActorId = await Promise.all(
-          list.map(async (b) => ({ ...b, actorId: await getActorIdForBusiness(b.id).catch(() => null) }))
-        );
-        setBusinesses(withActorId);
-      })
-      .catch(() => {});
   }, [user.id]);
 
   async function saveUsername() {
@@ -74,13 +68,13 @@ export default function ProfilePage() {
         }}
       >
         <button
-          onClick={() => navigate("/")}
+          onClick={() => navigate(-1)}
           style={{ background: "none", border: "none", display: "flex" }}
           aria-label="Volver"
         >
           <ArrowLeft size={20} />
         </button>
-        <h1 style={{ fontSize: 20, flex: 1 }}>Mi perfil</h1>
+        <h1 style={{ fontSize: 20, flex: 1 }}>Ajustes</h1>
         <Button variant="ghost" style={{ padding: "8px 14px", fontSize: 14 }} onClick={signOut}>
           Cerrar sesión
         </Button>
@@ -168,7 +162,7 @@ export default function ProfilePage() {
 
         <h2 style={{ fontSize: 16, marginBottom: 12 }}>Lugares guardados</h2>
         {savedPlaces.length === 0 ? (
-          <p style={{ color: "#948A80", fontSize: 14, marginBottom: 24 }}>
+          <p style={{ color: "#948A80", fontSize: 14 }}>
             Todavía no has guardado ningún lugar.
           </p>
         ) : (
@@ -177,52 +171,11 @@ export default function ProfilePage() {
               display: "grid",
               gridTemplateColumns: "repeat(auto-fill, minmax(150px, 1fr))",
               gap: 12,
-              marginBottom: 24,
             }}
           >
             {savedPlaces.map((place) => (
               <PlaceCard key={place.id} place={place} onClick={() => setSelectedPlace(place)} />
             ))}
-          </div>
-        )}
-
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
-          <h2 style={{ fontSize: 16 }}>Mis negocios</h2>
-          <Link to="/negocio/nuevo" style={{ fontSize: 13, color: "#E8785C", fontWeight: 600 }}>
-            + Registrar negocio
-          </Link>
-        </div>
-        {businesses.length === 0 ? (
-          <p style={{ color: "#948A80", fontSize: 14 }}>Todavía no has registrado ningún negocio.</p>
-        ) : (
-          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-            {businesses.map((b) => {
-              const content = (
-                <>
-                  <span style={{ fontWeight: 600, fontSize: 14 }}>{b.name}</span>
-                  <span
-                    style={{
-                      fontSize: 12,
-                      fontWeight: 600,
-                      color: b.status === "aprobado" ? "#4FA383" : "#B8875A",
-                    }}
-                  >
-                    {b.status === "aprobado" ? "Aprobado" : "En revisión"}
-                  </span>
-                </>
-              );
-              return b.actorId ? (
-                <Link key={b.id} to={`/actor/${b.actorId}`} style={{ textDecoration: "none", color: "#2B2622" }}>
-                  <Card style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                    {content}
-                  </Card>
-                </Link>
-              ) : (
-                <Card key={b.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                  {content}
-                </Card>
-              );
-            })}
           </div>
         )}
       </main>
