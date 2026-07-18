@@ -751,3 +751,40 @@ Tres, todas encontradas durante la propia verificación exhaustiva (no en produc
 ### Qué sigue
 
 Con el Bloque B completo, la Fase 2 (Verificación robusta y roles granulares) queda terminada en su capa de backend. Sigue pendiente, sin autorizar todavía: interfaz visual de solicitud/revisión, perfiles sociales, promociones, publicaciones, QR, IA nueva, Azu Taxi, monetización, y el cambio de fuente de verdad desde `is_admin` hacia el nuevo sistema de roles. Ver `MASTERPLAN.md` para las fases siguientes.
+
+---
+
+## FASE 2 CERRADA — Verificación robusta y roles granulares (2026-07-18)
+
+Cierre formal de la Fase 2 completa del `MASTERPLAN.md`, aprobado explícitamente tras el Bloque B. Checkpoint de Git: tag `checkpoint-fase2-verificacion-roles`.
+
+### Resumen ejecutivo
+
+La Fase 2 formalizó la verificación de negocios/organizadores como un proceso real con estados, evidencia y vigencia, y separó el rol de Administrador de roles granulares (Editor/Curador, Moderador), en dos bloques independientes:
+
+1. **Bloque A — Esquema de verificación y roles**: catálogo `roles` + asignación `actor_roles` (many-to-many sobre Actor, no una columna enum en `profiles`); `verifications` asociada a Actor (no a `businesses`), con evidencia solo referenciada nunca almacenada; `role_audit_log`. Aditivo total — `profiles.is_admin`/`public.is_admin()` permanecen exactamente iguales, ninguna política existente se tocó.
+2. **Bloque B — Ciclo de vida, vigencia y renovación**: transiciones de estado completas (pendiente/en_revisión/aprobado/rechazado/vencido/revocado), vigencia anual con 30 días de gracia, vencimiento automático (únicamente vía proceso de servicio, nunca por RLS normal), revocación con motivo obligatorio, snapshots automáticos para el modelo de renovación basado en riesgo, auditoría completa (`verification_status_log`/`verification_notices`/`evidence_access_log`), bucket privado de Storage para evidencias, y la Edge Function `process-verification-lifecycle`.
+
+Durante el Bloque B se encontraron y corrigieron **tres defectos reales** antes de cualquier commit — el más importante, un defecto de pertenencia de Actor heredado del propio Bloque A (las políticas de "esto es mío" nunca podían ser ciertas para un actor negocio/organizador) que se detuvo, se presentó, y se corrigió solo tras aprobación explícita, por tratarse de una modificación a políticas ya enviadas. Ningún defecto llegó a producción ni a un commit sin corregir — ver el detalle completo en la sección del Bloque B más arriba.
+
+Está completa en:
+- **Arquitectura** — Actor como eje de verificación y de roles, consistente con el resto de la Fase 1.
+- **Migraciones** — `0020` a `0022`, cada una propuesta y aprobada antes de escribirse (incluida la corrección de pertenencia, aprobada aparte antes de aplicarse).
+- **RLS** — cada tabla y cada regla de negocio sensible (auto-aprobación, escalada de privilegios, acceso a evidencias) probada con roles de bajo privilegio reales, incluyendo el caso más exigente: un administrador real que también es dueño de un negocio, intentando decidir sobre su propia verificación.
+- **Lógica PostgreSQL** — triggers de protección de campos, de auditoría automática, y de prevención de asignación a actores de sistema, todos verificados con datos reales.
+- **Documentación** — `PROJECT.md`, `CHANGELOG.md`, `supabase/README.md` actualizados en cada bloque.
+- **Pruebas locales** — Postgres 16 real en ambos bloques, nunca solo revisión visual de SQL.
+
+### Deuda técnica obligatoria antes de producción (no es una mejora opcional)
+
+Registrada explícitamente, mismo criterio que la Fase 1 — nada de lo siguiente se probó contra un proyecto Supabase real:
+
+1. `process-verification-lifecycle` — validar end-to-end contra un proyecto Supabase real.
+2. Bucket y políticas de Storage reales (`verification_evidence`) — confirmar en el proyecto real, ya que `0022` no pudo aplicarse contra Postgres local.
+3. `CRON_SECRET` y variables de entorno — configurar y confirmar en el proyecto real.
+4. Tarea programada de vencimiento — no existe todavía ningún disparador temporal configurado (misma deuda ya heredada de `process-account-deletions`, Fase 1 Bloque 5).
+5. Generación de URLs firmadas — confirmar que el flujo real de `createSignedUrl` funciona como se diseñó contra el bucket real.
+6. Flujo completo de carga y revisión de evidencias — nunca probado de punta a punta contra Storage real (solo simulado con referencias de texto en las pruebas locales).
+7. Limpieza de evidencias vencidas — mecanismo documentado en el análisis previo, no implementado en este bloque.
+8. Interfaz de solicitud y revisión — no existe ninguna todavía; este bloque es solo backend.
+9. Regresión extremo a extremo en un entorno desplegado — todo lo anterior verificado por partes contra Postgres real y simulaciones, nunca como un flujo continuo real de principio a fin en producción o staging.

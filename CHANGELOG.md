@@ -2,6 +2,14 @@
 
 Registro de cambios notables de Ahorita (Cuenca Viva). Formato libre, en español, más cercano a un registro de fases de producto que a versiones semánticas — ver `PROJECT.md` para el plan completo y el estado real de la implementación.
 
+## 2026-07-18 — FASE 2 CERRADA: verificación robusta y roles granulares
+
+Cierre formal de la Fase 2 completa del `MASTERPLAN.md`, tras la aprobación de los dos bloques (esquema de verificación/roles, ciclo de vida/vigencia/renovación). Checkpoint de Git: tag `checkpoint-fase2-verificacion-roles`.
+
+Completa en arquitectura, migraciones (`0020`-`0022`), RLS, lógica PostgreSQL, documentación y pruebas locales contra Postgres 16 real. **No lista para producción** hasta validar contra un proyecto Supabase real: `process-verification-lifecycle`, bucket y políticas de Storage reales, `CRON_SECRET`/variables de entorno, tarea programada de vencimiento, generación de URLs firmadas, flujo completo de carga/revisión de evidencias, limpieza de evidencias, interfaz de solicitud/revisión, y regresión extremo a extremo en un entorno desplegado — registrado como deuda técnica obligatoria en `PROJECT.md`.
+
+Durante el Bloque B se encontraron y corrigieron tres defectos reales antes de cualquier commit, el más importante un defecto de pertenencia de Actor heredado del Bloque A — ninguno llegó a producción.
+
 ## 2026-07-17 — Fase 2, Bloque B: ciclo de vida, vigencia y renovación de verificaciones
 
 Segundo bloque de la Fase 2 del `MASTERPLAN.md`. Periodo de gracia de 30 días (coherencia con el Bloque 5); bucket privado de evidencias construido en este bloque, un único archivo por solicitud.
