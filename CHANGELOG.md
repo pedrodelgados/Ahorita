@@ -2,6 +2,31 @@
 
 Registro de cambios notables de Ahorita (Cuenca Viva). Formato libre, en español, más cercano a un registro de fases de producto que a versiones semánticas — ver `PROJECT.md` para el plan completo y el estado real de la implementación.
 
+## 2026-07-18 — Fase 3, Bloque B: horarios, catálogo y ubicación estructurada
+
+Segundo bloque de la Fase 3 del `MASTERPLAN.md`. Aditivo sobre las Fases 1-2 y el Bloque A. Cero cambios en `src/`.
+
+### Agregado
+- `supabase/migrations/0024_fase3_bloqueB_horarios_catalogo_ubicacion.sql`: `business_hours` (horario regular, múltiples intervalos por día, turnos que cruzan medianoche, 24 horas, días cerrados, con validación de superposición vía trigger); `business_special_hours` (excepciones por fecha con prioridad absoluta sobre el horario regular); `business_open_status()` (función central en PostgreSQL, zona horaria `America/Guayaquil`, que calcula abierto ahora/próxima apertura/próximo cierre); `business_catalog_collections`/`business_catalog_items` (colecciones flexibles por negocio, sin taxonomía rígida por rubro); extensión de `refresh_actor_search_index()` para incluir el catálogo; `businesses.zone_id` (columna nueva, sin backfill — ver hallazgo abajo).
+
+### Hallazgo documentado (no un defecto)
+`businesses.zone_id` no pudo backfilearse: a diferencia de `places.area` (Bloque 4, Fase 1), `businesses` no tiene ningún campo de texto libre de zona, y `zones` no tiene geometría. Se agregó la columna vacía en vez de inventar una coincidencia débil.
+
+### Dos incidencias encontradas y corregidas antes del commit
+1. El cálculo de "abierto ahora" evaluaba el horario de hoy y de ayer con la misma lógica simétrica, causando que un negocio apareciera abierto un día que no tiene horario propio (por contaminación del día anterior) y que un turno nocturno pareciera abierto antes de empezar su propio turno. Corregido separando el cálculo en dos evaluaciones asimétricas explícitas.
+2. "Próximo cierre" no capturaba el cierre de un turno nocturno en curso (consultado a la 01:00 dentro de un turno 20:00–02:00, reportaba el cierre del lunes siguiente en vez de las 02:00 de esa misma madrugada) — el bucle de eventos futuros no incluía el día anterior. Corregido extendiendo el bucle para incluir explícitamente el día anterior.
+
+Ambas detectadas probando contra Postgres 16 real, ninguna llegó a un commit sin corregir.
+
+### Verificado
+- Las 24 migraciones aplicables contra Postgres 16 real, con datos de 5 rubros distintos (restaurante, barbería, ferretería, hotel, consultorio legal).
+- Horario diurno, dos intervalos el mismo día, turno que cruza medianoche (con consulta a la 01:00), 24 horas, día cerrado, feriado que anula el horario regular, próxima apertura y próximo cierre — todos correctos tras las dos correcciones.
+- Validaciones y triggers: solapamiento rechazado, formas inválidas del `check` rechazadas, colección de otro negocio rechazada, precio numérico con `price_type='variable'` rechazado.
+- Búsqueda extendida al catálogo funcionando, con refresco automático en cada cambio.
+- RLS con roles de bajo privilegio: dueño legal y administrador operativo gestionan correctamente; terceros bloqueados; intento de delegación por un administrador operativo rechazado; usuario anónimo lee negocio aprobado; administrador de plataforma con acceso global.
+- Aislamiento de la Fase 2 reconfirmado: el administrador operativo, con permiso de tabla otorgado explícitamente, fue rechazado por RLS al intentar insertar en `verifications`.
+- Reversión completa sin errores (incluida la restauración de `refresh_actor_search_index` a su versión del Bloque A); build y lint sin cambios; `src/` no tocado.
+
 ## 2026-07-18 — Fase 3, Bloque A: perfil unificado y administración
 
 Primer bloque de la Fase 3 del `MASTERPLAN.md` (reformulada en tres bloques: A perfil unificado/administración, B información estructurada, C perfiles visibles/editables — "Centro del Negocio"). Aditivo sobre las Fases 1-2, sin tocar `verifications`/`actor_roles`.

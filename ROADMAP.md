@@ -22,7 +22,7 @@ Resumen de las fases (detalle completo, con las once decisiones ya incorporadas,
 
 1. ✅ Unificación del modelo de datos fundacional (Actor, Publicación, Interacción, Ciudad) + línea base de privacidad y consentimiento — **cerrada**.
 2. ✅ Verificación robusta de negocios (vigencia anual sin cobro automático) + roles granulares — **cerrada**.
-3. Identidad social plena (perfiles y negocio extendido) — **propuesta de ejecución presentada, pendiente de aprobación**.
+3. Identidad social plena (perfiles y negocio extendido) — **en progreso, dividida en tres bloques**: Bloque A (perfil unificado y administración) ✅ implementado; Bloque B (horarios, catálogo y ubicación estructurada) ✅ implementado; Bloque C (perfiles visibles y editables — "Centro del Negocio") pendiente de aprobación. Ver `PROJECT.md` para el detalle de cada bloque.
 4. Contenido social ampliado (Publicaciones y Promociones)
 5A. Seguir negocios (puede ejecutarse en paralelo con la Fase 4)
 5B. Interacción social plena (comentarios/guardados/reacciones — catálogo cerrado: Me gusta, Quiero ir, Ya fui)
