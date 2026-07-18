@@ -8,6 +8,7 @@ import ProfilePage from "./pages/ProfilePage";
 import SearchPage from "./pages/SearchPage";
 import NotificationsPage from "./pages/NotificationsPage";
 import BusinessRegisterPage from "./pages/BusinessRegisterPage";
+import ActorProfilePage from "./pages/ActorProfilePage";
 import AdminPage from "./pages/AdminPage";
 import AdminEventsListPage from "./pages/admin/AdminEventsListPage";
 import AdminEventEditorPage from "./pages/admin/AdminEventEditorPage";
@@ -90,6 +91,16 @@ export default function App() {
         element={
           <RequireAccess>
             <NotificationsPage />
+          </RequireAccess>
+        }
+      />
+      <Route
+        path="/actor/:actorId"
+        element={
+          <RequireAccess>
+            <MainLayout>
+              <ActorProfilePage />
+            </MainLayout>
           </RequireAccess>
         }
       />

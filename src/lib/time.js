@@ -18,6 +18,18 @@ export function formatRelativeTime(dateString) {
   });
 }
 
+// Hora de un timestamptz en la zona horaria de Cuenca, sin importar en qué
+// zona esté el navegador de quien mira la pantalla — el "abierto ahora" de
+// un negocio siempre se calculó (business_open_status, Postgres) y debe
+// mostrarse en hora de Cuenca, nunca en la hora local del visitante.
+export function formatCuencaTime(dateString) {
+  return new Date(dateString).toLocaleTimeString("es-EC", {
+    hour: "numeric",
+    minute: "2-digit",
+    timeZone: "America/Guayaquil",
+  });
+}
+
 // "Hoy · 7:00 p.m.", "Mañana · 3:00 p.m.", "sáb 20 jul · 9:00 a.m."
 export function formatEventDateTime(dateString) {
   const date = new Date(dateString);

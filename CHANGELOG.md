@@ -2,6 +2,28 @@
 
 Registro de cambios notables de Ahorita (Cuenca Viva). Formato libre, en español, más cercano a un registro de fases de producto que a versiones semánticas — ver `PROJECT.md` para el plan completo y el estado real de la implementación.
 
+## 2026-07-18 — Fase 3, Bloque C, Entrega 1: perfil público unificado
+
+Primera entrega del Bloque C ("Centro del Negocio") y primera vez que la Fase 3 toca `src/`. Solo lectura.
+
+### Agregado
+- `supabase/migrations/0025_fase3_bloqueC_insignia_publica.sql`: `public.actor_verification_badge(actor_id)` — función pública y estrecha que calcula vigente/en_gracia/vencida/no_verificado sin exponer ninguna fila de `verifications` ni sus campos sensibles.
+- `src/lib/actorProfile.js`, `src/lib/time.js` (formateador de hora en zona Cuenca): capa de datos del perfil público.
+- `src/features/profile/{ActorProfileHeader,VerificationBadge,BusinessOpenStatus}.jsx`: tarjeta de identidad unificada (persona o negocio) — foto/portada/nombre/bio/categoría/insignia en vivo/estado abierto-cerrado/dirección y zona.
+- `src/pages/ActorProfilePage.jsx` + ruta `/actor/:actorId` en `src/App.jsx`.
+- `src/pages/ProfilePage.jsx`: "Mis negocios" enlaza al nuevo perfil público.
+
+### Bifurcación de permisos resuelta antes de implementar
+`verifications` es privada por diseño (Fase 2) — un visitante anónimo no podía calcular la insignia. Se presentaron 3 alternativas, se aprobó la función pública estrecha (opción recomendada).
+
+### Verificado
+- Migración 0025 contra Postgres 16 real: los 4 estados calculados correctamente; `anon` puede llamar la función pero sigue sin poder leer `verifications` directamente; reversión completa.
+- Playwright (8 escenarios, red interceptada con datos que reproducen los estados verificados en Postgres): persona visitante, negocio vigente/en_gracia/vencido/no_verificado, horario nocturno, negocio cerrado con zona, usuario autenticado (mismo contenido que visitante — sin vista diferenciada por rol todavía).
+- Regresión de Feed/Explorar/Perfil sin excepciones de JS; build y lint limpios.
+
+### Limitación de entorno documentada
+Sin Docker ni proyecto Supabase real disponibles en este sandbox, el Playwright valida el frontend contra red interceptada, no un flujo end-to-end contra Auth+PostgREST+RLS en vivo — deuda técnica obligatoria sumada a la ya existente de Fases 1-2.
+
 ## 2026-07-18 — Fase 3, Bloque B: horarios, catálogo y ubicación estructurada
 
 Segundo bloque de la Fase 3 del `MASTERPLAN.md`. Aditivo sobre las Fases 1-2 y el Bloque A. Cero cambios en `src/`.

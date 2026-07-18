@@ -918,3 +918,47 @@ Dos, ambas descritas arriba (contaminación del estado "abierto ahora" entre dí
 5. El botón "cómo llegar" ya existe para `places`; el Bloque C deberá decidir si el negocio reutiliza el mismo componente o requiere uno propio dado que `businesses` no comparte tabla con `places`.
 
 Ninguna fase ni bloque siguiente se implementa hasta aprobación explícita — no se avanza automáticamente al Bloque C.
+
+## Fase 3, Bloque C, Entrega 1 — Perfil público unificado (implementado)
+
+Primera entrega del Bloque C ("Centro del Negocio"), dividido en 7 entregas verificables (perfil público unificado; Centro del Negocio; edición del perfil; horarios y catálogo editables; selector personal/negocios administrados; acciones sociales y de contacto; validación visual final). Esta es la **primera vez que un bloque de la Fase 3 toca `src/`** — todo lo anterior (Bloques A y B) fue exclusivamente backend.
+
+### Bifurcación de permisos encontrada y resuelta antes de implementar
+
+Antes de escribir cualquier código de frontend se encontró que la insignia de verificación pública, tal como estaba especificada, era imposible de cumplir con el esquema tal cual: la política de lectura de `verifications` (Fase 2) es intencionalmente privada — solo el propio actor o un administrador pueden leerla (`evidence_ref`/`internal_notes`/`rejection_reason`/`revocation_reason` son datos sensibles). Un visitante anónimo no podía calcular la insignia en absoluto. Se presentaron tres alternativas al Product Owner (función pública estrecha; vista pública acotada; abrir la tabla completa) y se aprobó explícitamente la primera.
+
+### `supabase/migrations/0025_fase3_bloqueC_insignia_publica.sql` (nuevo)
+
+- **`public.actor_verification_badge(actor_id)`**: función `security definer` que devuelve únicamente uno de cuatro estados calculados — `vigente` (aprobado, dentro de vigencia), `en_gracia` (aprobado, ya vencido pero dentro del periodo de gracia de 30 días de la Fase 2), `vencida` (`status = 'vencido'`), `no_verificado` (cualquier otro caso, incluida la ausencia total de una verificación). Nunca expone una fila de `verifications` ni ningún campo sensible — la tabla en sí sigue sin ninguna política pública nueva.
+- **Decisión de producto documentada** (no una bifurcación adicional, solo tratamiento visual dentro de lo ya aprobado): la insignia pública muestra "Verificado" tanto en `vigente` como en `en_gracia` (para el público, el negocio sigue siendo confiable durante la gracia; la urgencia de renovación es información para el propietario, en una fase futura) y no muestra ninguna insignia en `vencida`/`no_verificado` — consistente con AI_PHILOSOPHY.md: la verificación es una señal de desempate, nunca una acusación pública de "no confiable".
+
+### Frontend (primera vez que la Fase 3 toca `src/`)
+
+- **`src/lib/actorProfile.js`** (nuevo): `getPublicActorProfile(actorId)` resuelve persona o negocio a partir de `actors`, uniendo `actor_profile_details`/`profiles`/`businesses`/`zones` según corresponda; `getActorVerificationBadge`/`getBusinessOpenStatus` (envoltorios de los RPC de Postgres, sin recalcular nada en el cliente); `getActorIdForBusiness` (único punto de entrada real de esta entrega).
+- **`src/lib/time.js`**: se agrega `formatCuencaTime()` — formatea siempre en `America/Guayaquil`, sin importar la zona horaria del navegador de quien mira la pantalla.
+- **`src/features/profile/VerificationBadge.jsx`**, **`BusinessOpenStatus.jsx`**, **`ActorProfileHeader.jsx`** (nuevos): la misma tarjeta de identidad sirve para un actor persona o negocio — foto/portada, nombre, bio, categoría, insignia de verificación en vivo, estado abierto/cerrado + próxima apertura/cierre (leído de `business_open_status()`, nunca recalculado en el frontend), dirección + zona.
+- **`src/pages/ActorProfilePage.jsx`** (nuevo) y ruta `/actor/:actorId` en `src/App.jsx`: una sola ruta unificada para cualquier tipo de actor, siguiendo el mismo eje de identidad de toda la Fase 3.
+- **`src/pages/ProfilePage.jsx`**: "Mis negocios" ahora enlaza cada negocio a su perfil público nuevo — único punto de entrada real a la ruta en esta entrega (el resto de las pruebas navegó directamente por URL, ya que el descubrimiento/búsqueda de negocios no es parte del alcance de este bloque).
+- Solo lectura: sin edición, catálogo, eventos asociados ni acciones sociales todavía — llegan en las entregas siguientes.
+
+### Verificación realizada
+
+- **Migración 0025 contra Postgres 16 real**: las 25 migraciones aplicables en orden; los 4 estados calculados correctamente con datos reales (negocios vigente/en gracia/vencido/no verificado); confirmado que un rol de bajo privilegio sin ninguna relación (incluido `anon`, sin JWT) puede llamar la función y obtener el estado correcto, pero sigue recibiendo `permission denied` al intentar leer `verifications` directamente — la superficie nueva es exactamente tan estrecha como se aprobó. Reversión completa ejecutada de verdad (conteos de `businesses`/`verifications` intactos).
+- **Playwright**: 8 escenarios contra la app real (`vite dev`) con las respuestas de Supabase interceptadas y sustituidas por datos que reproducen EXACTAMENTE los estados ya verificados contra Postgres real arriba — persona visitante (sin bio real, sin insignia); negocio vigente abierto; negocio en gracia (insignia igual a vigente); negocio vencido (sin insignia); negocio no verificado (sin insignia); horario nocturno (turno que cruza medianoche, "Cierra a las 2:00 a.m." calculado correctamente); negocio cerrado con zona y próxima apertura; usuario autenticado (mismo contenido que el visitante, ya que esta entrega no tiene todavía ninguna vista diferenciada por rol). Los 8 escenarios pasaron, con capturas de pantalla generadas para cada uno.
+- **Regresión**: Feed (`/`), Explorar (`/explorar`) y Perfil (`/perfil`) cargan sin ninguna excepción de JavaScript no controlada tras los cambios.
+- **Build y lint**: ambos limpios, sin advertencias nuevas.
+
+### Limitación honesta del entorno (documentada, no un defecto)
+
+Este sandbox no tiene un proyecto Supabase real ni Docker funcional (`supabase start` requiere contenedores; el daemon de Docker no está disponible aquí) ni acceso a GitHub Releases (bloqueado por la política de salida) para instalar PostgREST/GoTrue de forma independiente. Por lo tanto, el Playwright de esta entrega valida el **renderizado y la lógica real del frontend** contra respuestas de red interceptadas que reproducen fielmente los datos ya verificados en Postgres real — no valida un flujo end-to-end contra Auth + PostgREST + RLS en vivo. La corrección de las políticas RLS y de las funciones de Postgres sí se verificó de forma completamente real, como en todos los bloques anteriores. Se agrega como deuda técnica obligatoria (junto con la ya existente de Fases 1-2): validar esta entrega end-to-end contra un proyecto Supabase real antes de producción.
+
+### Deuda técnica detectada
+
+- **Sin prueba end-to-end contra Supabase real** (ver limitación de entorno arriba) — se suma a la deuda ya documentada de las Fases 1-2.
+- **`actor_profile_details.logo_url`/`cover_image_url` vacíos para todo negocio existente** — el header usa `businesses.image_url` como respaldo visual mientras no exista la edición (Entrega 3); es un respaldo deliberado con datos reales existentes, no un placeholder inventado.
+- **Sin descubrimiento/búsqueda de negocios todavía** — el único punto de entrada real a `/actor/:actorId` en esta entrega es "Mis negocios" en el perfil propio; la búsqueda (`actor_search_index`, Fase 3 Bloque A/B) no está conectada a ninguna pantalla todavía.
+- **`follows` no admite seguir un negocio** (solo personas, ver `lib/follows.js`) — relevante para la Entrega 6 (acciones sociales).
+
+### Qué sigue (Entrega 2, pendiente de aprobación)
+
+Centro del Negocio: catálogo por colecciones y eventos/contenido asociado, todavía de solo lectura. No se avanza automáticamente — a la espera de aprobación explícita.

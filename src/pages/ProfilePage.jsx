@@ -5,6 +5,7 @@ import { useAuth } from "../contexts/AuthContext";
 import { getProfile, updateProfile } from "../lib/profile";
 import { listSavedPlaces } from "../lib/savedPlaces";
 import { listMyBusinesses } from "../lib/businesses";
+import { getActorIdForBusiness } from "../lib/actorProfile";
 import { CHANNELS } from "../styles/theme";
 import Button from "../components/ui/Button";
 import Card from "../components/ui/Card";
@@ -30,7 +31,14 @@ export default function ProfilePage() {
       setUsername(p.username ?? "");
     });
     listSavedPlaces(user.id).then(setSavedPlaces).catch(() => {});
-    listMyBusinesses(user.id).then(setBusinesses).catch(() => {});
+    listMyBusinesses(user.id)
+      .then(async (list) => {
+        const withActorId = await Promise.all(
+          list.map(async (b) => ({ ...b, actorId: await getActorIdForBusiness(b.id).catch(() => null) }))
+        );
+        setBusinesses(withActorId);
+      })
+      .catch(() => {});
   }, [user.id]);
 
   async function saveUsername() {
@@ -188,20 +196,33 @@ export default function ProfilePage() {
           <p style={{ color: "#948A80", fontSize: 14 }}>Todavía no has registrado ningún negocio.</p>
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-            {businesses.map((b) => (
-              <Card key={b.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                <span style={{ fontWeight: 600, fontSize: 14 }}>{b.name}</span>
-                <span
-                  style={{
-                    fontSize: 12,
-                    fontWeight: 600,
-                    color: b.status === "aprobado" ? "#4FA383" : "#B8875A",
-                  }}
-                >
-                  {b.status === "aprobado" ? "Aprobado" : "En revisión"}
-                </span>
-              </Card>
-            ))}
+            {businesses.map((b) => {
+              const content = (
+                <>
+                  <span style={{ fontWeight: 600, fontSize: 14 }}>{b.name}</span>
+                  <span
+                    style={{
+                      fontSize: 12,
+                      fontWeight: 600,
+                      color: b.status === "aprobado" ? "#4FA383" : "#B8875A",
+                    }}
+                  >
+                    {b.status === "aprobado" ? "Aprobado" : "En revisión"}
+                  </span>
+                </>
+              );
+              return b.actorId ? (
+                <Link key={b.id} to={`/actor/${b.actorId}`} style={{ textDecoration: "none", color: "#2B2622" }}>
+                  <Card style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                    {content}
+                  </Card>
+                </Link>
+              ) : (
+                <Card key={b.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                  {content}
+                </Card>
+              );
+            })}
           </div>
         )}
       </main>
