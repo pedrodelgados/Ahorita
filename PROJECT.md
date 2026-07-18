@@ -1213,3 +1213,50 @@ El Product Owner pidió dejar explícitamente documentado que esta función **no
 ### Qué sigue (Entrega 7, pendiente de aprobación y de su propio análisis de 18 puntos)
 
 A definir junto con el usuario. No se avanza automáticamente — a la espera de aprobación explícita. Ni la Entrega 7 ni el cierre del Bloque C/Fase 3 deben iniciarse sin aprobación expresa.
+
+## Fase 3, Bloque C, Entrega 7 — Búsqueda y descubrimiento de negocios (implementado)
+
+A diferencia de las Entregas 5 y 6, el objeto de esta entrega no vino dictado de antemano — el usuario pidió continuar solo con funcionalidad nueva y delegó la definición del alcance al análisis de 18 puntos. Se propuso y se aprobó cerrar la deuda técnica más citada del Bloque C (registrada desde la Entrega 2): no existía ninguna forma de descubrir un negocio salvo enlace directo, evento propio o ser tuyo. Auditando el código real antes de proponerlo se confirmó que `actor_search_index` (tsvector, Bloque A, extendida con catálogo en el Bloque B) existía completa y poblada automáticamente, pero ningún archivo de `src/` la usaba — trabajo ya pagado, nunca conectado a ninguna pantalla.
+
+### Dos ajustes de producto exigidos antes de implementar
+
+1. **Actor como entidad principal, no una función específica de negocios.** La función de búsqueda consulta actores con un parámetro `actor_types` (por defecto `['negocio']`) — ampliar a `'organizador'` o, con su propia aprobación futura, `'persona'`, es ensanchar un arreglo, nunca rediseñar la consulta.
+2. **Estado inicial mejorado**: categorías rápidas de acceso directo (misma taxonomía de `channels`/`CHANNELS` ya usada en toda la app) antes de escribir texto, que disparan la misma búsqueda existente — nunca un sistema de recomendación aparte.
+
+### `supabase/migrations/0029_fase3_bloqueC_entrega7_busqueda_actores.sql` (nuevo)
+
+`public.search_actors(search_query, category_filter, actor_types)` — función de solo lectura sobre `actor_search_index`, unida a `actors`/`businesses`. Dos decisiones de seguridad, ambas verificadas contra Postgres 16 real:
+- El filtro `status = 'aprobado'` se aplica **dentro de la propia función** (`b.id is null or b.status = 'aprobado'`), nunca confiado solo a la política de lectura pública ya existente de `actor_search_index` — un negocio pendiente, rechazado o sin propietario nunca es descubrible, aunque su fila de índice exista.
+- `category_filter` filtra por el id corto de categoría (`businesses.category`, la misma taxonomía de `channels`), no por coincidencia de texto contra la etiqueta en español — el documento indexado contiene "gastronomia", no "restaurantes", así que un chip de categoría necesita un filtro exacto, no una búsqueda de texto disfrazada.
+- `search_query` y `category_filter` son independientes: se puede llamar con cualquiera de los dos o ambos.
+- Deliberadamente sin ranking por popularidad/cercanía ni personalización — orden por `ts_rank` cuando hay texto, alfabético cuando el acceso es solo por categoría; eso queda reservado para la Fase 6 ("Descubrimiento inteligente v2").
+
+### Frontend
+
+- **`src/lib/actorSearch.js`** (nuevo): `searchActors({ query, category, types })` — envuelve el RPC, con `types` por defecto `["negocio"]`.
+- **`src/lib/places.js`**: sin cambios — `listPlaces({ channel })` (ya existente) se reutiliza tal cual para el acceso rápido por categoría del lado de Lugares; `searchPlaces(query)` (ya existente) se reutiliza tal cual para la búsqueda por texto.
+- **`src/features/search/ActorResultCard.jsx`** (nuevo): mismo lenguaje visual que `PlaceCard` (grilla 1:1, imagen o respaldo por categoría, nombre superpuesto) para que Lugares y Negocios se sientan parte del mismo sistema, aunque sus secciones nunca se mezclan.
+- **`src/pages/SearchPage.jsx`**: misma pantalla y misma ruta `/buscar` de siempre, extendida — nunca una pantalla nueva. Categorías rápidas visibles solo antes de buscar; al tocar una, dispara `listPlaces({channel})` + `searchActors({category, types:['negocio']})` en paralelo. Al escribir texto, dispara `searchPlaces(query)` + `searchActors({query, types:['negocio']})`. Dos secciones ("Lugares"/"Negocios") que **nunca se mezclan** — cada una se dibuja solo si tiene resultados reales, mismo principio ya usado en el Centro del Negocio. Placeholder actualizado a "Buscar un lugar o negocio…".
+
+### Verificación realizada
+
+- **Migración 0029 contra Postgres 16 real**, como visitante anónimo (`set role anon`, nunca superusuario): buscar por texto el nombre de un negocio aprobado (lo encuentra); buscar por texto el nombre de un negocio **pendiente** (no aparece, aunque el nombre coincida exactamente); buscar por categoría exacta (encuentra solo el aprobado de esa categoría); buscar por contenido de la bio/descripción, no solo el nombre (funciona, confirma que el índice cubre más que el nombre); sin `query` ni `category` (0 filas — nunca un listado completo accidental); un actor tipo persona nunca aparece al filtrar `actor_types=['negocio']`.
+- **Playwright** (6 escenarios nuevos): estado inicial con chips de categoría y sin secciones de resultados; tocar un chip muestra ambas secciones separadas con datos reales; búsqueda de texto encuentra lugar y negocio a la vez, cada uno en su sección; buscar algo que solo tiene negocio hace que la sección "Lugares" no se renderice en absoluto; sin resultados en ninguna sección muestra un mensaje honesto sin dibujar ningún encabezado; tocar una tarjeta de negocio navega a `/actor/:actorId`.
+- **Regresión completa**: las seis Playwright de las Entregas 1-6 (8 + 3 + 8 + 7 + 7 + 10 = 43 escenarios) se volvieron a correr — todos pasan. Una repetición aislada de un escenario de doble-toque de la Entrega 6 (`e6_08`) mostró una falla puntual (`writes=2` en vez de `1`) en la primera pasada de esta ronda de regresión; se confirmó que ningún archivo de la Entrega 6 fue tocado en esta entrega (`git diff` limpio) y se repitió la prueba de forma aislada, pasando limpiamente (`writes=1`) — conclusión: inestabilidad de temporización de la simulación de doble-clic bajo carga del sistema en este sandbox, no una regresión real. Se documenta por transparencia, no se descarta sin evidencia.
+- **Build y lint**: limpios, sin advertencias nuevas.
+
+### Limitación de entorno
+
+Misma de las entregas anteriores (sin Docker/Supabase real). El comportamiento de `websearch_to_tsquery('spanish', ...)` se probó con nombres y contenido reales de negocio (no solo IDs sintéticos), pero no se probó exhaustivamente contra el catálogo completo de nombres de negocio reales que eventualmente existan en producción — un nombre con acentos, siglas o marcas inusuales podría comportarse de forma inesperada; se recomienda revisar resultados de búsqueda reales tras el primer mes en producción.
+
+### Deuda técnica detectada
+
+- Toda la de las Entregas 1-6 (sin cambios).
+- **Sin autocompletado en vivo**: la búsqueda requiere enviar el formulario; agregar sugerencias mientras se escribe es una mejora de UX razonable, no incluida a propósito en esta entrega.
+- **Sin ranking por relevancia/popularidad/cercanía**: reservado explícitamente para la Fase 6 ("Descubrimiento inteligente v2").
+- **Sin búsqueda de personas**: el índice técnicamente ya cubre actores tipo persona, pero exponer "buscar personas por nombre" abre una pregunta de privacidad/descubribilidad nunca aprobada — queda fuera hasta que se apruebe aparte.
+- **Negocios no aparecen en el Mapa/Explorar**: `ExplorePage`/`MapView`/`PlaceGrid` siguen trabajando exclusivamente sobre `places` — extensión futura razonable, no construida en esta entrega.
+
+### Qué sigue
+
+A definir junto con el usuario, con su propio análisis de 18 puntos previo. No se avanza automáticamente — a la espera de aprobación explícita.

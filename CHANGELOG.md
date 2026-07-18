@@ -2,6 +2,23 @@
 
 Registro de cambios notables de Ahorita (Cuenca Viva). Formato libre, en español, más cercano a un registro de fases de producto que a versiones semánticas — ver `PROJECT.md` para el plan completo y el estado real de la implementación.
 
+## 2026-07-18 — Fase 3, Bloque C, Entrega 7: búsqueda y descubrimiento de negocios
+
+El objeto de esta entrega no vino dictado de antemano — se definió con un análisis de 18 puntos que propuso cerrar la deuda técnica más citada del Bloque C (desde la Entrega 2): sin descubrimiento/búsqueda de negocios conectado a ninguna pantalla, pese a que `actor_search_index` (Bloque A/B) ya existía completa y poblada.
+
+### Ajustes de producto exigidos antes de implementar
+- Búsqueda Actor-céntrica (`actor_types` como parámetro, no una función específica de negocios) para no rediseñar cuando se agreguen otros tipos de actor.
+- Categorías rápidas de acceso directo en el estado inicial de `/buscar`, reutilizando la misma búsqueda existente — sin ranking ni recomendaciones.
+
+### Agregado
+- `supabase/migrations/0029_fase3_bloqueC_entrega7_busqueda_actores.sql`: `public.search_actors(search_query, category_filter, actor_types)` — filtra `status='aprobado'` dentro de la propia función (nunca confiado solo a RLS), category_filter exacto sobre `businesses.category`, sin ranking por popularidad ni personalización (reservado para la Fase 6).
+- `src/lib/actorSearch.js`: `searchActors({query, category, types})`.
+- `src/features/search/ActorResultCard.jsx`: tarjeta de negocio, mismo lenguaje visual que `PlaceCard`.
+- `SearchPage.jsx`: extendida (misma ruta `/buscar`) — categorías rápidas antes de escribir; secciones "Lugares"/"Negocios" siempre separadas, cada una se dibuja solo si tiene resultados reales.
+
+### Verificado
+Migración contra Postgres 16 real como visitante anónimo: negocio aprobado encontrado por texto y por categoría; negocio pendiente nunca aparece aunque el nombre coincida exactamente; búsqueda por contenido de bio/descripción funciona; sin query ni categoría devuelve 0 filas; personas nunca aparecen filtrando por `types=['negocio']`. Playwright (6 escenarios): chips iniciales, secciones separadas, sección vacía no se renderiza, sin resultados con mensaje honesto, navegación a perfil. Regresión completa de las Entregas 1-6 (43 escenarios) sigue pasando — una falla puntual de temporización en un escenario de doble-toque de la Entrega 6 se confirmó como inestabilidad del entorno (repetición aislada limpia), no una regresión real. Build y lint limpios.
+
 ## 2026-07-18 — Fase 3, Bloque C, Entrega 6 (seguimiento): documentar reconciliación como legacy
 
 Recomendación de arquitectura aprobada al cerrar la Entrega 6: `reconcile_follows_to_interactions()` debe quedar documentada expresamente como herramienta de una sola ejecución, no una operación normal del sistema, para evitar que se reejecute sobre datos ya consolidados.
