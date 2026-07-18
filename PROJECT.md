@@ -682,3 +682,72 @@ Ninguna no anticipada. Todas las decisiones de diseño (modelo de roles, relaci�
 - Diseñar el periodo de gracia con aviso antes de marcar una verificación como `vencida` (ya anticipado como riesgo en el `MASTERPLAN.md`, Fase 2).
 - Decidir si la renovación anual requiere nueva evidencia o es solo una confirmación (el campo `renewal_of` ya está preparado para encadenar cualquiera de los dos casos sin cambios de esquema).
 - Evaluar en ese momento, no antes, si conviene ya iniciar el diseño del bucket de Storage privado para evidencias, dado que el ciclo de vida completo de una verificación probablemente lo necesite antes de tener una interfaz real.
+
+---
+
+## Fase 2, Bloque B — Ciclo de vida, vigencia y renovación de verificaciones (implementado)
+
+Segundo y último bloque de la Fase 2 planificado hasta ahora. Ajustes aprobados sobre el análisis técnico previo: periodo de gracia de **30 días** (coherencia con el Bloque 5, no los 15 propuestos inicialmente), y el bucket privado de evidencias **sí se construye en este bloque**, con un único archivo por solicitud (PDF/JPG/PNG) — múltiples evidencias queda documentado como fase futura, no implementado.
+
+### Dos defectos reales encontrados y corregidos durante la implementación
+
+Ambos se detectaron probando escenarios explícitamente pedidos, no por casualidad — y ambos se corrigieron dentro de este mismo bloque (la migración `0021` nunca llegó a commitearse con el defecto), previa parada y aprobación expresa del primero, y corrección directa del segundo por ser un bug de implementación de un requisito ya aprobado, no una bifurcación arquitectónica nueva.
+
+**1. Pertenencia de Actor rota para negocio/organizador (defecto del Bloque A).** Las políticas de "esto es mío" en `verifications`/`actor_roles` comparaban únicamente `actors.profile_id = auth.uid()`. Funciona para un actor `persona`, pero un actor `negocio`/`organizador` **siempre** tiene `profile_id = NULL` por diseño (desde el Bloque 1) — la pertenencia real para esos actores depende de `businesses.owner_id`. Esto bloqueaba exactamente el caso de uso central de este bloque: Ana, dueña de un negocio, solicitando la verificación de **su propio negocio**. Nunca se detectó en las pruebas del Bloque A porque ahí solo se probaron verificaciones sobre actores `persona`.
+
+  Se presentó el hallazgo, se detuvo la implementación, y se esperó aprobación explícita antes de corregir (por tratarse de una modificación a políticas ya aprobadas y enviadas del Bloque A). Corrección aprobada: función `public.actor_belongs_to_current_user(actor_id)` (`security definer`, mismo criterio que `is_admin()`), que resuelve correctamente los cuatro casos pedidos — persona vía `profile_id`; negocio/organizador vía `businesses.owner_id`; sistema nunca pertenece a nadie; negocio sin propietario no pertenece a nadie hasta reasignación. Reemplaza la comparación directa en las políticas afectadas de `verifications` (Bloque A y B) y `actor_roles` (Bloque A), sin cambiar el comportamiento para actores `persona`.
+
+**2. Auto-aprobación posible para un admin dueño de un negocio (consecuencia del mismo defecto, más seria de lo que parecía).** La política "nunca la propia" del Bloque A también usaba la comparación rota — significaba que un administrador que **además** fuera dueño de un negocio podía aprobar la verificación de **su propio negocio**, porque el chequeo de exclusión nunca detectaba que ese actor le pertenecía. Al corregir con `actor_belongs_to_current_user`, se descubrió un segundo problema más sutil al probarlo: en PostgreSQL, las cláusulas `WITH CHECK` de **todas** las políticas permisivas de `UPDATE` se combinan con `OR`, sin importar cuál política fue la que autorizó vía `USING` — el `WITH CHECK` laxo de la política de administradores (`status <> 'vencido'`) podía "rescatar" una actualización que en realidad había entrado por la política de "el actor completa su propia solicitud", permitiendo de nuevo la auto-aprobación aunque la corrección de pertenencia ya estuviera aplicada.
+
+  Solución: una guarda explícita e incondicional dentro del trigger `protect_verification_fields` (no solo en RLS): si quien ejecuta la operación pertenece al actor de la verificación **y** el `status` resultante es una decisión real (`aprobado`/`rechazado`/`revocado`), se aborta con una excepción — sin importar qué política haya dejado pasar el `UPDATE` a nivel de RLS. Este mecanismo no depende de la interacción entre políticas, por lo que es inmune al problema de `WITH CHECK` combinados con `OR`.
+
+### `supabase/migrations/0021_fase2_bloqueB_ciclo_vida_verificaciones.sql` (nuevo)
+
+- **`public.actor_belongs_to_current_user(actor_id)`**: función de pertenencia corregida (ver arriba), usada en las políticas de `verifications` (select/insert/update) y `actor_roles` (select).
+- **Columnas nuevas en `verifications`**: `revoked_by`/`revoked_at` (distintas de `reviewed_by`/`decided_at`, porque una revocación es un evento posterior y potencialmente de otro admin); `snapshot_owner_id`/`snapshot_category`/`snapshot_lat`/`snapshot_lng`, pobladas automáticamente por el trigger al aprobar (primera vez o renovación) — permiten detectar en la siguiente renovación si hubo un cambio real de propietario/actividad/ubicación (modelo de renovación basado en riesgo).
+- **`verifications_evidence_required`** (check): exige `evidence_ref` antes de pasar a `en_revision`/`aprobado`, exceptuando explícitamente las verificaciones `origin='migracion'` — no se les exige retroactivamente algo que el Bloque A nunca les pidió.
+- **Política nueva**: el actor puede completar su propia solicitud activa (adjuntar `evidence_ref`/`scope`) mientras esté `pendiente`/`en_revision` — vacío real del Bloque A, que nunca necesitó esto porque no existía el flujo de evidencia.
+- **`vencido` inalcanzable vía RLS normal**: la política de administradores se reemplaza con `with check (status <> 'vencido')` — solo el proceso automatizado (service role, que no pasa por RLS) puede marcarlo.
+- **Trigger `protect_verification_fields`**: congela todo campo sensible si quien actualiza no es admin ni el proceso automatizado (deja editable solo `evidence_ref`/`scope`); congela `expires_at` incluso para un admin si no hay una transición real de `status` en el mismo `UPDATE`; contiene la guarda anti-autoaprobación descrita arriba; puebla los snapshots al aprobar.
+- **`verification_status_log`**: auditoría de cada transición (`from_status`/`to_status`/`performed_by`/`reason`/`is_automated`), poblada por trigger — tabla separada de `role_audit_log` (dominios distintos).
+- **`verification_notices`**: un aviso único por `(verification_id, notice_type)` — nunca se reenvía.
+- **`evidence_access_log`**: quién consultó la evidencia de quién, poblada por la Edge Function que genera cada URL firmada (no puede ser un trigger, generar una URL firmada es una llamada a Storage, no SQL).
+
+### `supabase/migrations/0022_fase2_bloqueB_storage_evidencias.sql` (nuevo)
+
+Bucket privado `verification_evidence` (`allowed_mime_types`: PDF/JPG/PNG; `file_size_limit`: 10 MB). Ruta fija `<verification_id>/evidence.<ext>` — un único archivo por solicitud vía upsert, sin necesitar una restricción de esquema adicional. Políticas: el actor sube/reemplaza evidencia solo de su propia verificación activa (`pendiente`/`en_revision`); lectura para el propio solicitante (en cualquier estado) o un administrador — nunca Editor/Moderador, nunca público. **No pudo verificarse contra Postgres local** (depende del esquema `storage` de Supabase, igual que `0002_storage.sql`) — solo revisada por sintaxis y consistencia con el resto del esquema.
+
+### `supabase/functions/process-verification-lifecycle` (nuevo)
+
+Avisos (reutilizando `send-push` en vez de duplicar su lógica, con idempotencia vía la restricción única de `verification_notices`) y vencimiento automático (`aprobado` → `vencido` tras 30 días de gracia). Protegida con `CRON_SECRET`, independiente de `process-account-deletions` en código y dominio — solo puede compartir la credencial de invocación. **Misma nota de verificación honesta que las Edge Functions del Bloque 5**: no se pudo probar contra un proyecto Supabase real en este entorno.
+
+### Verificación realizada
+
+Postgres 16 real, las 21 migraciones aplicables en orden (`0001`-`0021`, saltando `0002` y `0022` — ambas dependen del esquema `storage`), con datos de prueba reales: Ana (dueña de un negocio aprobado), Beto (negocio pendiente), dos administradores — uno de ellos (admin1) **también dueño de un negocio**, deliberadamente, para poder probar el caso crítico.
+
+- **Pertenencia corregida, los seis escenarios pedidos**: usuario accediendo a su actor persona (✔ true); propietario accediendo al actor de su propio negocio (✔ true); propietario intentando acceder al actor de otro negocio (✔ false); usuario normal intentando "pertenecer" a un actor de sistema (✔ false); negocio sin propietario — nadie pertenece hasta reasignación (✔ false); tras la reasignación por un admin, el nuevo dueño sí pertenece y el anterior nunca lo hizo (✔ true / ✔ false).
+- **Ciclo completo real**: Ana solicita, adjunta evidencia, admin1 pasa a `en_revision` y aprueba — `snapshot_owner_id`/`snapshot_category`/`snapshot_lat`/`snapshot_lng` se poblaron automáticamente y coinciden exactamente con los datos reales del negocio en ese momento.
+- **Auto-aprobación rechazada en el caso crítico real**: admin1 (administrador real) intentando aprobar la verificación de **su propio negocio** fue rechazado con una excepción explícita — un segundo admin (admin2, sin relación con ese negocio) sí pudo aprobarla.
+- **`vencido` inalcanzable por RLS normal**: un admin real intentando `UPDATE ... SET status='vencido'` directamente fue rechazado por la política.
+- **`expires_at` protegido**: un admin intentando cambiarlo sin una transición de estado real vio el valor revertido silenciosamente por el trigger, sin error, sin cambio efectivo.
+- **Periodo de gracia de 30 días probado con dos casos reales**: una verificación vencida hace 20 días (dentro de gracia) permaneció `aprobado` tras correr la lógica de vencimiento; una vencida hace 35 días (fuera de gracia) pasó a `vencido` automáticamente — simulado con el rol de Postgres ejecutando como `service_role` (vía `auth.role()`), igual que lo haría la Edge Function real.
+- **Auditoría exacta, incluyendo un tercer defecto encontrado y corregido en el camino**: la primera versión del trigger de auditoría registraba `reviewed_by` (de la aprobación original) como responsable de una revocación posterior hecha por otro admin — corregido para que cada tipo de transición registre el campo correcto (`reviewed_by` para aprobar/rechazar, `revoked_by` para revocar, `null` para vencimiento automático). Verificado de nuevo tras la corrección: la revocación por admin2 quedó auditada con `performed_by = admin2`, no con el admin que había aprobado antes.
+- **`verification_notices` idempotente**: un segundo intento de insertar el mismo `(verification_id, notice_type)` fue rechazado por la restricción única; RLS verificada (el dueño ve su propio aviso, un tercero no).
+- **Reversión completa ejecutada de verdad** (sobre un estado sin ningún vencimiento/decisión real de producción): las 4 tablas nuevas, la función de pertenencia, el trigger de protección, y las políticas modificadas del Bloque A se revirtieron sin ningún error; las tablas existentes (`profiles`, `businesses`, `verifications` con sus filas de prueba, `roles`, `actors`) quedaron exactamente con los mismos conteos.
+- **Build y lint del frontend**: sin cambios, ambos limpios; `git status` confirma que `src/` no fue tocado — los únicos cambios son las dos migraciones y la Edge Function nueva.
+
+### Incidencias encontradas
+
+Tres, todas encontradas durante la propia verificación exhaustiva (no en producción) y corregidas dentro de este mismo bloque antes de cualquier commit: (1) pertenencia de Actor rota para negocio/organizador — requirió detener la implementación y pedir aprobación explícita por modificar políticas ya aprobadas del Bloque A; (2) auto-aprobación posible vía interacción de políticas `WITH CHECK` combinadas con `OR` — corregida con una guarda de trigger incondicional; (3) auditoría de revocación atribuida al admin equivocado — corregida para usar el campo correcto según el tipo de transición.
+
+### Deuda técnica detectada
+
+- **Limpieza automática de evidencias vencidas** (90 días tras un estado terminal, propuesta en el análisis previo): no implementada en este bloque — no fue parte de lo explícitamente aprobado en esta ronda.
+- **Edge Function no verificada contra un proyecto Supabase real** (misma limitación que las del Bloque 5) — pendiente antes de producción.
+- **Sin interfaz de usuario** para solicitar verificación, adjuntar evidencia, o revisar — este bloque es solo backend (esquema + Storage + Edge Function).
+- **Sin mecanismo de disparo temporal configurado** para invocar `process-verification-lifecycle` periódicamente (mismo tipo de deuda ya heredada de `process-account-deletions`).
+- **Denuncia/incidencia como señal de riesgo para exigir evidencia en la renovación**: depende de un mecanismo de moderación que no existe todavía (Fase 13) — hasta entonces, esa señal específica solo puede evaluarse manualmente por un admin.
+
+### Qué sigue
+
+Con el Bloque B completo, la Fase 2 (Verificación robusta y roles granulares) queda terminada en su capa de backend. Sigue pendiente, sin autorizar todavía: interfaz visual de solicitud/revisión, perfiles sociales, promociones, publicaciones, QR, IA nueva, Azu Taxi, monetización, y el cambio de fuente de verdad desde `is_admin` hacia el nuevo sistema de roles. Ver `MASTERPLAN.md` para las fases siguientes.

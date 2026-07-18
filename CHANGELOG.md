@@ -2,6 +2,30 @@
 
 Registro de cambios notables de Ahorita (Cuenca Viva). Formato libre, en español, más cercano a un registro de fases de producto que a versiones semánticas — ver `PROJECT.md` para el plan completo y el estado real de la implementación.
 
+## 2026-07-17 — Fase 2, Bloque B: ciclo de vida, vigencia y renovación de verificaciones
+
+Segundo bloque de la Fase 2 del `MASTERPLAN.md`. Periodo de gracia de 30 días (coherencia con el Bloque 5); bucket privado de evidencias construido en este bloque, un único archivo por solicitud.
+
+### Agregado
+- `supabase/migrations/0021_fase2_bloqueB_ciclo_vida_verificaciones.sql`: `public.actor_belongs_to_current_user(actor_id)` (corrige la pertenencia de Actor para negocio/organizador, ver más abajo); columnas nuevas en `verifications` (`revoked_by`/`revoked_at`, snapshots automáticos al aprobar); `verification_status_log`/`verification_notices`/`evidence_access_log`; trigger de protección de campos con guarda anti-autoaprobación incondicional; `vencido` solo alcanzable por el proceso automatizado.
+- `supabase/migrations/0022_fase2_bloqueB_storage_evidencias.sql`: bucket privado `verification_evidence` (PDF/JPG/PNG, 10MB), un archivo por solicitud vía ruta fija. No verificable contra Postgres local (depende de `storage`, mismo motivo que `0002_storage.sql`).
+- `supabase/functions/process-verification-lifecycle`: avisos (reutilizando `send-push`) + vencimiento automático, protegida con `CRON_SECRET`, independiente de `process-account-deletions`.
+
+### Tres defectos encontrados y corregidos durante la implementación (antes de cualquier commit)
+1. **Pertenencia de Actor rota para negocio/organizador** (defecto del Bloque A): las políticas comparaban solo `actors.profile_id`, que siempre es `NULL` para un actor negocio/organizador — bloqueaba el caso central de este bloque. Se detuvo la implementación y se pidió aprobación explícita antes de corregir, por tratarse de políticas ya aprobadas y enviadas. Corregido con una función reutilizable que cubre los cuatro casos (persona, negocio/organizador, sistema, negocio sin propietario).
+2. **Auto-aprobación posible para un admin dueño de un negocio**: al corregir el punto 1, se descubrió que en PostgreSQL las cláusulas `WITH CHECK` de todas las políticas permisivas de `UPDATE` se combinan con `OR` sin importar cuál política autorizó — el `WITH CHECK` laxo de la política de administradores podía rescatar una actualización entrada por la política del propio actor. Corregido con una guarda incondicional en el trigger, inmune a la interacción entre políticas.
+3. **Auditoría de revocación atribuida al admin equivocado**: el trigger de auditoría tomaba `reviewed_by` (de la aprobación original) en vez de `revoked_by` (quien realmente revocó). Corregido para usar el campo correcto según el tipo de transición.
+
+### Verificado
+- Las 21 migraciones aplicables (`0001`-`0021`) contra Postgres 16 real, con un administrador que también es dueño de un negocio (deliberado, para probar el caso crítico).
+- Los seis escenarios de pertenencia pedidos, todos correctos tras la corrección.
+- Ciclo completo real: solicitud, evidencia, revisión, aprobación con snapshot automático.
+- Auto-aprobación rechazada en el caso crítico (admin dueño de su propio negocio); un segundo admin sí pudo aprobar.
+- `vencido` inalcanzable por RLS normal; `expires_at` protegido de cambios aislados.
+- Periodo de gracia de 30 días probado con dos casos reales (dentro y fuera de gracia), simulando el rol de servicio.
+- Auditoría exacta tras la corrección del defecto 3.
+- `verification_notices` idempotente; reversión completa sin errores; build/lint sin cambios, `src/` no tocado.
+
 ## 2026-07-17 — Fase 2, Bloque A: esquema de verificación y roles granulares
 
 Primer bloque de la Fase 2 del `MASTERPLAN.md`. Aditivo y deliberadamente invisible: `profiles.is_admin`/`public.is_admin()` permanecen exactamente iguales, ninguna política RLS existente se toca.
