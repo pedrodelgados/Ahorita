@@ -1005,3 +1005,46 @@ Sin Docker ni un proyecto Supabase real disponibles en este sandbox, el Playwrig
 ### Qué sigue (Entrega 3, pendiente de aprobación)
 
 Edición del perfil: bio/logo/portada para propietario y administrador operativo. No se avanza automáticamente — a la espera de aprobación explícita.
+
+## Fase 3, Bloque C, Entrega 3 — Edición del perfil (implementado)
+
+Ni una sola migración nueva: toda la seguridad requerida (propietario legal o administrador operativo activo, terceros bloqueados) ya existía desde el Bloque A (`actor_editable_by_current_user`, políticas de `actor_profile_details`/`actor_media`) — esta entrega es la primera vez que el frontend la usa para escribir.
+
+### Frontend
+
+- **`src/lib/uploadValidation.js`** (nuevo): `validateImageFile()` — tipo (`jpeg`/`png`/`webp`) y tamaño (máximo 5 MB, decisión de producto). Se usa tanto en `MediaUploader` como en `GalleryEditor`.
+- **`src/lib/actorMedia.js`** (nuevo): alta/baja/reordenamiento de `actor_media`. `MAX_GALLERY_ITEMS = 12` — una galería curada, no un álbum sin fin (decisión de producto, sin límite en la base de datos).
+- **`src/lib/actorProfile.js`**: `canEditActor(actorId)` (envuelve el RPC `actor_editable_by_current_user` del Bloque A) y `updateActorProfileDetails(actorId, patch)`.
+- **`src/components/ui/MediaUploader.jsx`**: dos props nuevas y opcionales, `aspectRatio` (por defecto `"16 / 9"`, sin cambiar el comportamiento donde ya se usa) y `round`; ahora valida tipo/tamaño antes de subir. Los usos existentes (editor de lugares/eventos) siguen intactos.
+- **`src/features/profile/GalleryEditor.jsx`** (nuevo): cuadrícula de hasta 12 fotos con reordenamiento por flechas (sin arrastrar y soltar, para no sumar una dependencia nueva), eliminación y contador `n/12`. **Cada acción se guarda de inmediato** (a diferencia de logo/portada/bio) — no tiene sentido "deshacer" una foto ya subida esperando un guardado global, igual que cualquier gestor de fotos real.
+- **`src/pages/ActorEditPage.jsx`** (nuevo) + ruta `/actor/:actorId/editar`: logo (1:1), portada (21:9), bio y galería, con el mismo patrón ya usado en los editores admin de lugares/eventos — snapshot/`dirty`, `SaveStatusPill` (guardando/guardado/error), `ConfirmationModal` al salir con cambios sin guardar (`useUnsavedChangesGuard`), vista previa reutilizando el propio `ActorProfileHeader` con el estado del formulario todavía no guardado.
+- **`src/pages/ActorProfilePage.jsx`**: ícono de lápiz en el encabezado, visible únicamente cuando `canEditActor()` devuelve `true` para quien mira — el punto de entrada real al editor.
+- Horarios y catálogo **no se tocan** — quedan para la Entrega 4, tal como se pidió explícitamente.
+
+### Verificación realizada
+
+- **Build y lint**: limpios, sin advertencias nuevas.
+- **Playwright** (misma red interceptada de las entregas anteriores, pero esta vez **con una sesión autenticada real de supabase-js simulada** en `localStorage` bajo la clave `sb-127-auth-token` — la que supabase-js deriva del host de `VITE_SUPABASE_URL` — para poder probar el editor detrás de `RequireAuth`, no solo la función RPC en aislado):
+  - Tercero ajeno (`actor_editable_by_current_user` responde `false`): pantalla "No tienes permiso para editar este perfil", sin ningún campo de edición.
+  - Propietario/administrador operativo (`true`): editor completo — logo, portada, biografía, galería y vista previa, los cinco visibles.
+  - Edición de biografía → aparece "Cambios sin guardar" → "Guardar cambios" envía el `PATCH` correcto a `actor_profile_details` → aparece "Guardado".
+  - Cambios sin guardar + botón "Volver" → modal de confirmación ("Cambios sin guardar" / "Seguir editando").
+  - Subir un PDF como logo → "Formato no admitido", sin llamar a Storage.
+  - Subir una imagen de 6 MB → "Máximo 5 MB", sin llamar a Storage.
+  - Subir un logo válido (200 KB, JPEG) → sin errores, "Cambios sin guardar" activado.
+  - Galería: agregar una foto (contador pasa de `0/12` a `1/12`) y eliminarla (vuelve a `0/12`).
+- **Regresión**: Feed, Explorar y Perfil siguen cargando sin excepciones; los perfiles públicos de la Entrega 1/2 no cambiaron su comportamiento.
+
+### Limitación de entorno
+
+Misma de las entregas anteriores (sin Docker/Supabase real). A diferencia de la Entrega 2, aquí sí fue posible simular una sesión autenticada real de supabase-js (ver arriba), lo que permitió probar el editor de extremo a extremo contra la red interceptada — pero sigue sin ser un flujo contra Auth+PostgREST+RLS realmente desplegados. La distinción real entre "propietario legal" y "administrador operativo" (dos condiciones distintas que ambas hacen que `actor_editable_by_current_user` devuelva `true`) ya se probó a nivel de Postgres en el Bloque A; esta entrega prueba que el frontend respeta correctamente lo que el RPC responde, no vuelve a probar la lógica SQL en sí.
+
+### Deuda técnica detectada
+
+- Toda la de las Entregas 1-2 (sin cambios).
+- **Los objetos de Storage nunca se eliminan** al reemplazar o eliminar una foto (logo/portada/galería) — mismo comportamiento ya existente en el editor de lugares/eventos desde antes de la Fase 3 (el bucket `media` no tiene política de `DELETE`/`UPDATE`, solo lectura pública e inserción). No es una regresión de esta entrega; se documenta porque ahora también aplica al Centro del Negocio.
+- **Sin editor de horarios ni catálogo** — a propósito, quedan para la Entrega 4.
+
+### Qué sigue (Entrega 4, pendiente de aprobación)
+
+Horarios y catálogo visibles/editables. No se avanza automáticamente — a la espera de aprobación explícita.

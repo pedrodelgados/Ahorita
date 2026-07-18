@@ -9,6 +9,7 @@ import SearchPage from "./pages/SearchPage";
 import NotificationsPage from "./pages/NotificationsPage";
 import BusinessRegisterPage from "./pages/BusinessRegisterPage";
 import ActorProfilePage from "./pages/ActorProfilePage";
+import ActorEditPage from "./pages/ActorEditPage";
 import AdminPage from "./pages/AdminPage";
 import AdminEventsListPage from "./pages/admin/AdminEventsListPage";
 import AdminEventEditorPage from "./pages/admin/AdminEventEditorPage";
@@ -102,6 +103,14 @@ export default function App() {
               <ActorProfilePage />
             </MainLayout>
           </RequireAccess>
+        }
+      />
+      <Route
+        path="/actor/:actorId/editar"
+        element={
+          <RequireAuth>
+            <ActorEditPage />
+          </RequireAuth>
         }
       />
       <Route

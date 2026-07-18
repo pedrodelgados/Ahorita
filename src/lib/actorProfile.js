@@ -86,6 +86,28 @@ export async function listActorMedia(actorId) {
   return data;
 }
 
+// ¿Puede quien mira ahora editar este actor? Reutiliza la función de
+// seguridad ya creada y probada en el Bloque A (dueño legal o administrador
+// operativo activo) — ninguna regla de permisos nueva para la Entrega 3.
+export async function canEditActor(actorId) {
+  const { data, error } = await supabase.rpc("actor_editable_by_current_user", {
+    check_actor_id: actorId,
+  });
+  if (error) throw error;
+  return data === true;
+}
+
+export async function updateActorProfileDetails(actorId, patch) {
+  const { data, error } = await supabase
+    .from("actor_profile_details")
+    .update(patch)
+    .eq("actor_id", actorId)
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+}
+
 export async function getActorIdForBusiness(businessId) {
   const { data, error } = await supabase
     .from("actors")

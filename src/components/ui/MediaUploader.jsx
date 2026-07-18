@@ -1,14 +1,18 @@
 import { useRef, useState } from "react";
 import { ImagePlus, Trash2 } from "lucide-react";
 import { uploadMedia } from "../../lib/storage";
+import { validateImageFile } from "../../lib/uploadValidation";
 import { COLORS, textStyle, TYPE } from "../../styles/theme";
 import ImageWithFallback from "./ImageWithFallback";
 
 // Subir/reemplazar/eliminar la foto principal. Al eliminar, vuelve a null —
 // ImageWithFallback ya sabe mostrar el fallback de categoría de marca en vez
 // de una foto ausente (ver CategoryFallback), así que "eliminar" nunca deja
-// un hueco vacío.
-export default function MediaUploader({ imageUrl, category, ownerId, onChange }) {
+// un hueco vacío. `aspectRatio` es opcional (por defecto 16:9, el uso
+// original de lugares/eventos) — el Centro del Negocio lo usa en "1 / 1"
+// para el logo y "21 / 9" para la portada, sin cambiar el comportamiento
+// existente en ningún otro lugar que ya use este componente.
+export default function MediaUploader({ imageUrl, category, ownerId, onChange, aspectRatio = "16 / 9", round = false }) {
   const inputRef = useRef(null);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState(null);
@@ -16,6 +20,12 @@ export default function MediaUploader({ imageUrl, category, ownerId, onChange })
   async function handleFile(e) {
     const file = e.target.files?.[0];
     if (!file) return;
+    const validationError = validateImageFile(file);
+    if (validationError) {
+      setError(validationError);
+      e.target.value = "";
+      return;
+    }
     setUploading(true);
     setError(null);
     try {
@@ -34,8 +44,8 @@ export default function MediaUploader({ imageUrl, category, ownerId, onChange })
       <div
         style={{
           position: "relative",
-          aspectRatio: "16 / 9",
-          borderRadius: "var(--radius-card)",
+          aspectRatio,
+          borderRadius: round ? "50%" : "var(--radius-card)",
           overflow: "hidden",
           background: "#EEE",
           marginBottom: 12,

@@ -2,6 +2,25 @@
 
 Registro de cambios notables de Ahorita (Cuenca Viva). Formato libre, en español, más cercano a un registro de fases de producto que a versiones semánticas — ver `PROJECT.md` para el plan completo y el estado real de la implementación.
 
+## 2026-07-18 — Fase 3, Bloque C, Entrega 3: edición del perfil
+
+Sin ninguna migración nueva — toda la seguridad (propietario legal o administrador operativo activo, terceros bloqueados) ya existía desde el Bloque A; esta entrega es la primera vez que el frontend la usa para escribir.
+
+### Agregado
+- `src/lib/uploadValidation.js`: validación de tipo (jpeg/png/webp) y tamaño (máx. 5 MB) antes de subir.
+- `src/lib/actorMedia.js`: alta/baja/reordenamiento de `actor_media`, límite de 12 fotos (decisión de producto).
+- `src/lib/actorProfile.js`: `canEditActor`, `updateActorProfileDetails`.
+- `src/components/ui/MediaUploader.jsx`: props opcionales `aspectRatio`/`round` + validación — sin romper los usos existentes (lugares/eventos).
+- `src/features/profile/GalleryEditor.jsx`: galería con reordenamiento por flechas, cada acción se guarda de inmediato (a diferencia de logo/portada/bio).
+- `src/pages/ActorEditPage.jsx` + ruta `/actor/:actorId/editar`: logo, portada, bio y galería con snapshot/dirty, estado de guardado, confirmación al salir, vista previa reutilizando `ActorProfileHeader`.
+- `ActorProfilePage.jsx`: ícono de edición visible solo cuando `canEditActor()` es verdadero.
+
+### No implementado a propósito
+Editores de horarios y catálogo — quedan para la Entrega 4.
+
+### Verificado
+Build y lint limpios. Playwright con sesión autenticada real de supabase-js simulada (primera vez en este proyecto): tercero bloqueado, propietario/admin operativo con editor completo, dirty-tracking + guardado con `PATCH` correcto, confirmación al salir con cambios sin guardar, validación de tipo y tamaño rechazando archivos inválidos sin llamar a Storage, carga de logo válida, galería agregar/eliminar. Regresión de Feed/Explorar/Perfil y de los perfiles públicos de las Entregas 1-2 sin cambios de comportamiento.
+
 ## 2026-07-18 — Fase 3, Bloque C, Entrega 2: Centro del Negocio
 
 Precedida por una propuesta de diseño funcional y visual aprobada explícitamente antes de escribir código (jerarquía, prioridad de acciones, organización de contenido, estrategia contra espacios vacíos, adaptabilidad por rubro, componentes, integraciones futuras).

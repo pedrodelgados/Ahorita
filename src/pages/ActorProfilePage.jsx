@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft } from "lucide-react";
-import { getPublicActorProfile } from "../lib/actorProfile";
+import { Link, useNavigate, useParams } from "react-router-dom";
+import { ArrowLeft, Pencil } from "lucide-react";
+import { useAuth } from "../contexts/AuthContext";
+import { getPublicActorProfile, canEditActor } from "../lib/actorProfile";
 import { COLORS, SPACE } from "../styles/theme";
 import Card from "../components/ui/Card";
 import ActorProfileHeader from "../features/profile/ActorProfileHeader";
@@ -28,7 +29,9 @@ import AboutSection from "../features/profile/AboutSection";
 export default function ActorProfilePage() {
   const { actorId } = useParams();
   const navigate = useNavigate();
+  const { isAuthenticated } = useAuth();
   const [state, setState] = useState({ loading: true, error: null, data: null });
+  const [canEdit, setCanEdit] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -46,6 +49,24 @@ export default function ActorProfilePage() {
   }, [actorId]);
 
   const isNegocio = state.data?.actor.type !== "persona" && !!state.data?.business;
+
+  useEffect(() => {
+    if (!isNegocio || !isAuthenticated) {
+      setCanEdit(false);
+      return;
+    }
+    let cancelled = false;
+    canEditActor(actorId)
+      .then((allowed) => {
+        if (!cancelled) setCanEdit(allowed);
+      })
+      .catch(() => {
+        if (!cancelled) setCanEdit(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [actorId, isNegocio, isAuthenticated]);
 
   return (
     <div style={{ minHeight: "100svh" }}>
@@ -66,6 +87,18 @@ export default function ActorProfilePage() {
           <ArrowLeft size={20} />
         </button>
         <h2 style={{ fontSize: 16, flex: 1 }}>Perfil</h2>
+        {canEdit && (
+          <Link
+            to={`/actor/${actorId}/editar`}
+            aria-label="Editar perfil"
+            style={{
+              width: 36, height: 36, borderRadius: "50%", background: "rgba(43, 38, 34, 0.06)",
+              display: "flex", alignItems: "center", justifyContent: "center", color: COLORS.ink,
+            }}
+          >
+            <Pencil size={16} />
+          </Link>
+        )}
       </header>
 
       <main style={{ maxWidth: 720, margin: "0 auto", padding: "24px 24px calc(84px + env(safe-area-inset-bottom))" }}>
