@@ -1,12 +1,19 @@
 import { useEffect, useState } from "react";
-import { ChevronDown, Clock, MapPin, Phone, MessageCircle, Navigation, Globe } from "lucide-react";
+import { ChevronDown, Clock, MapPin, Phone, MessageCircle, Globe } from "lucide-react";
 import { getBusinessWeekHoursText } from "../../lib/businessHours";
-import { googleMapsDirectionsUrl } from "../../lib/directions";
 import { COLORS, SPACE, textStyle, TYPE } from "../../styles/theme";
 
 // "Acerca de" (Fase 3, Bloque C, Entrega 2): horario semanal completo,
 // dirección y contacto en un solo bloque expandible. La bio ya se muestra
 // en la identidad (ActorProfileHeader) — no se repite aquí.
+//
+// Entrega 6: llamar/WhatsApp/cómo llegar dejan de ser botones tocables
+// aquí — ya existen en `ActionBar`, más arriba en la jerarquía visual, y
+// tener el mismo botón dos veces en la misma pantalla era una duplicación
+// real, no una redundancia útil. Esta sección conserva el teléfono y
+// WhatsApp como información de texto (se puede leer el número, no repetir
+// la acción); el sitio web sí sigue siendo un enlace tocable porque no
+// existe en ningún otro lugar de la pantalla.
 export default function AboutSection({ business, zone, defaultOpen }) {
   const [open, setOpen] = useState(defaultOpen);
   const [weekHours, setWeekHours] = useState(null);
@@ -56,20 +63,26 @@ export default function AboutSection({ business, zone, defaultOpen }) {
             </div>
           )}
 
-          <div style={{ display: "flex", gap: 8 }}>
-            {business.phone && (
-              <ContactIcon href={`tel:${business.phone}`}><Phone size={16} /></ContactIcon>
-            )}
-            {business.whatsapp && (
-              <ContactIcon href={`https://wa.me/${business.whatsapp.replace(/\D/g, "")}`} external><MessageCircle size={16} /></ContactIcon>
-            )}
-            {business.lat && business.lng && (
-              <ContactIcon href={googleMapsDirectionsUrl(business.lat, business.lng)} external><Navigation size={16} /></ContactIcon>
-            )}
-            {business.website && (
-              <ContactIcon href={business.website} external><Globe size={16} /></ContactIcon>
-            )}
-          </div>
+          {(business.phone || business.whatsapp) && (
+            <div style={{ display: "flex", flexDirection: "column", gap: 4, marginBottom: business.website ? 8 : 0 }}>
+              {business.phone && (
+                <span style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                  <Phone size={14} color={COLORS.inkSoft} style={{ flexShrink: 0 }} />
+                  <span style={textStyle(TYPE.bodySmall, { color: COLORS.inkSoft })}>{business.phone}</span>
+                </span>
+              )}
+              {business.whatsapp && (
+                <span style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                  <MessageCircle size={14} color={COLORS.inkSoft} style={{ flexShrink: 0 }} />
+                  <span style={textStyle(TYPE.bodySmall, { color: COLORS.inkSoft })}>WhatsApp disponible</span>
+                </span>
+              )}
+            </div>
+          )}
+
+          {business.website && (
+            <ContactIcon href={business.website} external><Globe size={16} /></ContactIcon>
+          )}
         </div>
       )}
     </div>

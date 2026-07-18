@@ -2,6 +2,31 @@
 
 Registro de cambios notables de Ahorita (Cuenca Viva). Formato libre, en español, más cercano a un registro de fases de producto que a versiones semánticas — ver `PROJECT.md` para el plan completo y el estado real de la implementación.
 
+## 2026-07-18 — Fase 3, Bloque C, Entrega 6: consolidación del seguimiento y experiencia social
+
+Precedida por un análisis de 18 puntos que concluyó que esta entrega debía tratarse como consolidación de arquitectura/seguridad/experiencia, no como funcionalidad social nueva — la mayoría ya existía, solo para negocios.
+
+### Bifurcación resuelta con aprobación explícita
+`follows` (persona→persona, Fase 1) e `interactions` (cualquier actor, Entrega 2) eran dos sistemas de seguimiento desconectados. Se migró el seguimiento de personas a `interactions`, convirtiéndola en la única fuente de verdad futura; `follows` queda como legacy de solo respaldo (no se elimina en esta entrega).
+
+### Agregado
+- `supabase/migrations/0027_fase3_bloqueC_entrega6_seguimiento_unificado.sql`: reconciliación puntual `follows` → `interactions` (inserta drift faltante, elimina huérfanos persona→persona sin respaldo real); `reconcile_follows_to_interactions()` reutilizable (solo admin, únicamente copia hacia adelante); trigger `prevent_self_interaction` — bloquea a nivel de base de datos seguirte a ti mismo, seguir tu propio negocio, y guardarlo como propietario/administrador operativo.
+- `src/hooks/useActorSocialState.js`: estado compartido entre `ActionBar`/`ActivityStrip` — contadores reactivos, optimista con reversión exacta, `busy` por acción, mensaje de error transitorio.
+- `src/lib/interactions.js`: `listFollowedProfileIds`, `describeInteractionError`.
+- `src/lib/actorProfile.js`: `getActorIdForProfile`.
+- `ActionBar.jsx`/`ActivityStrip.jsx`: ahora también para actores persona (antes exclusivo de negocio); "Cómo llegar" abre `DirectionsSection` completo en vez de un enlace básico.
+- `AboutSection.jsx`: teléfono/WhatsApp pasan a ser texto informativo (ya no duplican los botones de `ActionBar`).
+- `FollowContext.jsx`: reescrito sobre `interactions`, misma forma pública — `AuthorTag.jsx` no necesitó ningún cambio.
+
+### Eliminado
+- `src/lib/follows.js` — sin más referencias (la tabla en la base de datos no se toca).
+
+### Incidencia encontrada y corregida antes de cualquier commit
+La primera versión de `reconcile_follows_to_interactions()` también eliminaba interacciones sin fila de `follows` correspondiente — correcto solo en el instante exacto de la migración, pero habría borrado seguimientos nuevos legítimos si se reejecutaba después del corte. Encontrado probando la función contra Postgres real con datos que reproducían el escenario; corregido dejando la eliminación de huérfanos únicamente en la reconciliación puntual (una sola vez, dentro de la migración), nunca en la función reutilizable.
+
+### Verificado
+Migración y trigger contra Postgres 16 real: seguir persona/negocio, autointeracción rechazada (uno mismo, negocio propio, negocio administrado), tercero sigue/deja de seguir, RLS impide suplantar o borrar interacciones ajenas, duplicado rechazado por `unique`, reversión real probada (trigger removido → auto-seguimiento posible → reaplicado). Playwright (10 escenarios + 1 de `AuthorTag`): contadores reactivos, botón oculto para autointeracción, "Cómo llegar" enriquecido, reversión ante error con mensaje, doble-toque una sola escritura, `AuthorTag` escribe en `interactions` nunca en `follows`. Regresión completa de las Entregas 1-5 (33 escenarios) sigue pasando. Build y lint limpios.
+
 ## 2026-07-18 — Fase 3, Bloque C, Entrega 5: selector de perfil unificado
 
 A partir de esta entrega, nueva metodología para el resto del proyecto: cada entrega futura se presenta primero como un análisis de 18 puntos (arquitectura, UX/UI, product design, auditoría técnica) antes de escribir código, cuestionando activamente el diseño previo — no solo confirmando la funcionalidad pedida.

@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import { ArrowLeft, ChevronsUpDown, Pencil, Settings } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
 import { useMyActorId } from "../hooks/useMyActorId";
+import { useActorSocialState } from "../hooks/useActorSocialState";
 import { getPublicActorProfile, canEditActor } from "../lib/actorProfile";
 import { COLORS, SPACE } from "../styles/theme";
 import Card from "../components/ui/Card";
@@ -36,6 +37,7 @@ export default function ActorProfilePage() {
   const [state, setState] = useState({ loading: true, error: null, data: null });
   const [canEdit, setCanEdit] = useState(false);
   const [switcherOpen, setSwitcherOpen] = useState(false);
+  const social = useActorSocialState(actorId);
 
   useEffect(() => {
     let cancelled = false;
@@ -139,21 +141,27 @@ export default function ActorProfilePage() {
 
         {state.data && (
           <>
-            <Card style={{ marginBottom: isNegocio ? SPACE.lg : 0 }}>
+            <Card style={{ marginBottom: SPACE.lg }}>
               <ActorProfileHeader
                 actor={state.data.actor}
                 details={state.data.details}
                 profile={state.data.profile}
                 business={state.data.business}
               />
-              {isNegocio && (
-                <>
-                  <ActivityStrip actorId={state.data.actor.id} businessId={state.data.business.id} />
-                  <div style={{ marginTop: SPACE.sm }}>
-                    <ActionBar actor={state.data.actor} business={state.data.business} />
-                  </div>
-                </>
-              )}
+              <ActivityStrip
+                businessId={state.data.business?.id}
+                counts={social.counts}
+                isPersona={!isNegocio}
+              />
+              <div style={{ marginTop: SPACE.sm }}>
+                <ActionBar
+                  actor={state.data.actor}
+                  business={state.data.business}
+                  zone={state.data.zone}
+                  social={social}
+                  blocked={canSwitch}
+                />
+              </div>
             </Card>
 
             {isNegocio && (

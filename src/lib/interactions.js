@@ -72,3 +72,47 @@ export async function toggleActorInteraction({ viewerProfileId, targetActorId, t
     if (error) throw error;
   }
 }
+
+// Entrega 6: seguimiento persona->persona migrado de `follows` a
+// `interactions` — misma tabla y mismas reglas que seguir un negocio, ya
+// que ambos son simplemente "seguir un actor". Devuelve profile_id (no
+// actor_id) para que FollowContext pueda mantener exactamente la misma
+// forma pública (`followingIds: Set<profileId>`) que ya usa AuthorTag, sin
+// que ese componente necesite saber que por debajo cambió el modelo.
+export async function listFollowedProfileIds(viewerProfileId) {
+  const myActorId = await getMyActorId(viewerProfileId);
+  const { data, error } = await supabase
+    .from("interactions")
+    .select("target_id")
+    .eq("actor_id", myActorId)
+    .eq("type", "seguimiento")
+    .eq("target_type", "actor");
+  if (error) throw error;
+  const targetActorIds = data.map((r) => r.target_id);
+  if (targetActorIds.length === 0) return [];
+
+  const { data: actors, error: actorsError } = await supabase
+    .from("actors")
+    .select("profile_id")
+    .in("id", targetActorIds)
+    .eq("type", "persona");
+  if (actorsError) throw actorsError;
+  return actors.map((a) => a.profile_id);
+}
+
+// Traduce un error real de Postgres/PostgREST a un mensaje breve y
+// comprensible — nunca un fallo silencioso (Entrega 6). El bloqueo de
+// autointeracción (código 23514, ver migración 0027) ya trae su propio
+// mensaje en español listo para mostrar tal cual.
+export function describeInteractionError(error) {
+  if (!error) return "Algo salió mal. Intenta de nuevo.";
+  if (error.code === "23514") return error.message;
+  if (error.code === "23505") return "Ya habías hecho esto.";
+  if (error.code === "42501" || /row-level security/i.test(error.message ?? "")) {
+    return "No tienes permiso para hacer esto.";
+  }
+  if (error.message === "Failed to fetch" || error.name === "TypeError") {
+    return "No se pudo conectar. Intenta de nuevo.";
+  }
+  return "No se pudo completar la acción. Intenta de nuevo.";
+}

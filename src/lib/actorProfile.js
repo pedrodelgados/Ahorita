@@ -157,3 +157,16 @@ export async function getActorIdForBusiness(businessId) {
   if (error) throw error;
   return data.id;
 }
+
+// Entrega 6: resuelve el actor persona de un profile_id — lo necesita
+// FollowContext para seguir migrado a interactions (target_id siempre es un
+// actor_id, nunca un profile_id directo).
+export async function getActorIdForProfile(profileId) {
+  const { data, error } = await supabase
+    .from("actors")
+    .select("id")
+    .eq("profile_id", profileId)
+    .single();
+  if (error) throw error;
+  return data.id;
+}
