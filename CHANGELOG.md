@@ -2,6 +2,32 @@
 
 Registro de cambios notables de Ahorita (Cuenca Viva). Formato libre, en español, más cercano a un registro de fases de producto que a versiones semánticas — ver `PROJECT.md` para el plan completo y el estado real de la implementación.
 
+## 2026-07-18 — Fase 3, Bloque A: perfil unificado y administración
+
+Primer bloque de la Fase 3 del `MASTERPLAN.md` (reformulada en tres bloques: A perfil unificado/administración, B información estructurada, C perfiles visibles/editables — "Centro del Negocio"). Aditivo sobre las Fases 1-2, sin tocar `verifications`/`actor_roles`.
+
+### Agregado
+- `supabase/migrations/0023_fase3_bloqueA_perfil_administracion.sql`: `actor_profile_details` (bio/logo/portada, 1:1 con cualquier actor, auto-creada por trigger); `actor_managers` (administración operativa delegable, distinta de `businesses.owner_id` — solo el propietario legal o un admin de plataforma agregan/revocan); `actor_media` (galería preparada); `actor_search_index` (búsqueda básica con `tsvector` nativo, sin motor externo). `public.actor_editable_by_current_user()` compone pertenencia legal + administración operativa — deliberadamente no usada en `verifications`.
+
+### Cuatro ajustes de producto incorporados
+"Centro del Negocio" (Bloque C futuro, estructura ya preparada colgando de `actor_id`); estructura multimedia preparada (`actor_media`, interfaz pendiente); búsqueda básica (`tsvector`, extensible en Bloque B con catálogo); colecciones flexibles de catálogo (aplica al Bloque B).
+
+### Incidencia encontrada y corregida antes del commit
+El trigger de auto-creación no copiaba `businesses.description` al `bio` de negocios nuevos (a diferencia del backfill, que sí lo hacía para los existentes) — detectado probando la creación de un negocio posterior a la migración, corregido antes de cualquier commit.
+
+### Verificado
+- Las 23 migraciones aplicables contra Postgres 16 real.
+- Auto-creación con siembra correcta de `bio` tras la corrección.
+- Búsqueda básica funcionando (encuentra por nombre/bio/categoría, se actualiza en cada edición).
+- Administración operativa real: un administrador no propietario editó el perfil con éxito.
+- Escalada de permisos rechazada (un administrador no puede agregar a otro); terceros ajenos bloqueados; revocación real con motivo verificada.
+- Guard de tipo de actor (solo negocio/organizador pueden tener administradores).
+- Aislamiento de la Fase 2 confirmado explícitamente: un administrador operativo activo no pudo insertar en `verifications` (rechazado por RLS, no por falta de permiso).
+- Reversión completa sin errores; build y lint sin cambios; `src/` no tocado.
+
+### Nota
+`businesses.description` se verificó en el código real: se escribe una sola vez al registrar el negocio, sin ningún editor posterior — `actor_profile_details.bio` es la fuente de verdad desde ahora, la columna antigua queda como histórica hasta que una fase posterior confirme que puede retirarse.
+
 ## 2026-07-18 — FASE 2 CERRADA: verificación robusta y roles granulares
 
 Cierre formal de la Fase 2 completa del `MASTERPLAN.md`, tras la aprobación de los dos bloques (esquema de verificación/roles, ciclo de vida/vigencia/renovación). Checkpoint de Git: tag `checkpoint-fase2-verificacion-roles`.

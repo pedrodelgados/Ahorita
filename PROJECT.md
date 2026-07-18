@@ -788,3 +788,68 @@ Registrada explícitamente, mismo criterio que la Fase 1 — nada de lo siguient
 7. Limpieza de evidencias vencidas — mecanismo documentado en el análisis previo, no implementado en este bloque.
 8. Interfaz de solicitud y revisión — no existe ninguna todavía; este bloque es solo backend.
 9. Regresión extremo a extremo en un entorno desplegado — todo lo anterior verificado por partes contra Postgres real y simulaciones, nunca como un flujo continuo real de principio a fin en producción o staging.
+
+---
+
+## Fase 3, Bloque A — Perfil unificado y administración (implementado)
+
+Primer bloque de la Fase 3 del `MASTERPLAN.md`, reformulada en tres bloques (A: perfil unificado y administración; B: información estructurada del negocio; C: perfiles visibles y editables — "Centro del Negocio"). Aditivo sobre las Fases 1-2: no toca ninguna tabla ni política existente de `actors`/`businesses`/`profiles`/`verifications`/`actor_roles`.
+
+### Cuatro ajustes de producto incorporados al diseño
+
+1. **"Centro del Negocio" (visión de Bloque C)**: `actor_profile_details`/`actor_media`/`actor_search_index` cuelgan de `actor_id` — el mismo eje unificador de toda la arquitectura — precisamente para que publicaciones/promociones/historias/reels/eventos/catálogo se integren en el futuro sin rediseñar esta base.
+2. **Estructura multimedia preparada**: `actor_media` (galería) además de `logo_url`/`cover_image_url` en `actor_profile_details` — la interfaz para gestionarla es Bloque C, no este bloque.
+3. **Búsqueda básica**: `actor_search_index` con `tsvector` nativo de Postgres (sin motor externo), poblada por trigger desde nombre/bio/categoría — el Bloque B la extenderá para incluir el catálogo.
+4. **Colecciones flexibles de catálogo**: decisión que aplica al Bloque B (`business_catalog_collections`), no a este.
+
+### Separación deliberada: propiedad legal vs. administración operativa
+
+`businesses.owner_id` (Bloque 5 de la Fase 1) sigue siendo el **único** propietario legal — rige la orfandad de negocios y sigue siendo, sin ningún cambio, quien puede solicitar/aprobar/rechazar/revocar verificaciones (Fase 2). Este bloque **no toca `verifications` ni sus políticas** — los administradores operativos nuevos (`actor_managers`) no obtienen ninguna capacidad sobre verificación, deliberadamente, para no reabrir superficie de riesgo ya cerrada en la Fase 2. Se verificó explícitamente que esto es cierto (ver abajo), no solo se asumió.
+
+### `supabase/migrations/0023_fase3_bloqueA_perfil_administracion.sql` (nuevo)
+
+- **`actor_profile_details`**: `actor_id` como llave primaria real (1:1 con cualquier actor, de cualquier tipo). Lectura pública; escritura por el dueño legal o un administrador operativo activo (`actor_editable_by_current_user`).
+- **`actor_managers`**: administración operativa many-to-many, nunca se borra una fila (se revoca con `revoked_at`/`revoked_by`/`revocation_reason`, mismo principio de auditoría inmutable de toda la Fase 1/2). Un trigger (`prevent_invalid_actor_manager_target`) impide asignar administradores a actores `persona`/`sistema` — solo `negocio`/`organizador`. Solo el propietario legal o un admin de plataforma agregan/revocan — **nunca** un administrador operativo puede agregar a otro, cerrando la cadena de delegación sin control.
+- **`public.actor_editable_by_current_user(actor_id)`**: compone `actor_belongs_to_current_user` (Fase 2, dueño legal) **o** una fila activa en `actor_managers` — deliberadamente no usada en ningún lugar de `verifications`.
+- **`actor_media`**: galería preparada (`media_url`, `media_type`, `display_order`, `is_active`) — interfaz de carga pendiente de Bloque C.
+- **`actor_search_index`**: `tsvector` con índice GIN, poblado por `refresh_actor_search_index()` desde nombre del actor + bio + categoría del negocio, con peso decreciente (`A`/`B`/`C`). Disparado automáticamente por trigger en cada cambio de `actor_profile_details.bio`.
+- **Auto-creación**: un trigger en `actors` (`handle_new_actor_profile_details`) crea automáticamente la fila de `actor_profile_details` de todo actor nuevo — con `bio` sembrado desde `businesses.description` si es un actor `negocio`, replicando para actores futuros el mismo backfill que se hizo una sola vez para los existentes.
+- **Backfill**: una fila de `actor_profile_details` por cada actor ya existente, con `bio` copiado de `businesses.description` para los actores `negocio` (fotografía puntual, sin sincronización posterior — mismo criterio ya usado en toda la Fase 1/2). El `INSERT` masivo dispara el trigger de búsqueda fila por fila, poblando `actor_search_index` automáticamente sin un paso aparte.
+
+### Decisión sobre la fuente de verdad `businesses.description` vs. `actor_profile_details.bio`
+
+Se verificó en el código real (no se asumió) que **`businesses.description` se escribe una sola vez, en `BusinessRegisterPage.jsx`, y no existe ningún editor posterior** — no hay ningún flujo de edición compitiendo con el nuevo. `actor_profile_details.bio` es la fuente de verdad desde que existe; `businesses.description` queda como campo histórico de solo lectura. El editor de perfil de negocio (Bloque C) leerá y escribirá exclusivamente `bio`. La columna antigua puede retirarse en una fase posterior, una vez confirmado que ningún código la lee ya — no en este bloque.
+
+### Incidencia encontrada y corregida antes del commit
+
+El trigger de auto-creación (`handle_new_actor_profile_details`), en su primera versión, creaba la fila de `actor_profile_details` sin copiar `businesses.description` — a diferencia del backfill, que sí lo hacía para los actores ya existentes en el momento de la migración. Se detectó probando la creación de un negocio **nuevo** (posterior a aplicar la migración) y viendo que su `bio` quedaba vacío en vez de heredar la descripción inicial. Corregido antes de cualquier commit: el trigger ahora replica exactamente el mismo criterio de siembra que el backfill.
+
+### Verificación realizada
+
+Postgres 16 real, las 23 migraciones aplicables en orden (saltando `0002` y `0022`, que dependen del esquema `storage`), con datos de prueba reales: dos negocios (Ana y Beto), un administrador de plataforma, y Carla como administradora operativa del negocio de Ana.
+
+- **Auto-creación con siembra correcta**: los dos negocios de prueba, creados después de aplicar la migración, mostraron `bio` poblado exactamente con su `businesses.description` — confirmando la corrección de la incidencia de arriba.
+- **Búsqueda básica funcionando de verdad**: `to_tsquery('spanish', 'cafe')` encontró correctamente "Cafetería La Ana"; tras editar el `bio` para incluir "repostería", una nueva búsqueda con esa palabra (con tilde) encontró el negocio — confirmando que el trigger de refresco se dispara en cada cambio, no solo en la creación. (Nota honesta: sin la extensión `unaccent`, una búsqueda sin tilde — "reposteria" — no encuentra "repostería" con tilde; documentado como limitación conocida, no como defecto, ver deuda técnica abajo.)
+- **Administración operativa real**: Ana agregó a Carla como administradora de su negocio; Carla, sin ser dueña, editó exitosamente el `bio` del negocio.
+- **Escalada de permisos rechazada**: Carla (administradora, no propietaria) intentando agregar a otro administrador fue rechazada por RLS.
+- **Terceros ajenos bloqueados**: Beto, sin ninguna relación con el negocio de Ana, intentó editar su `bio` — `UPDATE` afectó 0 filas.
+- **Revocación real con motivo**: Ana revocó a Carla con `revocation_reason` — verificado que, tras la revocación, Carla ya no pudo editar el perfil (`UPDATE` afectó 0 filas).
+- **Guard de tipo de actor**: un intento de asignar un administrador operativo a un actor tipo `persona` fue rechazado explícitamente por el trigger `prevent_invalid_actor_manager_target`.
+- **Admin de plataforma con visibilidad completa**: un administrador vio la lista completa de `actor_managers` de un negocio del que no es dueño ni administrador.
+- **Aislamiento de la Fase 2 confirmado, no solo asumido**: se reactivó a Carla como administradora y se probó que, aun siendo administradora operativa activa, no pudo insertar en `verifications` — rechazada por RLS (no por falta de permiso de tabla, verificado otorgando el `GRANT` explícitamente antes de la prueba).
+- **Reversión completa ejecutada de verdad**: las 4 tablas nuevas, sus funciones, triggers e índices se revirtieron sin ningún error; las tablas existentes (`profiles`, `businesses`, `actors`, `verifications`, `roles`) quedaron con los mismos conteos exactos de antes de aplicar la migración.
+- **Build y lint del frontend**: sin cambios, ambos limpios; `git status` confirma que `src/` no fue tocado — el único cambio es la migración nueva.
+
+### Incidencias encontradas
+
+Una, ya descrita arriba (siembra de `bio` faltante en el trigger de auto-creación), encontrada y corregida antes de cualquier commit.
+
+### Deuda técnica detectada
+
+- **Búsqueda sin normalización de tildes**: sin la extensión `unaccent` (no instalada, no solicitada), una búsqueda sin tilde no encuentra una palabra con tilde. Aceptable para "búsqueda básica sin motor complejo" tal como se aprobó; se anota como mejora posible si en el futuro se decide que la tolerancia a tildes es un requisito real.
+- **Sin interfaz de usuario todavía** para gestionar perfil/galería/administradores — este bloque es solo backend; la experiencia visible es Bloque C.
+- **`businesses.description` sigue existiendo** como campo histórico sin escritores activos — su retiro definitivo queda para una fase posterior, una vez confirmado que ningún código lo lee.
+
+### Qué sigue (Bloque B, pendiente de aprobación)
+
+Información estructurada del negocio: horarios (múltiples intervalos, turnos que cruzan medianoche, 24 horas, horarios especiales/feriados, cálculo "abierto ahora" en zona horaria de Cuenca), catálogo con colecciones flexibles definidas por cada negocio, y `businesses.zone_id`. Ver `MASTERPLAN.md`/la propuesta detallada ya presentada para el desglose completo.
