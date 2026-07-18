@@ -1206,6 +1206,10 @@ Misma de las entregas anteriores (sin Docker/Supabase real): la prueba de concur
 - **Sin pantalla de "negocios guardados"**: `guardar` un negocio sigue funcionando (vía `interactions`), pero no existe ningún lugar de la interfaz donde ver la lista de negocios guardados — registrada como funcionalidad futura de producto, no como deuda crítica de esta entrega (decisión explícita del usuario).
 - **Concurrencia real de la restricción `unique`**: aproximada, no probada con múltiples conexiones simultáneas genuinas (ver limitación de entorno arriba).
 
+### Recomendación de arquitectura aprobada al cerrar la Entrega 6: `reconcile_follows_to_interactions()` es legacy, no una operación normal
+
+El Product Owner pidió dejar explícitamente documentado que esta función **no es una operación normal del sistema** — es una herramienta de una sola ejecución para la ventana de convivencia con `follows`, pensada únicamente para el caso de que `follows` reciba una escritura fuera de banda (por ejemplo, una corrección manual vía SQL Editor). No debe programarse para correr periódicamente sobre datos ya consolidados. Se documentó a nivel de base de datos con `supabase/migrations/0028_fase3_bloqueC_entrega6_documentar_reconciliacion_legacy.sql` (`comment on function`, verificado contra Postgres real — puramente documental, no cambia ninguna columna, política ni comportamiento ya aprobado), además de en este documento.
+
 ### Qué sigue (Entrega 7, pendiente de aprobación y de su propio análisis de 18 puntos)
 
 A definir junto con el usuario. No se avanza automáticamente — a la espera de aprobación explícita. Ni la Entrega 7 ni el cierre del Bloque C/Fase 3 deben iniciarse sin aprobación expresa.

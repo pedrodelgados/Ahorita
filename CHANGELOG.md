@@ -2,6 +2,13 @@
 
 Registro de cambios notables de Ahorita (Cuenca Viva). Formato libre, en español, más cercano a un registro de fases de producto que a versiones semánticas — ver `PROJECT.md` para el plan completo y el estado real de la implementación.
 
+## 2026-07-18 — Fase 3, Bloque C, Entrega 6 (seguimiento): documentar reconciliación como legacy
+
+Recomendación de arquitectura aprobada al cerrar la Entrega 6: `reconcile_follows_to_interactions()` debe quedar documentada expresamente como herramienta de una sola ejecución, no una operación normal del sistema, para evitar que se reejecute sobre datos ya consolidados.
+
+### Agregado
+- `supabase/migrations/0028_fase3_bloqueC_entrega6_documentar_reconciliacion_legacy.sql`: `comment on function` — puramente documental, verificado contra Postgres 16 real, sin cambiar ninguna columna, política ni comportamiento.
+
 ## 2026-07-18 — Fase 3, Bloque C, Entrega 6: consolidación del seguimiento y experiencia social
 
 Precedida por un análisis de 18 puntos que concluyó que esta entrega debía tratarse como consolidación de arquitectura/seguridad/experiencia, no como funcionalidad social nueva — la mayoría ya existía, solo para negocios.
