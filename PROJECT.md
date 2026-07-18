@@ -1259,4 +1259,103 @@ Misma de las entregas anteriores (sin Docker/Supabase real). El comportamiento d
 
 ### Qué sigue
 
-A definir junto con el usuario, con su propio análisis de 18 puntos previo. No se avanza automáticamente — a la espera de aprobación explícita.
+Con la Entrega 7 completa, el Bloque C (y con él, la Fase 3 completa) se declaran oficialmente cerrados — ver la sección "FASE 3 CERRADA" más abajo. No se crea una Entrega 8: el usuario confirmó que no correspondía extender artificialmente el Bloque C, y que las 7 entregas planificadas quedaron completas (con la sustitución transparentada de la Entrega 7, ver esa sección).
+
+---
+
+## FASE 3 CERRADA — Identidad social plena (2026-07-18)
+
+Cierre formal de la Fase 3 completa del `MASTERPLAN.md`, aprobado explícitamente tras completar el Bloque C (7 entregas). Checkpoint de Git: tag `checkpoint-fase3-identidad-social`.
+
+### Resumen ejecutivo
+
+La Fase 3 construyó la identidad social plena de Ahorita — un perfil público, editable y descubrible, compartido por personas y negocios bajo un único eje: el Actor. Se dividió en tres bloques, cada uno propuesto, implementado, verificado y aprobado por separado:
+
+1. **Bloque A — Perfil unificado y administración**: `actor_profile_details` (bio/logo/portada, 1:1 con cualquier actor), `actor_managers` (administración operativa delegable, distinta de la propiedad legal), `actor_media` (galería), `actor_search_index` (búsqueda básica con tsvector nativo), y `actor_editable_by_current_user()` (pertenencia legal O administración operativa activa).
+2. **Bloque B — Horarios, catálogo y ubicación estructurada**: `business_hours`/`business_special_hours` (horario regular y excepciones, con turnos que cruzan medianoche), `business_open_status()` (función central de "abierto ahora" en zona horaria `America/Guayaquil`), `business_catalog_collections`/`business_catalog_items` (catálogo flexible sin taxonomía rígida), `businesses.zone_id`.
+3. **Bloque C — Perfiles visibles y editables ("Centro del Negocio")**, 7 entregas:
+   - **Entrega 1**: perfil público unificado (`/actor/:actorId`), identidad de solo lectura, insignia de verificación pública (`actor_verification_badge()`).
+   - **Entrega 2**: "Centro del Negocio" — actividad real (guardados/seguidores), acciones (seguir/guardar/compartir/contacto), catálogo por colecciones, eventos asociados, galería, tarjeta de la Guía IA, "Acerca de". Precedida por una propuesta de diseño funcional y visual aprobada antes de escribir código.
+   - **Entrega 3**: edición de logo/portada/bio/galería, con permisos reutilizados del Bloque A, sin ninguna migración nueva.
+   - **Entrega 4**: edición de horarios (regulares y especiales) y catálogo (colecciones e ítems), con terminología deliberadamente genérica ("Catálogo"/"Colecciones"/"Elementos").
+   - **Entrega 5**: selector de perfil unificado — el perfil personal se unificó al mismo sistema que los negocios (`ProfilePage.jsx` retirado), `ProfileSwitcherSheet` para saltar entre identidades propias/administradas, nueva ruta `/ajustes`.
+   - **Entrega 6**: consolidación del seguimiento — `interactions` como única fuente de verdad para seguir personas y negocios (`follows` migrada y retirada del frontend, conservada como legacy de solo respaldo), autointeracción bloqueada a nivel de base de datos, estado social reactivo compartido entre componentes, "Cómo llegar" enriquecido, contacto sin duplicar.
+   - **Entrega 7**: búsqueda y descubrimiento de negocios (`search_actors()`, Actor-céntrica, categorías rápidas), cerrando la deuda técnica citada desde la Entrega 2. Sustituyó, con aprobación informada después de transparentarlo, el contenido original planeado para esta entrega ("validación visual final").
+
+A partir de la Entrega 6, la fase adoptó una metodología nueva y permanente: cada entrega se precede de un análisis de 18 puntos (arquitectura, ingeniería, UX/UI, product design, auditoría técnica), cuestionando activamente el diseño previo en vez de solo confirmar la funcionalidad pedida.
+
+### Arquitectura lograda
+
+- **Actor como eje unificador único**: toda identidad (persona, negocio, organizador, sistema) se resuelve a la misma forma de datos y a la misma ruta pública (`/actor/:actorId`) — nunca dos sistemas paralelos para "perfil de persona" y "perfil de negocio".
+- **Separación explícita de dos ejes de control**: propiedad legal (`businesses.owner_id`, Fase 1) vs. administración operativa delegable (`actor_managers`, Bloque A) — un negocio puede tener administradores sin transferir su titularidad legal.
+- **Perfil como concepto de Actor, no de tabla**: `actor_profile_details` es 1:1 con cualquier actor, incluidos los de sistema, por consistencia estructural.
+- **Modelo polimórfico único de interacción social**: `interactions` (Fase 1, Bloque 4) terminó la fase siendo la única fuente de verdad para seguir/guardar cualquier tipo de actor — consolidación real, no solo una decisión de diseño en el papel.
+- **Funciones de seguridad compuestas y reutilizadas, nunca reinventadas**: `actor_belongs_to_current_user` (Fase 2) + `actor_editable_by_current_user` (Bloque A) se combinan para dar exactamente "pertenencia legal O administración operativa activa" en cada punto donde se necesitó, incluida la migración 0027 de la Entrega 6.
+- **Funciones públicas de alcance estrecho para exponer datos sensibles sin abrir RLS ancha**: `actor_verification_badge()` (badge público sin exponer `verifications`), `business_open_status()` (estado calculado sin exponer horarios completos si no se desea), `search_actors()` (búsqueda pública que respeta `status='aprobado'` dentro de la propia función).
+- **Índice de búsqueda mantenido automáticamente**: `actor_search_index` (tsvector) se puebla por trigger desde el Bloque A, extendida en el Bloque B para incluir el catálogo — la Entrega 7 solo tuvo que conectarla, no construirla.
+- **Patrones de producto consolidados y repetidos deliberadamente**: "staged vs. immediate save" (logo/portada/bio y horario semanal completo se guardan con un botón; galería/horarios especiales/catálogo se guardan de inmediato, acción por acción); "ninguna sección se dibuja sin datos reales" (Centro del Negocio, resultados de búsqueda).
+
+### Funcionalidades implementadas
+
+- Perfil público unificado para cualquier actor, con insignia de verificación pública.
+- Centro del Negocio completo: actividad, acciones sociales, catálogo, eventos, galería, Guía IA, información de contacto y horario.
+- Edición completa de logo, portada, biografía y galería, con validación de tipo/tamaño y protección de cambios sin guardar.
+- Edición de horarios regulares (con validación de solapamiento) y especiales, y de catálogo por colecciones e ítems (con precio fijo/desde/variable, disponibilidad, visibilidad).
+- Selector de identidad: cualquier usuario con negocios propios o administrados puede saltar entre su perfil personal y cada negocio desde un solo punto.
+- Ajustes de cuenta separados del perfil (`/ajustes`): intereses, lugares guardados, notificaciones, panel de administración, cerrar sesión.
+- Seguir/dejar de seguir y guardar/quitar de guardados, unificado para personas y negocios, con contadores reactivos, bloqueo de autointeracción, y mensajes de error comprensibles ante cualquier fallo.
+- Búsqueda real de negocios por nombre, contenido de catálogo o categoría, con acceso rápido por categorías, separada siempre de la búsqueda de lugares.
+
+### Decisiones de diseño tomadas durante la fase
+
+- Usar `actor_verification_badge()` (función estrecha) en vez de abrir la lectura pública de `verifications`, para no reabrir una superficie de riesgo ya cerrada en la Fase 2.
+- Reutilizar `interactions` para "seguir un negocio" (Entrega 2) en vez de ampliar `follows`, y más tarde (Entrega 6) completar esa consolidación migrando también el seguimiento de personas.
+- Agregar `business_catalog_collections.is_visible` (pequeña migración aprobada aparte) en vez de forzar el mismo comportamiento con una columna ya existente que significaba algo distinto.
+- Unificar el perfil personal al sistema de Actor (Opción B, Entrega 5) en vez de agregar un selector sobre la pantalla heredada de la Fase 1 — evitando perpetuar una inconsistencia visual real.
+- Relocalizar los ajustes de cuenta a `/ajustes`, separando explícitamente "quién soy" (perfil) de "cómo configuro mi cuenta" (ajustes).
+- Mantener `follows` como legacy de solo respaldo en vez de retirarla en la misma entrega que dejó de usarse — reversión sin pérdida de datos durante una ventana de convivencia observada.
+- Documentar `reconcile_follows_to_interactions()` explícitamente como herramienta de una sola ejecución (a nivel de base de datos, con `comment on function`) tras una recomendación de arquitectura del Product Owner, para que nunca se interprete como una tarea programada normal.
+- Diseñar `search_actors()` de forma Actor-céntrica (`actor_types` como arreglo) en vez de una función específica de negocios, para no rediseñar cuando se agreguen otros tipos de actor descubribles.
+- Reutilizar la taxonomía de `channels`/`CHANNELS` ya existente para las categorías rápidas de búsqueda, en vez de inventar una nueva clasificación.
+
+### Problemas encontrados y cómo fueron resueltos
+
+- **`listBusinessCatalog` (Entrega 2) no filtraba colecciones ocultas** tras agregar `is_visible` en la Entrega 4 — encontrado y corregido antes de cualquier commit, agregando el mismo filtro que ya tenían los ítems.
+- **Reordenar ítems del catálogo no re-ordenaba la lista visual** (Entrega 4) — corregido ordenando el arreglo antes de agrupar por colección.
+- **Defecto real en la primera versión de `reconcile_follows_to_interactions()`** (Entrega 6): eliminaba interacciones sin fila de `follows` correspondiente, lo que habría destruido seguimientos nuevos legítimos si se hubiera reejecutado después del corte — encontrado probando la función contra Postgres real con datos que reproducían exactamente ese escenario, corregido antes de cualquier commit dejando la eliminación de huérfanos únicamente en la reconciliación puntual de la migración.
+- **Inestabilidad puntual de un escenario de doble-toque en Playwright** (Entrega 6, reaparecida durante la regresión de la Entrega 7): se investigó activamente en vez de descartarla — se confirmó que ningún archivo relacionado había cambiado (`git diff` limpio) y se repitió la prueba de forma aislada, pasando limpiamente. Se documentó con transparencia como inestabilidad de temporización del entorno, no como una regresión real ni como una falla ignorada.
+- **Sustitución no transparentada del contenido de la Entrega 7**: al delegárseme la definición de su alcance, propuse "búsqueda" en vez de la "validación visual final" originalmente planeada, sin marcarlo explícitamente como reemplazo — corregido con una aclaración completa apenas se preguntó directamente, antes de autorizar cualquier fase siguiente.
+
+### Deudas técnicas pendientes (consolidado, obligatorio documentar antes de producción)
+
+- **Gestión de `actor_managers`** (invitar, aceptar/rechazar, impedir invitaciones duplicadas, mostrar propietarios/administradores activos, revocar, registrar quién invitó/revocó, impedir que un administrador operativo invite o revoque a otros, retirar permisos de inmediato al revocar) — **obligatoria antes de que los negocios puedan publicar y operar plenamente en la fase social** (aprobación explícita al cerrar la Entrega 6).
+- **Gestión de archivos huérfanos en Storage** (reemplazar/eliminar debe liberar el objeto binario real, confirmar pertenencia, evitar borrar referencias activas, registrar fallos, limpieza periódica, respetar privacidad/eliminación de cuenta) — obligatoria antes de producción, con su propio diseño dedicado, nunca corregida de forma aislada dentro de una entrega.
+- **Prueba end-to-end contra un proyecto Supabase real desplegado** (Auth+PostgREST+RLS+Storage+Edge Functions+triggers programados) — heredada desde la Fase 1, nunca resuelta en ningún bloque de la Fase 3 por falta de Docker/Supabase real en este entorno de desarrollo.
+- **`follows` permanece como estructura legacy de solo respaldo** — el frontend ya no la usa, pero la tabla y sus filas no se han retirado; el retiro definitivo requiere su propia migración futura, después de un periodo de convivencia observado en producción.
+- **Sin pantalla de "negocios guardados"** — `guardar` un negocio funciona (vía `interactions`), pero no existe ningún lugar de la interfaz para ver esa lista; registrada como funcionalidad futura de producto, no como deuda crítica.
+- **Sin autocompletado ni ranking en la búsqueda** — reservado explícitamente para la Fase 6 ("Descubrimiento inteligente v2"), decisión de alcance, no una omisión.
+- **Sin búsqueda de personas** — el índice ya cubre actores tipo persona técnicamente, pero exponerla abre una pregunta de privacidad/descubribilidad nunca aprobada.
+- **Negocios no aparecen en el Mapa/Explorar** — `ExplorePage`/`MapView`/`PlaceGrid` siguen trabajando exclusivamente sobre `places`.
+- **`replaceBusinessHours` no es atómico** (Entrega 4) — dos llamadas REST separadas, sin transacción; riesgo bajo, documentado.
+- **Concurrencia real de la restricción `unique` de `interactions`** (Entrega 6) — aproximada con inserción duplicada secuencial y doble-clic en Playwright, nunca probada con múltiples conexiones simultáneas genuinas.
+- **Comportamiento de `websearch_to_tsquery('spanish', ...)` contra el catálogo completo de nombres reales de negocio** (Entrega 7) — probado con datos reales pero no exhaustivamente; recomendado revisar resultados reales tras el primer mes en producción.
+
+### Dependencias habilitadas para las siguientes fases
+
+- **`interactions` como única fuente de verdad del seguimiento** (Entrega 6) permite que la Fase 4 (Contenido social ampliado) y la Fase 5 (Interacción social plena) construyan directamente sobre ella, sin necesitar ninguna reconciliación adicional entre sistemas paralelos.
+- **El perfil unificado (`/actor/:actorId`) es la superficie de identidad ya construida** sobre la que la Fase 4 (publicaciones/promociones), la Fase 7 (Guía IA v2) y la Fase 9 (QR y experiencias físicas) probablemente anclarán su interfaz, sin rediseñar la identidad de nuevo.
+- **`actor_managers` + `actor_editable_by_current_user()` ya resuelven "quién puede actuar en nombre de un negocio"** — la futura interfaz de gestión de administradores (deuda obligatoria) es la única pieza que falta para que la Fase 4 pueda apoyarse en un modelo de permisos ya probado, en vez de diseñar uno nuevo.
+- **`actor_search_index` ya conectada y en producción real de código (Entrega 7)** — la Fase 6 (Descubrimiento inteligente v2) puede construir ranking, personalización y autocompletado directamente sobre `search_actors()`, en vez de partir de cero.
+- **El patrón de reutilización de `DirectionsSection` entre lugares y negocios (Entrega 6)** deja precedente para que futuras superficies (por ejemplo, negocios en el Mapa) compartan componentes en vez de duplicar lógica de distancia/transporte.
+
+### Criterios que demuestran que la Fase 3 puede considerarse funcionalmente terminada
+
+1. Los tres bloques planificados (A, B, C) están completos — cada uno propuesto, implementado, verificado contra Postgres 16 real (o Playwright cuando Postgres no aplicaba) y aprobado explícitamente por separado.
+2. El Bloque C completó sus 7 entregas planificadas, incluida la sustitución de la Entrega 7 transparentada y aprobada informadamente.
+3. Ningún defecto real encontrado durante la fase llegó a un commit sin corregir — cada uno se detectó, se corrigió (o se detuvo para aprobación si implicaba una decisión de producto) antes de cerrar su bloque/entrega.
+4. Build y lint quedaron limpios, sin advertencias nuevas, al cierre de cada bloque y entrega.
+5. La regresión acumulada de Playwright de todo el Bloque C (Entregas 1 a 7: 8+3+8+7+7+10+6 = 49 escenarios, más el escenario dedicado de `AuthorTag`) pasa sin fallas reales — la única falla observada durante el ciclo se investigó activamente y se confirmó como inestabilidad de entorno, no una regresión de código.
+6. Toda deuda técnica pendiente está identificada, nombrada explícitamente y documentada como requisito de pre-producción — ninguna quedó oculta o implícita.
+7. La arquitectura de Actor, establecida como eje unificador desde la Fase 1, se sostuvo sin necesitar ningún rediseño durante los tres bloques de la Fase 3 — cada pieza nueva (perfil, horarios/catálogo, seguimiento, búsqueda) se construyó *sobre* Actor, nunca al lado de él.
+
+---

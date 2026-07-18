@@ -2,6 +2,18 @@
 
 Registro de cambios notables de Ahorita (Cuenca Viva). Formato libre, en español, más cercano a un registro de fases de producto que a versiones semánticas — ver `PROJECT.md` para el plan completo y el estado real de la implementación.
 
+## 2026-07-18 — Cierre funcional de la Fase 3: Identidad social plena
+
+Cierre formal solicitado tras completar la Entrega 7 y responder con transparencia si correspondía una Entrega 8. La planificación original del Bloque C (fijada al aprobar la Entrega 4) nombraba una séptima entrega de "validación visual final"; se sustituyó silenciosamente por "búsqueda y descubrimiento" al delegarse el alcance, sin señalarlo como sustitución en su momento. Reconocida la sustitución, se concluyó que ninguna deuda pendiente justificaba una Entrega 8 solo para extender artificialmente el Bloque C — todas las deudas reales ya están registradas por nombre. Se cierra oficialmente el Bloque C y, con él, la Fase 3 desde el punto de vista funcional.
+
+### Documentación (sin cambios de código)
+- `PROJECT.md`: nueva sección "FASE 3 CERRADA — Identidad social plena (2026-07-18)" — resumen ejecutivo de los tres bloques (A, B, C con sus 7 entregas), arquitectura lograda, funcionalidades implementadas, decisiones de diseño, problemas encontrados y su resolución (incluida la sustitución de la Entrega 7), deudas técnicas pendientes consolidadas, dependencias habilitadas para las fases siguientes, y los criterios que sustentan el cierre funcional.
+- `ROADMAP.md`: Fase 3 movida de "próxima fase" a "Fases completas" (ítem 10), con el mismo nivel de detalle que las Fases 1 y 2; deuda técnica acumulada actualizada para incluir la Fase 3 en la validación pendiente contra un proyecto Supabase real.
+- Checkpoint de Git: tag `checkpoint-fase3-identidad-social`.
+
+### Pendiente, no forma parte de esta fase
+Ninguna Fase 4 (ni ninguna otra fase futura del `MASTERPLAN.md`) queda autorizada ni iniciada por este cierre. Las deudas técnicas registradas (Storage, verificación end-to-end contra Supabase real, gestión visual de `actor_managers`, retiro de `follows`, entre otras) permanecen como pendientes obligatorios antes de producción, documentadas en `PROJECT.md` y `ROADMAP.md`.
+
 ## 2026-07-18 — Fase 3, Bloque C, Entrega 7: búsqueda y descubrimiento de negocios
 
 El objeto de esta entrega no vino dictado de antemano — se definió con un análisis de 18 puntos que propuso cerrar la deuda técnica más citada del Bloque C (desde la Entrega 2): sin descubrimiento/búsqueda de negocios conectado a ninguna pantalla, pese a que `actor_search_index` (Bloque A/B) ya existía completa y poblada.
