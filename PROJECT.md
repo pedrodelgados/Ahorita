@@ -1042,9 +1042,78 @@ Misma de las entregas anteriores (sin Docker/Supabase real). A diferencia de la 
 ### Deuda técnica detectada
 
 - Toda la de las Entregas 1-2 (sin cambios).
-- **Los objetos de Storage nunca se eliminan** al reemplazar o eliminar una foto (logo/portada/galería) — mismo comportamiento ya existente en el editor de lugares/eventos desde antes de la Fase 3 (el bucket `media` no tiene política de `DELETE`/`UPDATE`, solo lectura pública e inserción). No es una regresión de esta entrega; se documenta porque ahora también aplica al Centro del Negocio.
+- **Gestión de archivos huérfanos en Storage — deuda técnica OBLIGATORIA antes de producción** (registrada explícitamente como tal, no una mejora opcional): los objetos de Storage nunca se eliminan al reemplazar o eliminar una foto (logo/portada/galería) — mismo comportamiento ya existente en el editor de lugares/eventos desde antes de la Fase 3 (el bucket `media` no tiene política de `DELETE`/`UPDATE`, solo lectura pública e inserción). No se corrige de forma aislada dentro de esta entrega — antes de producción debe existir un mecanismo seguro que:
+  1. elimine el objeto anterior al reemplazar una imagen;
+  2. elimine el objeto de Storage al borrar una imagen;
+  3. confirme que el archivo pertenece realmente al actor que solicita eliminarlo;
+  4. evite borrar archivos todavía referenciados desde otra parte de la aplicación;
+  5. registre fallos de eliminación;
+  6. permita limpieza periódica de objetos sin referencia;
+  7. respete los procesos de eliminación de cuenta y privacidad (Fase 1, Bloque 5).
+  Ver también `ROADMAP.md`.
 - **Sin editor de horarios ni catálogo** — a propósito, quedan para la Entrega 4.
 
 ### Qué sigue (Entrega 4, pendiente de aprobación)
 
 Horarios y catálogo visibles/editables. No se avanza automáticamente — a la espera de aprobación explícita.
+
+## Fase 3, Bloque C, Entrega 4 — Edición de horarios y catálogo (implementado)
+
+### Hallazgo encontrado y resuelto antes de implementar
+
+`business_catalog_collections` no tenía forma de "ocultar" una colección — a diferencia de `business_catalog_items`, que sí tiene `is_visible` desde el Bloque B. Se presentó y se aprobó explícitamente agregar la misma columna, con el mismo patrón de política pública ya usado en los ítems. Fuera de esto, ningún otro campo pedido en esta entrega requirió cambios de esquema — horarios regulares, horarios especiales y el resto de los campos del catálogo ya existían completos desde el Bloque B.
+
+### `supabase/migrations/0026_fase3_bloqueC_ocultar_coleccion.sql` (nuevo)
+
+`business_catalog_collections.is_visible boolean not null default true` + política de lectura pública ajustada al mismo patrón de `business_catalog_items` (`(is_visible and business_visible_to_current_user(...)) or business_editable_by_current_user(...)`).
+
+### Corrección encontrada en el propio `lib/catalog.js` (Entrega 2) durante esta entrega
+
+`listBusinessCatalog` (la función que alimenta el perfil público, `CatalogSection.jsx`) no filtraba las colecciones por `is_visible` — solo los ítems. Antes de que existiera la columna esto no importaba (no había nada que ocultar), pero con `is_visible` ya agregado, un propietario visitando su propio perfil público vería sus colecciones ocultas (porque RLS le permite leer todo, al ser el editor). Se corrigió agregando el mismo filtro que ya tenían los ítems — el perfil público debe mostrar siempre lo mismo a cualquiera, sin importar quién lo mire.
+
+### Frontend
+
+- **`src/lib/businessHours.js`**: `listBusinessHoursRaw`, `replaceBusinessHours` (reemplazo completo: borra todas las filas del negocio e inserta el nuevo conjunto — más simple y seguro que calcular una diferencia fila por fila, ya que el editor siempre trabaja con la semana completa), `findOverlappingIntervals` (validación previa en el cliente, mismo criterio exacto que el trigger de Postgres — descompone un turno que cruza medianoche en dos rangos de minutos), `listBusinessSpecialHours`/`addBusinessSpecialHours`/`deleteBusinessSpecialHours`.
+- **`src/lib/catalog.js`**: `listCollectionsForEditor`/`listItemsForEditor` (a diferencia de la vista pública, incluyen lo oculto), CRUD completo de colecciones e ítems, `moveItemsOutOfCollection` (mueve explícitamente antes de borrar — la decisión que se le pide al usuario, no un efecto secundario silencioso del `on delete set null`), `swapCollectionOrder`/`swapItemOrder`.
+- **`src/features/profile/HoursEditor.jsx`**: los 7 días de la semana, cada uno cerrado/24 horas/con intervalos; múltiples intervalos por día; turnos que terminan después de medianoche (el mismo intervalo `20:00–02:00` que ya sabía calcular Postgres desde el Bloque B); validación de solapamiento antes de guardar. **Guardado propio** (staged, con su propio botón "Guardar horario" y su propio `SaveStatusPill`) — deliberadamente distinto del guardado de logo/portada/bio, porque el horario se edita como una semana completa a la vez; su estado "sin guardar" se reporta hacia `ActorEditPage` para que la protección de salida del editor completo también lo cubra.
+- **`src/features/profile/SpecialHoursEditor.jsx`**: excepciones por fecha (feriados, cierres, aperturas extraordinarias) — alta/baja inmediatas, igual que la galería, no staged.
+- **`src/features/profile/CatalogEditor.jsx`** + **`CatalogItemSheet.jsx`**: colecciones (crear/renombrar/reordenar/ocultar/eliminar) e ítems (nombre/descripción/imagen/colección/precio fijo-desde-variable/moneda/disponibilidad/visible-oculto), cada acción inmediata. Eliminar una colección con elementos **pide una decisión explícita** (mover los elementos a "Sin colección" y eliminar, o cancelar) en vez de dejar que el `on delete set null` de la base de datos lo resuelva en silencio.
+- **Vista previa de "abierto ahora"**: se muestra el estado ya guardado (`business_open_status()`, reutilizado de la Entrega 2) sobre el editor de horarios — se actualiza justo después de cada "Guardar horario", no tecla por tecla, para no duplicar la lógica de zona horaria/turnos nocturnos de Postgres en JavaScript.
+- **Terminología deliberadamente genérica**: "Catálogo", "Colecciones" y "Elementos" en toda la interfaz — nunca "menú" ni "productos" — para que la misma pantalla sirva sin cambios a un restaurante, una barbería, una ferretería, un hotel, un gimnasio o un servicio profesional.
+- **`ActorEditPage.jsx`**: agrega las secciones "Horarios" y "Catálogo" (exclusivas de actores negocio) entre la galería y la vista previa.
+
+### Verificación realizada
+
+- **Migración 0026 y las nuevas RLS contra Postgres 16 real**: las 26 migraciones aplicables en orden. Escenarios probados con roles de bajo privilegio (nunca superusuario):
+  - Ana (propietaria) reemplaza su horario regular (lunes diurno, viernes nocturno, domingo cerrado) — funciona.
+  - Beto (administrador operativo **activo** de ese negocio) agrega un intervalo — funciona.
+  - Beto intenta un intervalo superpuesto al de Ana — **rechazado por el trigger** (`El intervalo se superpone...`).
+  - Carla (tercero que nunca fue administradora) no puede insertar ni actualizar el horario de Ana — rechazada por RLS.
+  - Beto, ahora **revocado** como administrador de un segundo negocio (la ferretería), ya no puede tocar su horario — rechazado por RLS.
+  - El administrador de plataforma (`is_admin`) sí puede gestionar el horario de cualquier negocio.
+  - Mismos cinco roles/escenarios repetidos para `business_special_hours` y `business_catalog_collections`/`business_catalog_items` (crear/ocultar/eliminar con reasignación de ítems) — mismo resultado en cada caso.
+  - Reversión completa ejecutada de verdad: columna y política revertidas, conteos de filas existentes intactos.
+- **Playwright** (misma red interceptada de las entregas anteriores, con sesión autenticada real de supabase-js simulada, más handlers con estado en memoria para que crear/ocultar/eliminar se reflejen dentro del propio test):
+  - Horario diurno + varios intervalos + turno nocturno + 24 horas + día cerrado, guardado correctamente, vista previa "Abierto ahora" visible.
+  - Dos intervalos idénticos en el mismo día → rechazados con el mensaje "hay dos intervalos que se superponen" **antes** de intentar guardar (sin llamar a la red).
+  - Horario especial: agregar un feriado y eliminarlo.
+  - Catálogo vacío → mensaje honesto ("Todavía no tienes ninguna colección"); crear una colección; agregar un ítem con precio "Desde $18.00"; ocultar la colección.
+  - Ítem con precio `variable` (muestra "Consultar", nunca un número inventado) y disponibilidad `agotado`.
+  - Eliminar una colección con un elemento → modal de decisión explícita (mover a "Sin colección" y eliminar, o cancelar); tras confirmar, el ítem aparece bajo "Sin colección" y la colección desaparece.
+  - Tercero bloqueado: ni horarios ni catálogo aparecen en la pantalla de permiso denegado.
+- **Regresión**: las cuatro Playwright completas de las Entregas 1, 2 y 3 se volvieron a correr después de esta entrega — los ocho escenarios de la Entrega 1, los tres de la Entrega 2 y los ocho de la Entrega 3 siguen pasando; Feed/Explorar/Perfil sin excepciones.
+- **Build y lint**: limpios, sin advertencias nuevas.
+
+### Incidencias encontradas
+
+Una, descrita arriba (`listBusinessCatalog` de la Entrega 2 no filtraba colecciones ocultas) — encontrada al implementar `is_visible` en esta entrega, corregida antes de cualquier commit.
+
+### Deuda técnica detectada
+
+- Toda la de las Entregas 1-3 (sin cambios) — incluida la gestión de archivos huérfanos en Storage, registrada como obligatoria antes de producción.
+- **`replaceBusinessHours` no es atómico**: borra y luego inserta en dos llamadas REST separadas (Supabase no ofrece transacciones multi-sentencia desde el cliente). Una falla de red entre ambas dejaría el negocio temporalmente sin horario regular. Riesgo bajo (ventana muy corta, recuperable reintentando) pero documentado — una función `RPC` transaccional en Postgres sería la solución definitiva, no implementada en esta entrega para no ampliar el alcance de la migración ya aprobada.
+- **Horario semanal de "Acerca de" (Entrega 2) sigue sin mostrar horarios especiales** — limitación ya documentada en la Entrega 2, no tocada aquí.
+
+### Qué sigue (Entrega 5, pendiente de aprobación)
+
+Selector entre perfil personal y negocios administrados. No se avanza automáticamente — a la espera de aprobación explícita.

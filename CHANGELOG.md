@@ -2,6 +2,21 @@
 
 Registro de cambios notables de Ahorita (Cuenca Viva). Formato libre, en español, más cercano a un registro de fases de producto que a versiones semánticas — ver `PROJECT.md` para el plan completo y el estado real de la implementación.
 
+## 2026-07-18 — Fase 3, Bloque C, Entrega 4: edición de horarios y catálogo
+
+### Agregado
+- `supabase/migrations/0026_fase3_bloqueC_ocultar_coleccion.sql`: `business_catalog_collections.is_visible` + política pública ajustada (hallazgo presentado y aprobado antes de implementar).
+- `src/lib/businessHours.js`: `replaceBusinessHours` (reemplazo completo del horario semanal), `findOverlappingIntervals` (validación previa, mismo criterio que el trigger de Postgres), CRUD de horarios especiales.
+- `src/lib/catalog.js`: CRUD completo de colecciones e ítems para el editor, `moveItemsOutOfCollection` (decisión explícita antes de eliminar una colección con elementos).
+- `src/features/profile/HoursEditor.jsx` (horario regular, guardado propio staged), `SpecialHoursEditor.jsx` (excepciones, inmediato), `CatalogEditor.jsx` + `CatalogItemSheet.jsx` (colecciones e ítems, inmediato).
+- `ActorEditPage.jsx`: secciones "Horarios" y "Catálogo", exclusivas de negocios.
+
+### Corrección encontrada durante esta entrega
+`listBusinessCatalog` (Entrega 2, perfil público) no filtraba colecciones ocultas — solo ítems. Con `is_visible` recién agregado a las colecciones, un propietario viendo su propio perfil público habría visto sus colecciones ocultas. Corregido antes de cualquier commit.
+
+### Verificado
+Migración y RLS contra Postgres 16 real: propietario/administrador operativo activo pueden editar; administrador **revocado** pierde el acceso; tercero bloqueado; administrador de plataforma con acceso global; solapamiento de horarios rechazado por el trigger existente. Playwright: horario variado guardado, solapamiento rechazado antes de guardar, horario especial agregar/eliminar, catálogo vacío → crear colección → agregar ítem con precio "desde", ítem variable/agotado, eliminar colección con elementos → decisión explícita, tercero bloqueado. Regresión completa de las Entregas 1-3 (19 escenarios) sigue pasando. Build y lint limpios.
+
 ## 2026-07-18 — Fase 3, Bloque C, Entrega 3: edición del perfil
 
 Sin ninguna migración nueva — toda la seguridad (propietario legal o administrador operativo activo, terceros bloqueados) ya existía desde el Bloque A; esta entrega es la primera vez que el frontend la usa para escribir.

@@ -8,7 +8,7 @@ import {
   updateActorProfileDetails,
   listActorMedia,
 } from "../lib/actorProfile";
-import { COLORS, textStyle, TYPE } from "../styles/theme";
+import { COLORS, SPACE, textStyle, TYPE } from "../styles/theme";
 import { useUnsavedChangesGuard } from "../hooks/useUnsavedChangesGuard";
 import Card from "../components/ui/Card";
 import Button from "../components/ui/Button";
@@ -18,6 +18,10 @@ import ConfirmationModal from "../components/ui/ConfirmationModal";
 import SaveStatusPill from "../components/ui/SaveStatusPill";
 import ActorProfileHeader from "../features/profile/ActorProfileHeader";
 import GalleryEditor from "../features/profile/GalleryEditor";
+import HoursEditor from "../features/profile/HoursEditor";
+import SpecialHoursEditor from "../features/profile/SpecialHoursEditor";
+import CatalogEditor from "../features/profile/CatalogEditor";
+import BusinessOpenStatus from "../features/profile/BusinessOpenStatus";
 
 function snapshotOf(form) {
   return JSON.stringify(form);
@@ -41,6 +45,7 @@ export default function ActorEditPage() {
   const [savedSnapshot, setSavedSnapshot] = useState(null);
   const [saveStatus, setSaveStatus] = useState(null);
   const [confirmLeave, setConfirmLeave] = useState(false);
+  const [hoursDirty, setHoursDirty] = useState(false);
   const savedStatusTimeout = useRef(null);
 
   useEffect(() => {
@@ -75,7 +80,8 @@ export default function ActorEditPage() {
 
   useEffect(() => () => clearTimeout(savedStatusTimeout.current), []);
 
-  const dirty = savedSnapshot !== null && form && snapshotOf(form) !== savedSnapshot;
+  const profileDirty = savedSnapshot !== null && form && snapshotOf(form) !== savedSnapshot;
+  const dirty = profileDirty || hoursDirty;
 
   const handleBlockedBack = useCallback(() => setConfirmLeave(true), []);
   useUnsavedChangesGuard(dirty, handleBlockedBack);
@@ -130,6 +136,7 @@ export default function ActorEditPage() {
   if (!form) return null;
 
   const previewDetails = { ...data.details, bio: form.bio, logo_url: form.logo_url, cover_image_url: form.cover_image_url };
+  const isNegocio = data.actor.type !== "persona" && !!data.business;
 
   return (
     <div style={{ minHeight: "100svh" }}>
@@ -184,7 +191,30 @@ export default function ActorEditPage() {
           </Card>
         </FormSection>
 
-        <FormSection index={5} title="Vista previa">
+        {isNegocio && (
+          <FormSection index={5} title="Horarios">
+            <Card style={{ marginBottom: SPACE.sm, display: "flex", alignItems: "center", gap: 8 }}>
+              <span style={textStyle(TYPE.metadata, { color: COLORS.inkSoft, fontWeight: 700 })}>Estado actual:</span>
+              <BusinessOpenStatus businessId={data.business.id} />
+            </Card>
+            <Card style={{ marginBottom: SPACE.sm }}>
+              <HoursEditor businessId={data.business.id} onDirtyChange={setHoursDirty} />
+            </Card>
+            <Card>
+              <SpecialHoursEditor businessId={data.business.id} />
+            </Card>
+          </FormSection>
+        )}
+
+        {isNegocio && (
+          <FormSection index={6} title="Catálogo">
+            <Card>
+              <CatalogEditor businessId={data.business.id} ownerId={user.id} category={data.business.category} />
+            </Card>
+          </FormSection>
+        )}
+
+        <FormSection index={isNegocio ? 7 : 5} title="Vista previa">
           <Card>
             <ActorProfileHeader actor={data.actor} details={previewDetails} profile={data.profile} business={data.business} />
           </Card>
@@ -192,7 +222,7 @@ export default function ActorEditPage() {
       </main>
 
       <div style={footerStyle}>
-        <Button fullWidth disabled={saveStatus === "saving" || !dirty} onClick={handleSave} style={{ padding: "14px 20px" }}>
+        <Button fullWidth disabled={saveStatus === "saving" || !profileDirty} onClick={handleSave} style={{ padding: "14px 20px" }}>
           {saveStatus === "saving" ? "Guardando…" : "Guardar cambios"}
         </Button>
       </div>
@@ -200,7 +230,7 @@ export default function ActorEditPage() {
       <ConfirmationModal
         open={confirmLeave}
         title="Cambios sin guardar"
-        message="Si sales ahora perderás los cambios que no has guardado en logo, portada o biografía."
+        message="Si sales ahora perderás los cambios que no has guardado en logo, portada, biografía u horario."
         confirmLabel="Salir sin guardar"
         cancelLabel="Seguir editando"
         onConfirm={goToProfile}

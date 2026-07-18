@@ -22,7 +22,7 @@ Resumen de las fases (detalle completo, con las once decisiones ya incorporadas,
 
 1. ✅ Unificación del modelo de datos fundacional (Actor, Publicación, Interacción, Ciudad) + línea base de privacidad y consentimiento — **cerrada**.
 2. ✅ Verificación robusta de negocios (vigencia anual sin cobro automático) + roles granulares — **cerrada**.
-3. Identidad social plena (perfiles y negocio extendido) — **en progreso, dividida en tres bloques**: Bloque A (perfil unificado y administración) ✅ implementado; Bloque B (horarios, catálogo y ubicación estructurada) ✅ implementado; Bloque C (perfiles visibles y editables — "Centro del Negocio") pendiente de aprobación. Ver `PROJECT.md` para el detalle de cada bloque.
+3. Identidad social plena (perfiles y negocio extendido) — **en progreso, dividida en tres bloques**: Bloque A (perfil unificado y administración) ✅ implementado; Bloque B (horarios, catálogo y ubicación estructurada) ✅ implementado; Bloque C (perfiles visibles y editables — "Centro del Negocio") **en progreso, dividido en 7 entregas**: Entrega 1 (perfil público unificado) ✅, Entrega 2 (actividad/acciones/catálogo/eventos/galería/Guía IA/Acerca de) ✅, Entrega 3 (edición de logo/portada/bio/galería) ✅, Entrega 4 (edición de horarios y catálogo) en curso, Entregas 5-7 (selector personal/negocios, acciones sociales adicionales, validación visual final) pendientes de aprobación. Ver `PROJECT.md` para el detalle de cada entrega.
 4. Contenido social ampliado (Publicaciones y Promociones)
 5A. Seguir negocios (puede ejecutarse en paralelo con la Fase 4)
 5B. Interacción social plena (comentarios/guardados/reacciones — catálogo cerrado: Me gusta, Quiero ir, Ya fui)
@@ -36,6 +36,12 @@ Resumen de las fases (detalle completo, con las once decisiones ya incorporadas,
 13. Madurez operativa y cumplimiento (moderación, soporte, i18n, legal, feature flags, observabilidad — la privacidad ya no se introduce aquí, se adelantó a la Fase 1)
 
 **Ninguna fase se implementa hasta aprobación explícita.** Antes de la Fase 1 específicamente, falta presentar y aprobar una propuesta concreta de ejecución (alcance exacto, estrategia de migración, compatibilidad, reversión, riesgos, pruebas, criterios de aceptación, entregables y estimación) — recién con esa propuesta aprobada empieza la implementación.
+
+## Deuda técnica obligatoria antes de producción (acumulada, ver detalle en `PROJECT.md`)
+
+- **Fases 1-2 completas**: validar contra un proyecto Supabase real desplegado (Edge Functions, Storage, triggers programados) — nunca verificado más allá de Postgres local.
+- **Bloque C, Entrega 1-3 (Fase 3)**: sin prueba end-to-end contra Auth+PostgREST+RLS realmente desplegados (mismo motivo que arriba); sin descubrimiento/búsqueda de negocios conectado a ninguna pantalla.
+- **Gestión de archivos huérfanos en Storage** (detectada en la Entrega 3, ver `PROJECT.md`): antes de producción debe existir un mecanismo seguro que (1) elimine el objeto anterior al reemplazar una imagen, (2) elimine el objeto al borrar una imagen, (3) confirme que el archivo pertenece realmente al actor que solicita eliminarlo, (4) evite borrar archivos todavía referenciados desde otra parte de la aplicación, (5) registre fallos de eliminación, (6) permita limpieza periódica de objetos sin referencia, (7) respete los procesos de eliminación de cuenta y privacidad de la Fase 1, Bloque 5. No se corrige de forma aislada dentro de una entrega — requiere su propio diseño y aprobación explícita.
 
 ## Explícitamente fuera de alcance por ahora (recordatorio recurrente)
 
