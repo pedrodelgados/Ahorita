@@ -1359,3 +1359,23 @@ A partir de la Entrega 6, la fase adoptó una metodología nueva y permanente: c
 7. La arquitectura de Actor, establecida como eje unificador desde la Fase 1, se sostuvo sin necesitar ningún rediseño durante los tres bloques de la Fase 3 — cada pieza nueva (perfil, horarios/catálogo, seguimiento, búsqueda) se construyó *sobre* Actor, nunca al lado de él.
 
 ---
+
+## FASE 4 — Contenido social ampliado, rediseñada como "el Feed como centro"
+
+Antes de implementarse, esta fase pasó por tres rediseños arquitectónicos sucesivos, cada uno cuestionando al anterior en vez de protegerlo por inercia — ver `PRODUCT_MANIFESTO.md`, `PRODUCT_STRATEGY.md` y `FASE4_CONTRATO_ARQUITECTONICO.md` (autoridad de diseño de esta fase) para el detalle completo del proceso. Decisión final: **nunca migrar un sistema estable (`events`) antes de validar completamente el nuevo** (núcleo de Publicaciones); la fase se construye y se ordena mentalmente alrededor del Feed, no de la base de datos, en cuatro bloques verificables. La antigua Fase 5A ("Seguir negocios") queda formalmente retirada del `MASTERPLAN.md` — su alcance ya fue absorbido por la Fase 3 (Entregas 2 y 6).
+
+### Bloque 1 — El Feed como contrato central
+
+**Objetivo.** Construir la capacidad del Feed de combinar contenido de múltiples fuentes con jerarquía visual clara, probada primero con Eventos (única fuente real hoy) sin modificarlo, antes de que exista ninguna fuente nueva.
+
+**Qué cambió.** `src/lib/feed.js`: se extrajo el mapeo de evento a item de feed a `mapEventToFeedItem` (antes inline dentro de `getFeed`), agregando un campo `sortAt` — el criterio de orden común entre fuentes, hoy igual a `start_at`. Se agregó `mergeFeedSources(...sources)`, que concatena y ordena por `sortAt` cualquier número de listas de items — hoy invocada con una sola fuente (eventos), por lo que el resultado es idéntico al anterior. `events` no se tocó en absoluto: ni su esquema, ni sus políticas RLS, ni `lib/events.js`, ni `EventSheet`, ni la administración de eventos.
+
+**Por qué este orden.** Pensado desde el Feed como centro del producto (no desde la base de datos): se prueba primero que el contrato de composición funciona con una sola fuente real, antes de arriesgar la combinación con una segunda fuente nueva (Publicaciones, Bloque 2). Si el contrato fallara, el costo de descubrirlo es mínimo — nada nuevo depende todavía de él.
+
+**Verificado.** Build y lint limpios (sin advertencias nuevas). Playwright (5 escenarios, `test_fase4_bloque1.js`): sin errores de JS; los cuatro eventos mockeados aparecen todos; el orden por cercanía temporal se preserva exactamente; "Selección del editor" sigue insertándose correctamente; el primer evento (más próximo) conserva el tratamiento visual "portada". Regresión general (`test_regression.js`): Inicio, Explorar y Perfil cargan sin errores. Sin migraciones — este bloque no toca la base de datos.
+
+**Resultado visible para el usuario.** Ninguno — cero diferencia observable, tal como exige el criterio de aceptación del contrato aprobado.
+
+**Deuda técnica.** Ninguna nueva. Sigue pendiente, a propósito, la eventual consolidación de `events` sobre el núcleo compartido de Publicación — se evaluará solo después de que Publicaciones y Promociones (Bloques 2-3) demuestren en uso real que el modelo es correcto.
+
+---

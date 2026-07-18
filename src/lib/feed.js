@@ -43,12 +43,16 @@ function pickEditorSelection(events) {
   return pool.slice(0, 5);
 }
 
-// Inicio es un feed exclusivamente de eventos (festivales, conciertos,
-// ferias, funciones, carreras...) — no de lugares fijos. Ver PROJECT.md.
-export async function getFeed({ channel } = {}) {
-  const events = await listUpcomingEvents({ channel });
-
-  const items = events.map((event, index) => ({
+// Fase 4, Bloque 1 (ver FASE4_CONTRATO_ARQUITECTONICO.md): el feed deja de
+// asumir una sola fuente de contenido. Cada fuente (hoy solo eventos; en
+// bloques futuros también Publicaciones y Promociones) produce su propia
+// lista de items ya en la forma común del feed, con `sortAt` como único
+// criterio de orden compartido entre fuentes. `mergeFeedSources` es el
+// contrato de composición: hoy combina una sola fuente (por eso el resultado
+// es idéntico al feed anterior), y es el mismo punto donde una fuente nueva
+// se sumará más adelante sin tocar el criterio de orden ya probado aquí.
+function mapEventToFeedItem(event, index) {
+  return {
     id: `event-${event.id}`,
     type: "event",
     targetType: "event",
@@ -62,6 +66,7 @@ export async function getFeed({ channel } = {}) {
     title: event.title,
     location: event.location_name || event.business?.name,
     startAt: event.start_at,
+    sortAt: event.start_at,
     endAt: event.end_at,
     description: event.description,
     tag: event.tag ? TAG_LABELS[event.tag] : null,
@@ -72,7 +77,22 @@ export async function getFeed({ channel } = {}) {
     likesCount: event.likes_count,
     commentsCount: event.comments_count,
     raw: event,
-  }));
+  };
+}
+
+function mergeFeedSources(...sources) {
+  return sources
+    .flat()
+    .sort((a, b) => new Date(a.sortAt).getTime() - new Date(b.sortAt).getTime());
+}
+
+// Inicio es un feed exclusivamente de eventos (festivales, conciertos,
+// ferias, funciones, carreras...) — no de lugares fijos. Ver PROJECT.md.
+export async function getFeed({ channel } = {}) {
+  const events = await listUpcomingEvents({ channel });
+
+  const eventItems = events.map(mapEventToFeedItem);
+  const items = mergeFeedSources(eventItems);
 
   const selection = pickEditorSelection(events);
   if (selection.length >= 3) {

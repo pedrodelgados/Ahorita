@@ -2,6 +2,23 @@
 
 Registro de cambios notables de Ahorita (Cuenca Viva). Formato libre, en español, más cercano a un registro de fases de producto que a versiones semánticas — ver `PROJECT.md` para el plan completo y el estado real de la implementación.
 
+## 2026-07-18 — Fase 4, Bloque 1: el Feed como contrato central
+
+Primer bloque de la Fase 4, rediseñada tres veces antes de implementarse bajo `PRODUCT_MANIFESTO.md` y `PRODUCT_STRATEGY.md` — ver `FASE4_CONTRATO_ARQUITECTONICO.md` (autoridad de diseño de esta fase). Principio rector: nunca migrar un sistema estable (`events`) antes de validar completamente el nuevo (núcleo de Publicaciones, bloques siguientes). La fase se ordena alrededor del Feed, no de la base de datos.
+
+### Agregado
+- Documentos fundacionales nuevos: `PRODUCT_MANIFESTO.md`, `PRODUCT_STRATEGY.md`, `FASE4_CONTRATO_ARQUITECTONICO.md`.
+- `src/lib/feed.js`: `mapEventToFeedItem` (extraído, con `sortAt` como criterio de orden compartido entre fuentes) y `mergeFeedSources(...sources)` — contrato de composición multi-fuente, hoy invocado con una sola fuente real (Eventos), por lo que el resultado es idéntico al feed anterior.
+
+### Sin cambios (a propósito)
+`events`, `lib/events.js`, `EventSheet`, la administración de eventos y todas las interacciones existentes sobre eventos — cero diferencia observable para el usuario, criterio de aceptación explícito de este bloque.
+
+### Verificado
+Build y lint limpios. Playwright (5 escenarios): sin errores de JS, todos los eventos mockeados presentes, orden por cercanía temporal preservado, "Selección del editor" preservada, tratamiento visual "portada" del primer evento preservado. Regresión general (Inicio/Explorar/Perfil) sin errores. Sin migraciones — este bloque no toca la base de datos.
+
+### Retirado del plan
+La antigua Fase 5A ("Seguir negocios") del `MASTERPLAN.md` — su alcance ya fue absorbido por la Fase 3 (Entregas 2 y 6); no se implementará como fase independiente.
+
 ## 2026-07-18 — Cierre funcional de la Fase 3: Identidad social plena
 
 Cierre formal solicitado tras completar la Entrega 7 y responder con transparencia si correspondía una Entrega 8. La planificación original del Bloque C (fijada al aprobar la Entrega 4) nombraba una séptima entrega de "validación visual final"; se sustituyó silenciosamente por "búsqueda y descubrimiento" al delegarse el alcance, sin señalarlo como sustitución en su momento. Reconocida la sustitución, se concluyó que ninguna deuda pendiente justificaba una Entrega 8 solo para extender artificialmente el Bloque C — todas las deudas reales ya están registradas por nombre. Se cierra oficialmente el Bloque C y, con él, la Fase 3 desde el punto de vista funcional.
