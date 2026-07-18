@@ -73,6 +73,19 @@ export async function getBusinessOpenStatus(businessId) {
 // en ProfilePage necesita el actor_id de un negocio para poder enlazar a
 // /actor/:actorId (la ruta trabaja siempre sobre actor_id, nunca business_id
 // directamente, para no bifurcar el concepto de "perfil").
+// Galería (actor_media, Fase 3 Bloque A) — solo medios activos, en el orden
+// que definió el propietario o administrador operativo.
+export async function listActorMedia(actorId) {
+  const { data, error } = await supabase
+    .from("actor_media")
+    .select("*")
+    .eq("actor_id", actorId)
+    .eq("is_active", true)
+    .order("display_order", { ascending: true });
+  if (error) throw error;
+  return data;
+}
+
 export async function getActorIdForBusiness(businessId) {
   const { data, error } = await supabase
     .from("actors")

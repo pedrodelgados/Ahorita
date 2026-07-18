@@ -1,17 +1,17 @@
 import { useEffect, useState } from "react";
-import { MapPin } from "lucide-react";
 import { getActorVerificationBadge } from "../../lib/actorProfile";
 import { CHANNELS, COLORS, SPACE, textStyle, TYPE, tint } from "../../styles/theme";
 import ImageWithFallback from "../../components/ui/ImageWithFallback";
 import VerificationBadge from "./VerificationBadge";
-import BusinessOpenStatus from "./BusinessOpenStatus";
 
-// Tarjeta de identidad del perfil público unificado (Fase 3, Bloque C,
-// Entrega 1): la misma forma visual sirve para un actor persona o negocio —
-// el eje unificador es actor_id, no profiles/businesses por separado (ver
-// PROJECT.md, Fase 3 Bloque A). Solo lectura; la edición llega en la
-// Entrega 3.
-export default function ActorProfileHeader({ actor, details, profile, business, zone }) {
+// Tarjeta de identidad del perfil público unificado (Fase 3, Bloque C): la
+// misma forma visual sirve para un actor persona o negocio — el eje
+// unificador es actor_id, no profiles/businesses por separado (ver
+// PROJECT.md, Fase 3 Bloque A). Solo identidad (foto/portada/nombre/bio/
+// categoría/insignia) — el estado abierto/cerrado vive en ActivityStrip y
+// la dirección en AboutSection (Entrega 2), para no repetir el mismo dato
+// dos veces en la misma pantalla.
+export default function ActorProfileHeader({ actor, details, profile, business }) {
   const [badge, setBadge] = useState(null);
   const isPersona = actor.type === "persona";
 
@@ -33,6 +33,10 @@ export default function ActorProfileHeader({ actor, details, profile, business, 
   const channel = business && CHANNELS.find((c) => c.id === business.category);
   const photoUrl = isPersona ? profile?.avatar_url : details?.logo_url || business?.image_url;
   const initial = (actor.display_name || "?").charAt(0).toUpperCase();
+  // El respaldo sin foto se tiñe del color de categoría del negocio (nunca
+  // un color plano genérico) — misma decisión que la portada/insignia del
+  // resto del Centro del Negocio, aprobada en la propuesta de diseño.
+  const fallbackColor = isPersona ? COLORS.accent : channel?.color ?? COLORS.accent;
 
   return (
     <div>
@@ -66,7 +70,7 @@ export default function ActorProfileHeader({ actor, details, profile, business, 
               width: 72,
               height: 72,
               borderRadius: isPersona ? "50%" : 18,
-              background: COLORS.accent,
+              background: fallbackColor,
               color: "#FFFFFF",
               display: "flex",
               alignItems: "center",
@@ -109,20 +113,6 @@ export default function ActorProfileHeader({ actor, details, profile, business, 
         <p style={textStyle(TYPE.bodySmall, { margin: `0 0 ${SPACE.md}px`, color: COLORS.inkSoft })}>
           {isPersona ? "Todavía no hay una biografía." : "Este negocio todavía no agregó una descripción."}
         </p>
-      )}
-
-      {!isPersona && business && (
-        <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: SPACE.md }}>
-          <BusinessOpenStatus businessId={business.id} />
-          {(business.address || zone?.name) && (
-            <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
-              <MapPin size={13} color={COLORS.inkSoft} />
-              <span style={textStyle(TYPE.metadata, { color: COLORS.inkSoft })}>
-                {[business.address, zone?.name].filter(Boolean).join(" · ")}
-              </span>
-            </span>
-          )}
-        </div>
       )}
     </div>
   );

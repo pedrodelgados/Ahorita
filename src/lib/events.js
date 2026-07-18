@@ -16,6 +16,21 @@ export async function listUpcomingEvents({ channel } = {}) {
   return data;
 }
 
+// Eventos asociados a un negocio (Centro del Negocio, Fase 3 Bloque C).
+// La RLS de `events` ya filtra a solo publicados para un visitante — no
+// hace falta repetir ese filtro aquí.
+export async function listBusinessEvents(businessId) {
+  const nowIso = new Date().toISOString();
+  const { data, error } = await supabase
+    .from("events")
+    .select("*")
+    .eq("business_id", businessId)
+    .or(`end_at.gte.${nowIso},and(end_at.is.null,start_at.gte.${nowIso})`)
+    .order("start_at", { ascending: true });
+  if (error) throw error;
+  return data;
+}
+
 export async function getEvent(id) {
   const { data, error } = await supabase
     .from("events")

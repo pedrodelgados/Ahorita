@@ -962,3 +962,46 @@ Este sandbox no tiene un proyecto Supabase real ni Docker funcional (`supabase s
 ### Qué sigue (Entrega 2, pendiente de aprobación)
 
 Centro del Negocio: catálogo por colecciones y eventos/contenido asociado, todavía de solo lectura. No se avanza automáticamente — a la espera de aprobación explícita.
+
+## Fase 3, Bloque C, Entrega 2 — Centro del Negocio (implementado)
+
+Antes de programar esta entrega se pidió y se aprobó explícitamente una **propuesta completa de diseño funcional y visual** (jerarquía, prioridad de acciones, organización de catálogo/eventos/promociones/historias/reels/publicaciones, estrategia contra espacios vacíos, adaptabilidad por rubro, inventario de componentes, preparación para integraciones futuras) — ver el artefacto de diseño presentado y aprobado antes de esta implementación. Esta entrega implementa exactamente lo que esa propuesta marcó como "Entrega 2": actividad real, acciones, catálogo, eventos, galería, tarjeta de la Guía IA y "Acerca de". Historias destacadas, reels/publicaciones, promociones y "negocios similares" quedan como secciones **no implementadas todavía** (no hay tabla ni dato real que las respalde) — consistente con la regla de esta misma entrega de no dibujar nunca una sección sin contenido real.
+
+### Bifurcación identificada y resuelta sin bloquear la entrega
+
+El botón "Seguir" del mockup aprobado no tenía dónde escribir: `follows` (tabla existente) solo admite como objetivo a una persona (`followed_id` referencia `auth.users`), nunca a un negocio. En vez de modificar esa tabla o su RLS, se usó `interactions` (Fase 1, Bloque 4) — genérica por diseño (`actor_id`/`type`/`target_type`/`target_id`), con su propia RLS ya probada entonces, pero que hasta ahora ningún flujo del frontend escribía todavía. No fue necesaria ninguna migración: es la primera vez que el frontend usa esta tabla para lo que fue diseñada. `follows`/`saved_places` y las pantallas que ya los usan (persona/lugares) quedan completamente intactos.
+
+### Frontend
+
+- **`src/lib/interactions.js`** (nuevo): contadores y `toggle` de seguir/guardar para cualquier actor vía `interactions`.
+- **`src/lib/catalog.js`** (nuevo): catálogo agrupado por colección; los ítems sin colección se agrupan bajo "Catálogo" en vez de perderse.
+- **`src/lib/businessHours.js`** (nuevo): horario semanal en texto, agrupando días consecutivos con el mismo horario (p. ej. "Lun–Jue 08:00–22:00 · Vie 20:00–02:00 · Sáb 08:00–22:00 · Dom Cerrado") en vez de repetir siete líneas iguales.
+- **`src/lib/events.js`**: `listBusinessEvents(businessId)` — reutiliza la RLS pública ya existente de `events`.
+- **`src/lib/actorProfile.js`**: `listActorMedia(actorId)` para la galería.
+- **`src/features/profile/{ActivityStrip,ActionBar,CatalogSection,EventsShelf,GallerySection,AboutSection,GuideTeaser}.jsx`** (nuevos): cada uno se auto-consulta y **no se monta si no tiene datos reales** — es la implementación literal de la regla "ninguna sección se dibuja sin contenido real" de la propuesta aprobada.
+- **`src/features/profile/ActorProfileHeader.jsx`**: el respaldo sin foto ahora se tiñe del color de categoría del negocio (antes un color plano) — ajuste visual explícito de la propuesta aprobada; se retiró el estado abierto/cerrado y la dirección de este componente (ahora viven en `ActivityStrip`/`AboutSection`, evitando repetir el mismo dato dos veces en la pantalla).
+- **`src/pages/ActorProfilePage.jsx`**: compone todo lo anterior exclusivamente para actores negocio; el perfil de persona queda igual que en la Entrega 1.
+- Botones de contacto (llamar/WhatsApp/cómo llegar) solo aparecen cuando el negocio tiene ese dato real — nunca un botón que no lleva a ningún lado.
+- "Seguir"/"Guardar" son visibles siempre, incluso para un visitante — al tocar, si no hay sesión, se pide iniciar sesión (mismo patrón que ya usa `FeedCard`), en vez de ocultar el botón por completo.
+- La tarjeta de la Guía IA abre el mismo chat genérico de `PlaceSheet` — todavía **sin contexto del negocio** (eso es Fase 7); la copia no promete algo que el sistema no hace todavía.
+
+### Verificación realizada
+
+- **Build y lint**: limpios, sin advertencias nuevas.
+- **Playwright** (mismo enfoque de red interceptada que la Entrega 1, con datos que reproducen fielmente el catálogo/horario/eventos/galería ya verificados contra Postgres real en los Bloques A y B): negocio completo (dos colecciones de catálogo con precios `fijo`/`desde` y un ítem `agotado`, un evento, dos fotos de galería, 128 guardados/342 seguidores reales, horario agrupado correctamente, sin repetir la dirección entre la identidad y "Acerca de"); negocio disperso (sin catálogo/eventos/galería/horario — ninguna de esas secciones se dibuja, pero actividad/acciones/Acerca de/Guía IA sí, con 0 guardados/0 seguidores mostrados honestamente); visitante sin sesión tocando "Seguir" es redirigido a `/login` en vez de fallar en silencio.
+- **Regresión**: Feed, Explorar y Perfil siguen cargando sin excepciones de JavaScript.
+
+### Limitación de entorno (misma que la Entrega 1, ver arriba)
+
+Sin Docker ni un proyecto Supabase real disponibles en este sandbox, el Playwright de esta entrega también valida el frontend contra red interceptada, no un flujo end-to-end contra Auth+PostgREST+RLS en vivo. Adicionalmente, **no fue posible simular una sesión autenticada real de supabase-js** (requeriría reproducir el formato interno de `localStorage` de GoTrue) — el flujo de "seguir/guardar ya autenticado" se verificó revisando el código contra la RLS de `interactions` ya probada en la Fase 1 Bloque 4, no con un Playwright de extremo a extremo. Se documenta como parte de la misma deuda técnica obligatoria.
+
+### Deuda técnica detectada
+
+- Toda la de la Entrega 1 (sin cambios).
+- **Sin prueba Playwright de "seguir/guardar" con sesión autenticada real** (ver limitación de entorno arriba).
+- **Historias, reels/publicaciones, promociones y "negocios similares"** no implementados — no hay tabla ni dato real que los respalde todavía; quedan reservados a nivel de diseño (ver la propuesta aprobada), no de código.
+- **Horario semanal sin manejo de horarios especiales/feriados en "Acerca de"**: `getBusinessWeekHoursText` lee solo `business_hours` (horario regular); no incorpora `business_special_hours` en el texto semanal — el estado "abierto ahora" (`ActivityStrip`) sí las considera correctamente porque usa `business_open_status()` de Postgres.
+
+### Qué sigue (Entrega 3, pendiente de aprobación)
+
+Edición del perfil: bio/logo/portada para propietario y administrador operativo. No se avanza automáticamente — a la espera de aprobación explícita.

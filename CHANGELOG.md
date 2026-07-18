@@ -2,6 +2,29 @@
 
 Registro de cambios notables de Ahorita (Cuenca Viva). Formato libre, en español, más cercano a un registro de fases de producto que a versiones semánticas — ver `PROJECT.md` para el plan completo y el estado real de la implementación.
 
+## 2026-07-18 — Fase 3, Bloque C, Entrega 2: Centro del Negocio
+
+Precedida por una propuesta de diseño funcional y visual aprobada explícitamente antes de escribir código (jerarquía, prioridad de acciones, organización de contenido, estrategia contra espacios vacíos, adaptabilidad por rubro, componentes, integraciones futuras).
+
+### Agregado
+- `src/lib/interactions.js`: contadores y toggle de seguir/guardar para cualquier actor, vía `interactions` (Fase 1, Bloque 4) — sin ninguna migración nueva.
+- `src/lib/catalog.js`, `src/lib/businessHours.js`: catálogo agrupado por colección; horario semanal con días consecutivos agrupados.
+- `src/lib/events.js`: `listBusinessEvents`. `src/lib/actorProfile.js`: `listActorMedia`.
+- `src/features/profile/{ActivityStrip,ActionBar,CatalogSection,EventsShelf,GallerySection,AboutSection,GuideTeaser}.jsx`: cada uno se auto-consulta y no se monta sin datos reales.
+- `ActorProfileHeader.jsx`: respaldo sin foto ahora teñido por categoría (antes color plano).
+
+### Bifurcación resuelta sin migración
+"Seguir" un negocio no tenía dónde escribir (`follows` solo admite personas). Se usó `interactions`, genérica desde la Fase 1 Bloque 4 pero nunca antes escrita por el frontend — `follows`/`saved_places` quedan intactos.
+
+### No implementado a propósito
+Historias, reels/publicaciones, promociones, "negocios similares" — sin tabla ni dato real todavía; reservados a nivel de diseño, no de código, siguiendo la misma regla de "sin contenido real, no se dibuja".
+
+### Verificado
+Build y lint limpios. Playwright (red interceptada): negocio completo (catálogo con 2 colecciones, evento, galería, 128/342 guardados-seguidores, horario agrupado); negocio disperso (ninguna sección de contenido se dibuja, actividad en 0 mostrada honestamente); visitante sin sesión tocando "Seguir" redirige a `/login`. Regresión de Feed/Explorar/Perfil sin excepciones.
+
+### Limitación de entorno
+Misma de la Entrega 1 (sin Docker/Supabase real) más: no fue posible simular una sesión autenticada real de supabase-js para probar "seguir/guardar" de extremo a extremo — verificado por código contra la RLS de `interactions` ya probada en la Fase 1.
+
 ## 2026-07-18 — Fase 3, Bloque C, Entrega 1: perfil público unificado
 
 Primera entrega del Bloque C ("Centro del Negocio") y primera vez que la Fase 3 toca `src/`. Solo lectura.

@@ -2,15 +2,29 @@ import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
 import { getPublicActorProfile } from "../lib/actorProfile";
-import { COLORS } from "../styles/theme";
+import { COLORS, SPACE } from "../styles/theme";
 import Card from "../components/ui/Card";
 import ActorProfileHeader from "../features/profile/ActorProfileHeader";
+import ActivityStrip from "../features/profile/ActivityStrip";
+import ActionBar from "../features/profile/ActionBar";
+import CatalogSection from "../features/profile/CatalogSection";
+import EventsShelf from "../features/profile/EventsShelf";
+import GallerySection from "../features/profile/GallerySection";
+import GuideTeaser from "../features/profile/GuideTeaser";
+import AboutSection from "../features/profile/AboutSection";
 
-// Perfil público unificado (Fase 3, Bloque C, Entrega 1): una sola ruta,
+// Perfil público unificado (Fase 3, Bloque C): una sola ruta,
 // /actor/:actorId, sirve tanto a un actor persona como a un actor negocio —
-// el mismo eje de identidad de toda la Fase 3. Solo lectura por ahora; la
-// edición, el catálogo, los eventos asociados y las acciones sociales
-// llegan en las entregas siguientes del Bloque C.
+// el mismo eje de identidad de toda la Fase 3.
+//
+// Entrega 1: identidad de solo lectura (foto/portada/nombre/bio/categoría/
+// insignia/estado abierto-cerrado).
+// Entrega 2 ("Centro del Negocio"): actividad real (guardados/seguidores),
+// acciones (seguir/guardar/compartir/contacto), catálogo por colecciones,
+// eventos asociados, galería, tarjeta de la Guía IA y "Acerca de" —
+// exclusivo de actores negocio; el perfil de persona queda igual que en la
+// Entrega 1. Cada sección decide sola si tiene datos reales para existir:
+// sin eso, no se monta — nunca un contenedor vacío.
 export default function ActorProfilePage() {
   const { actorId } = useParams();
   const navigate = useNavigate();
@@ -30,6 +44,8 @@ export default function ActorProfilePage() {
       cancelled = true;
     };
   }, [actorId]);
+
+  const isNegocio = state.data?.actor.type !== "persona" && !!state.data?.business;
 
   return (
     <div style={{ minHeight: "100svh" }}>
@@ -62,15 +78,39 @@ export default function ActorProfilePage() {
         )}
 
         {state.data && (
-          <Card>
-            <ActorProfileHeader
-              actor={state.data.actor}
-              details={state.data.details}
-              profile={state.data.profile}
-              business={state.data.business}
-              zone={state.data.zone}
-            />
-          </Card>
+          <>
+            <Card style={{ marginBottom: isNegocio ? SPACE.lg : 0 }}>
+              <ActorProfileHeader
+                actor={state.data.actor}
+                details={state.data.details}
+                profile={state.data.profile}
+                business={state.data.business}
+              />
+              {isNegocio && (
+                <>
+                  <ActivityStrip actorId={state.data.actor.id} businessId={state.data.business.id} />
+                  <div style={{ marginTop: SPACE.sm }}>
+                    <ActionBar actor={state.data.actor} business={state.data.business} />
+                  </div>
+                </>
+              )}
+            </Card>
+
+            {isNegocio && (
+              <>
+                <CatalogSection businessId={state.data.business.id} />
+                <EventsShelf businessId={state.data.business.id} />
+                <GallerySection actorId={state.data.actor.id} />
+                <GuideTeaser actorName={state.data.actor.display_name} />
+                <AboutSection
+                  business={state.data.business}
+                  zone={state.data.zone}
+                  bio={state.data.details?.bio}
+                  defaultOpen
+                />
+              </>
+            )}
+          </>
         )}
       </main>
     </div>
