@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Heart, Bookmark, Share2, Phone, MessageCircle, Navigation } from "lucide-react";
 import { useAuth } from "../../contexts/AuthContext";
+import { useShareContent } from "../../hooks/useShareContent";
 import { COLORS, textStyle, TYPE } from "../../styles/theme";
 import BottomSheet from "../../components/layout/BottomSheet";
 import DirectionsSection from "../places/DirectionsSection";
@@ -23,10 +24,20 @@ import DirectionsSection from "../places/DirectionsSection";
 // "Cómo llegar" ahora abre una hoja con el mismo `DirectionsSection`
 // completo (distancia/tiempo/Uber/transporte) que ya usan los lugares, en
 // vez de un enlace directo a Google Maps.
+//
+// Fase 4, Bloque 4: Compartir ya no depende de tener un negocio — antes
+// vivía solo dentro del bloque `{business && ...}`, así que una persona
+// nunca tenía forma de compartir su propio perfil. Ahora se renderiza
+// siempre (incluso viendo tu propio perfil, `blocked` true y sin negocio),
+// usando el hook `useShareContent` compartido con Evento/Publicación/
+// Promoción — antes esta función estaba duplicada aquí con lógica casi
+// idéntica y sin registrar ninguna señal.
 export default function ActionBar({ actor, business, zone, social, blocked }) {
   const { isAuthenticated } = useAuth();
   const navigate = useNavigate();
+  const { share } = useShareContent();
   const [showDirections, setShowDirections] = useState(false);
+  const [shareError, setShareError] = useState(null);
   const { mine, busy, error, toggleFollow, toggleSave } = social;
 
   function requireAuth(action) {
@@ -38,27 +49,20 @@ export default function ActionBar({ actor, business, zone, social, blocked }) {
   }
 
   async function handleShare() {
-    const shareData = {
+    setShareError(null);
+    const { status } = await share({
+      targetType: "actor",
+      targetId: actor.id,
       title: actor.display_name,
       text: `Mira ${actor.display_name} en Ahorita`,
       url: `${window.location.origin}/actor/${actor.id}`,
-    };
-    if (navigator.share) {
-      try {
-        await navigator.share(shareData);
-      } catch {
-        /* el usuario canceló el share */
-      }
-    } else {
-      await navigator.clipboard.writeText(shareData.url);
-    }
+    });
+    if (status === "failed") setShareError("No se pudo compartir. Intenta de nuevo.");
   }
 
   const directionsPlace = business?.lat && business?.lng
     ? { lat: business.lat, lng: business.lng, name: business.name, area: zone?.name }
     : null;
-
-  if (!business && blocked) return null;
 
   return (
     <div>
@@ -88,6 +92,10 @@ export default function ActionBar({ actor, business, zone, social, blocked }) {
           </button>
         )}
 
+        <IconButton onClick={handleShare} label="Compartir">
+          <Share2 size={17} />
+        </IconButton>
+
         {business && (
           <>
             {!blocked && (
@@ -95,9 +103,6 @@ export default function ActionBar({ actor, business, zone, social, blocked }) {
                 <Bookmark size={17} fill={mine.saved ? COLORS.ink : "none"} />
               </IconButton>
             )}
-            <IconButton onClick={handleShare} label="Compartir">
-              <Share2 size={17} />
-            </IconButton>
             {business.phone && (
               <IconButton as="a" href={`tel:${business.phone}`} label="Llamar">
                 <Phone size={17} />
@@ -117,9 +122,9 @@ export default function ActionBar({ actor, business, zone, social, blocked }) {
         )}
       </div>
 
-      {error && (
+      {(error || shareError) && (
         <p style={textStyle(TYPE.metadata, { color: COLORS.error, margin: "6px 0 0" })} role="alert">
-          {error}
+          {error || shareError}
         </p>
       )}
 

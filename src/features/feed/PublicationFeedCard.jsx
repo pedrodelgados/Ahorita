@@ -7,6 +7,7 @@ import {
   togglePublicationInteraction,
   describeInteractionError,
 } from "../../lib/interactions";
+import { useShareContent } from "../../hooks/useShareContent";
 import { COLORS, photoOverlay, textStyle, tint, TYPE } from "../../styles/theme";
 import { formatRelativeTime } from "../../lib/time";
 import ImageWithFallback from "../../components/ui/ImageWithFallback";
@@ -23,6 +24,7 @@ import SocialActions from "./SocialActions";
 export default function PublicationFeedCard({ item }) {
   const { user, isAuthenticated } = useAuth();
   const navigate = useNavigate();
+  const { share } = useShareContent();
   const [counts, setCounts] = useState({ meGusta: 0, guardados: 0 });
   const [mine, setMine] = useState({ meGusta: false, guardado: false });
   const [busy, setBusy] = useState({ meGusta: false, guardado: false });
@@ -85,20 +87,15 @@ export default function PublicationFeedCard({ item }) {
   }
 
   async function handleShare() {
-    const shareData = {
+    setError(null);
+    const { status } = await share({
+      targetType: "publicacion",
+      targetId: item.publicationId,
       title: item.title,
       text: item.description,
       url: window.location.origin + "/",
-    };
-    if (navigator.share) {
-      try {
-        await navigator.share(shareData);
-      } catch {
-        /* el usuario canceló, no hacer nada */
-      }
-    } else {
-      await navigator.clipboard.writeText(shareData.url);
-    }
+    });
+    if (status === "failed") setError("No se pudo compartir. Intenta de nuevo.");
   }
 
   const isLongText = (item.description || "").length > 140;

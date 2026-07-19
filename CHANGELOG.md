@@ -2,6 +2,23 @@
 
 Registro de cambios notables de Ahorita (Cuenca Viva). Formato libre, en español, más cercano a un registro de fases de producto que a versiones semánticas — ver `PROJECT.md` para el plan completo y el estado real de la implementación.
 
+## 2026-07-19 — Fase 4, Bloque 4: Compartidos fortalecen el Feed
+
+Cuarto y último bloque de la Fase 4 — alcance deliberadamente pequeño e instrumental: convertir cada acción real de compartir (Evento, Publicación, Promoción, Perfil de persona o negocio) en una señal medible dentro de `interactions`, sin cambiar la experiencia nativa de compartir. Sin migración nueva — `interactions` ya estaba preparada para esto desde el Bloque 1 de la Fase 1 (`'compartir'` en el `check` de `type`, `target_type` genérico, `unique(actor_id, type, target_type, target_id)`).
+
+### Agregado
+- `src/hooks/useShareContent.js`: hook único que reemplaza las cuatro implementaciones casi idénticas de `handleShare` (Evento, Publicación, Promoción, Perfil). Compartir nunca se bloquea por falta de sesión; la interacción solo se registra con sesión real; cancelar el diálogo nativo nunca es un error; un fallo al registrar nunca revierte el compartir que ya ocurrió.
+- `registerShare()` en `src/lib/interactions.js`: trata un conflicto de unicidad (23505, segundo intento sobre el mismo contenido) como éxito idempotente, nunca como error.
+
+### Cambiado
+- `ActionBar.jsx`: Compartir ya no vive solo dentro del bloque de negocio — ahora también aparece en el perfil de una persona (antes ausente).
+
+### Verificado
+Postgres 16 real con roles de bajo privilegio: un actor solo registra a nombre propio, no puede registrar por otro ni borrar interacciones ajenas, segundo intento sobre el mismo contenido no duplica fila. Playwright (11 escenarios + 1 verificación adicional): completar, cancelar, fallback de copiar enlace (éxito y fallo), visitante sin bloqueo y sin registro, segundo intento sin error visible, las cinco superficies (Evento/Publicación/Promoción/Perfil persona/Perfil negocio). Regresión completa de Fases 1-3 y Bloques 1-3 sigue pasando sin cambios de mocks. Build y lint limpios.
+
+### Hallazgo documentado, sin decidir arreglo
+Al probar Compartir sobre contenido corto sin imagen se descubrió que el riel de acciones de `PublicationFeedCard`/`PromotionFeedCard` puede quedar recortado por `overflow: hidden` — defecto preexistente del Bloque 2, no introducido por este bloque. Implica una decisión de diseño real (varias soluciones válidas); queda documentado en `PROJECT.md` para que el Product Owner decida antes de tocarlo.
+
 ## 2026-07-19 — Fase 4, Bloque 3: Promociones alimentan el Feed
 
 Tercer bloque de la Fase 4. Incorpora siete ajustes de producto acordados al aprobar el diseño: ventana de anticipación de 24 horas ("Empieza hoy"/"Empieza mañana"), reutilización estricta del criterio de orden por distancia a "ahora" (sin algoritmo nuevo), sin "Quiero ir" (exclusivo de Eventos), restricciones siempre visibles, beneficio exigido como frase completa, doble etiqueta temporal siempre junta ("Publicado hace…" + "Válido hasta…"), y ventana de gracia de 3 horas tras finalizar ("Finalizó hace…") antes de desaparecer del Feed. Incluye además la corrección de un hallazgo de seguridad del Bloque 2: la RLS de `publications` no volvía a exigir verificación al reactivar/publicar contenido ya existente.

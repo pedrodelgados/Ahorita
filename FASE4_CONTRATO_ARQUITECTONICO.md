@@ -57,9 +57,19 @@ Subtipo "promoción" sobre el mismo núcleo: vigencia obligatoria, condición de
 
 Ver `PROJECT.md` (sección "Bloque 3 — Promociones alimentan el Feed") para el detalle completo de migración, verificación, capa de datos/frontend y pruebas.
 
-## Bloque 4 — Compartidos fortalecen el Feed
+## Bloque 4 — Compartidos fortalecen el Feed ✅ (implementado 2026-07-19)
 
-Conectar el tipo de interacción "compartir" (reservado desde la Fase 1, nunca usado) a cualquier contenido del Feed — Eventos, Publicaciones y Promociones por igual. Bajo riesgo, puede construirse en paralelo a los demás bloques.
+Conectar el tipo de interacción "compartir" (reservado desde la Fase 1, nunca usado) a cualquier contenido del Feed — Eventos, Publicaciones, Promociones y Perfiles (persona y negocio) por igual. Alcance deliberadamente pequeño e instrumental, sin ranking, sin notificaciones, sin analítica de negocio.
+
+**Sin migración nueva.** `interactions` ya estaba preparada desde el Bloque 1 de la Fase 1: `'compartir'` en el `check` de `type`, `target_type` genérico, y el `unique(actor_id, type, target_type, target_id)` que por sí solo ya resuelve la política de deduplicación aprobada ("una sola fila por actor + tipo + objetivo").
+
+**Comportamiento aprobado.** Compartir nunca se bloquea por falta de sesión (a diferencia de me gusta/guardar); solo se registra con sesión real; cancelar el diálogo nativo nunca es un error; un fallo al registrar nunca revierte el compartir que ya ocurrió; un segundo intento sobre el mismo contenido nunca se muestra como error. Un único hook, `useShareContent`, reemplaza las cuatro implementaciones que existían por separado en Evento/Publicación/Promoción/Perfil. Sin contador visible de "compartidos" en ninguna superficie por ahora — decisión deliberada para no agregar una métrica de vanidad.
+
+**Hallazgo encontrado durante las pruebas, documentado sin decidir arreglo.** El riel de acciones (Me gusta/Compartir/Guardar) de Publicación/Promoción puede quedar recortado por `overflow: hidden` en contenido corto sin imagen — defecto preexistente del Bloque 2, no introducido por este bloque. Implica una decisión de diseño real (varias soluciones válidas); no se decidió unilateralmente.
+
+Ver `PROJECT.md` (sección "Bloque 4 — Compartidos fortalecen el Feed") para el detalle completo de verificación, capa de datos/frontend y pruebas.
+
+Con este bloque, los cuatro bloques del alcance aprobado de la Fase 4 están completos. El cierre formal de la fase requiere una aprobación explícita separada (mismo patrón que el cierre de la Fase 3).
 
 ## Condición previa no técnica (pendiente antes del Bloque 2)
 

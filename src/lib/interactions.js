@@ -222,6 +222,24 @@ export async function togglePromotionInteraction({ viewerProfileId, publicationI
   }
 }
 
+// Fase 4, Bloque 4: "compartir" como señal medible, para Evento, Publicación,
+// Promoción y Actor (persona/negocio) por igual — un único punto de escritura
+// reutilizado por `useShareContent` (ver src/hooks/useShareContent.js) en vez
+// de que cada tarjeta registre su propia interacción. El `unique(actor_id,
+// type, target_type, target_id)` ya existe desde el Bloque 1 de la Fase 1
+// (pensado desde el inicio para esto): compartir el mismo contenido varias
+// veces nunca crea filas nuevas, así que un conflicto de unicidad (23505) es
+// el resultado esperado de un segundo intento, no un error — la señal
+// significa "esta persona compartió esto al menos una vez", nunca una
+// cuenta de repeticiones.
+export async function registerShare({ viewerProfileId, targetType, targetId }) {
+  const myActorId = await getMyActorId(viewerProfileId);
+  const { error } = await supabase
+    .from("interactions")
+    .insert({ actor_id: myActorId, type: "compartir", target_type: targetType, target_id: targetId });
+  if (error && error.code !== "23505") throw error;
+}
+
 // Traduce un error real de Postgres/PostgREST a un mensaje breve y
 // comprensible — nunca un fallo silencioso (Entrega 6). El bloqueo de
 // autointeracción (código 23514, ver migración 0027) ya trae su propio

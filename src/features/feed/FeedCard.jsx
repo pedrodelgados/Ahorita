@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useAuth } from "../../contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { useSavedEvents } from "../../contexts/SavedEventsContext";
+import { useShareContent } from "../../hooks/useShareContent";
 import { CHANNEL_COLORS, CHANNELS, COLORS, photoOverlay, textStyle, TYPE } from "../../styles/theme";
 import { googleMapsDirectionsUrl } from "../../lib/directions";
 import { formatEventDateTime } from "../../lib/time";
@@ -24,7 +25,9 @@ export default function FeedCard({ item, liked, likeCount, isOpen, onToggleLike,
   const { isAuthenticated } = useAuth();
   const navigate = useNavigate();
   const { savedIds, toggleSave } = useSavedEvents();
+  const { share } = useShareContent();
   const [videoFailed, setVideoFailed] = useState(false);
+  const [shareError, setShareError] = useState(null);
   const channelColor = CHANNEL_COLORS[item.channel] ?? COLORS.accent;
   const channelLabel = CHANNELS.find((c) => c.id === item.channel)?.label;
   const isSaved = savedIds.has(item.eventId);
@@ -41,20 +44,15 @@ export default function FeedCard({ item, liked, likeCount, isOpen, onToggleLike,
   }
 
   async function handleShare() {
-    const shareData = {
+    setShareError(null);
+    const { status } = await share({
+      targetType: "event",
+      targetId: item.eventId,
       title: item.title,
       text: item.description || item.title,
       url: window.location.origin + "/",
-    };
-    if (navigator.share) {
-      try {
-        await navigator.share(shareData);
-      } catch {
-        /* el usuario canceló el share, no hacer nada */
-      }
-    } else {
-      await navigator.clipboard.writeText(shareData.url);
-    }
+    });
+    if (status === "failed") setShareError("No se pudo compartir. Intenta de nuevo.");
   }
 
   return (
@@ -171,6 +169,10 @@ export default function FeedCard({ item, liked, likeCount, isOpen, onToggleLike,
             Más información
           </PillButton>
         </div>
+
+        {shareError && (
+          <p style={textStyle(TYPE.metadata, { color: "#FFD9D9", margin: "8px 0 0" })}>{shareError}</p>
+        )}
       </div>
     </section>
   );

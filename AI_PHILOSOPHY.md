@@ -165,6 +165,14 @@ La Guía IA distingue explícitamente **tres estados** de verificación de un ne
 
 Este principio es una precisión permanente de la jerarquía de arriba, no una regla nueva: la verificación (y su vigencia) es **una señal adicional de confianza y frescura de los datos**, nunca el criterio principal de una recomendación. La relevancia real para la persona siempre tiene prioridad — la verificación entra en juego únicamente como desempate entre opciones de relevancia equivalente (Cuarto, arriba), igual que ya rige para cualquier otra señal de confianza.
 
+### "Compartir" como señal, no como métrica de ranking (Fase 4, Bloque 4)
+
+Compartir un contenido significa que alguien lo consideró suficientemente interesante como para recomendárselo a otra persona — una señal de interés real, con **más peso que una simple visualización**, porque implica una decisión activa de la persona, no solo la exposición pasiva de ver algo en el Feed.
+
+Aun así, compartir **no equivale automáticamente a calidad ni a confianza**: alguien puede compartir algo por curiosidad, por humor, o para advertir a otra persona sobre algo, no solo por aprobación. Por eso esta señal **nunca puede superar a la señal de verificación** en la jerarquía de confianza de la sección anterior — son ejes distintos (interés vs. confiabilidad de los datos) y no se combinan en una sola puntuación.
+
+Por diseño de esta fase, la señal de compartir **todavía no se usa para ranking ni para recomendaciones** — se registra (una sola vez por persona y por contenido, nunca como conteo de repeticiones) y queda disponible para cuando el motor de afinidad de la Fase 6 exista. Introducirla antes de tener ese motor sería exactamente el tipo de "número que crece por sí solo" que estos principios ya rechazan en otras partes de este documento.
+
 ### Cuentas oficiales e institucionales (visión futura, no implementada)
 
 En el futuro podrán existir cuentas oficiales institucionales en el ecosistema (por ejemplo, el Municipio de Cuenca, ETAPA, Turismo Cuenca, la Universidad de Cuenca). Estas cuentas se representarán mediante el sistema de verificación y la identidad del Actor — un tipo de verificación distinto, no un rol administrativo ni ningún privilegio especial de plataforma. Cuando existan, la Guía IA podrá identificar y comunicar que una recomendación proviene de una entidad oficial (por ejemplo, "esto lo organiza el Municipio de Cuenca") de la misma forma en que ya comunica el estado de verificación de cualquier otro actor — es una precisión adicional de confianza e identidad, sujeta exactamente a los mismos límites de esta sección: nunca desplaza la relevancia real, nunca es un criterio principal por sí solo.
@@ -229,7 +237,7 @@ La Guía IA no es una fase más del `MASTERPLAN.md` — es el hilo conductor que
 
 **Fase 3 (identidad social plena).** Le da a la Guía IA contexto de negocio más rico y estructurado — catálogo, horario, quién lo administra — que hoy permite responder con precisión preguntas como "¿qué tienen?" o "¿a qué hora abren realmente hoy?".
 
-**Fase 4 (contenido social ampliado).** Le da a la Guía IA el dato de promociones activas y una variedad real de contenido más allá de eventos — la variable "promociones activas" de tu lista original nace, literalmente, en esta fase.
+**Fase 4 (contenido social ampliado).** Le da a la Guía IA el dato de promociones activas y una variedad real de contenido más allá de eventos — la variable "promociones activas" de tu lista original nace, literalmente, en esta fase. También le da, en su último bloque, la señal de "compartir" — ver el apartado dedicado más abajo.
 
 **Fase 5 (interacción social plena).** Le da a la Guía IA las señales de comportamiento reales —qué guarda, qué sigue, cómo reacciona cada persona— que alimentan directamente "gustos del usuario" e "historial de interacción" de tu lista de variables.
 
