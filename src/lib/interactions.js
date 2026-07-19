@@ -100,6 +100,67 @@ export async function listFollowedProfileIds(viewerProfileId) {
   return actors.map((a) => a.profile_id);
 }
 
+// Fase 4, Bloque 2: me gusta/guardado sobre Publicaciones, reutilizando la
+// misma tabla `interactions` (target_type ya era texto libre, sin enum que
+// ampliar) — funciones nuevas y separadas de las de Actor de arriba para no
+// tocar ni arriesgar ese código ya probado en la Entrega 6. "Compartir"
+// como interacción registrada queda, a propósito, para el Bloque 4 de esta
+// misma fase (ver FASE4_CONTRATO_ARQUITECTONICO.md).
+export async function getPublicationInteractionCounts(publicationId) {
+  const [likes, saves] = await Promise.all([
+    supabase
+      .from("interactions")
+      .select("id", { count: "exact", head: true })
+      .eq("target_type", "publicacion")
+      .eq("target_id", publicationId)
+      .eq("type", "me_gusta"),
+    supabase
+      .from("interactions")
+      .select("id", { count: "exact", head: true })
+      .eq("target_type", "publicacion")
+      .eq("target_id", publicationId)
+      .eq("type", "guardado"),
+  ]);
+  if (likes.error) throw likes.error;
+  if (saves.error) throw saves.error;
+  return { meGusta: likes.count ?? 0, guardados: saves.count ?? 0 };
+}
+
+export async function getMyPublicationInteractions(viewerProfileId, publicationId) {
+  const myActorId = await getMyActorId(viewerProfileId);
+  const { data, error } = await supabase
+    .from("interactions")
+    .select("type")
+    .eq("actor_id", myActorId)
+    .eq("target_type", "publicacion")
+    .eq("target_id", publicationId)
+    .in("type", ["me_gusta", "guardado"]);
+  if (error) throw error;
+  return {
+    meGusta: data.some((r) => r.type === "me_gusta"),
+    guardado: data.some((r) => r.type === "guardado"),
+  };
+}
+
+export async function togglePublicationInteraction({ viewerProfileId, publicationId, type, active }) {
+  const myActorId = await getMyActorId(viewerProfileId);
+  if (active) {
+    const { error } = await supabase
+      .from("interactions")
+      .delete()
+      .eq("actor_id", myActorId)
+      .eq("type", type)
+      .eq("target_type", "publicacion")
+      .eq("target_id", publicationId);
+    if (error) throw error;
+  } else {
+    const { error } = await supabase
+      .from("interactions")
+      .insert({ actor_id: myActorId, type, target_type: "publicacion", target_id: publicationId });
+    if (error) throw error;
+  }
+}
+
 // Traduce un error real de Postgres/PostgREST a un mensaje breve y
 // comprensible — nunca un fallo silencioso (Entrega 6). El bloqueo de
 // autointeracción (código 23514, ver migración 0027) ya trae su propio

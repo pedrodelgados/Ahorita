@@ -22,13 +22,23 @@ El Feed es la superficie donde el criterio local del Manifesto se vuelve tangibl
 6. La IA observa el Feed para aprender contexto → no se construye en esta fase (Fase 7); el Feed queda diseñado como un único punto de observación futuro.
 7. Evaluar consolidación de `events` sobre el núcleo compartido → punto de decisión futuro, no de esta fase (ver cierre).
 
-## Bloque 1 — El Feed como contrato central
+## Bloque 1 — El Feed como contrato central ✅ (implementado 2026-07-18)
 
 Construir la capacidad del Feed de combinar contenido de múltiples fuentes con jerarquía visual clara, probada primero con Eventos (única fuente real hoy) sin modificarlo. Sin tablas nuevas. Criterio de aceptación: cero diferencia observable para el usuario; regresión completa del feed de eventos actual (orden, transición continua, likes) pasa sin cambios.
 
-## Bloque 2 — Publicaciones alimentan el Feed
+## Bloque 2 — Publicaciones alimentan el Feed ✅ (implementado 2026-07-19)
 
 Núcleo nuevo de Publicación (subtipo "publicación regular"), independiente de `events`, incluyendo el caso de autoría por el Actor de sistema "Ahorita Editorial" (ya existente desde la Fase 1, decisión 12 del `MASTERPLAN.md`) — resuelve "noticias relevantes" sin construir un tipo de contenido nuevo. Conectado como segunda fuente al contrato del Bloque 1. Solo actores negocio verificados (o el Actor sistema) pueden publicar.
+
+**Cinco ajustes de producto incorporados antes de implementar:**
+
+1. **Protección contra publicaciones accidentales.** Resuelta en el frontend con el mismo patrón de estado `busy`/botón deshabilitado ya probado en la Entrega 6 — protección del sistema, no un límite sentido por el negocio. Sin mecanismo nuevo de base de datos.
+2. **Longitud máxima de 500 caracteres**, justificada por la identidad del producto (una nota breve, no un artículo) y exigida por restricción real de base de datos, no solo del frontend.
+3. **Edición transparente.** `published_at` nunca se sobrescribe una vez fijada (protegida por trigger a nivel de base de datos); el detalle lleva su propio `updated_at`, de forma que el frontend puede mostrar "Editado" comparando ambas fechas, siempre con la fecha de publicación original visible.
+4. **Pérdida de verificación.** La verificación solo se exige al crear una Publicación nueva — nunca al editarla, ocultarla o eliminarla. El contenido ya publicado permanece intacto y visible aunque el negocio pierda la verificación después; solo se bloquea la creación de contenido nuevo mientras no la recupere. Sin reinterpretaciones futuras: esta regla queda fija.
+5. **Preparación de permalink.** No implementado en este bloque — satisfecho por construcción: el `id` (uuid) de cada Publicación ya es estable y nunca se reutiliza, por lo que servirá como identificador permanente el día que se construya (compartir, indexación, QR, Guía IA) sin ningún rediseño del modelo.
+
+Ver el detalle completo de implementación y verificación en `PROJECT.md`, sección "FASE 4", Bloque 2.
 
 ## Bloque 3 — Promociones alimentan el Feed
 

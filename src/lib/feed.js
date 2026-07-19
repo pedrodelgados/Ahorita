@@ -1,4 +1,5 @@
 import { listUpcomingEvents } from "./events";
+import { listPublishedFeedPublications } from "./publications";
 
 const TAG_LABELS = {
   nuevo: "NUEVO",
@@ -80,19 +81,65 @@ function mapEventToFeedItem(event, index) {
   };
 }
 
-function mergeFeedSources(...sources) {
-  return sources
-    .flat()
-    .sort((a, b) => new Date(a.sortAt).getTime() - new Date(b.sortAt).getTime());
+// Fase 4, Bloque 2: Publicaciones se suma como segunda fuente real. A
+// diferencia de un evento (fecha futura: "cuánto falta"), una Publicación
+// vive en el presente/pasado reciente ("qué tan nueva es") — mezclarlas por
+// valor de fecha ascendente crudo las separaría por completo (todas las
+// publicaciones, con fechas pasadas, quedarían siempre antes que cualquier
+// evento futuro). El criterio de orden correcto y compartido es la
+// DISTANCIA ABSOLUTA respecto a "ahora": un evento en 2 horas y una
+// publicación de hace 10 minutos quedan naturalmente cerca; algo lejano en
+// cualquier dirección se hunde por igual. Con una sola fuente (solo
+// eventos, todos futuros) esto da exactamente el mismo orden que antes —
+// el Bloque 1 sigue pasando sus mismas pruebas sin cambios.
+function mapPublicationToFeedItem(pub) {
+  return {
+    id: `publicacion-${pub.id}`,
+    type: "publicacion",
+    targetType: "publicacion",
+    targetId: pub.id,
+    publicationId: pub.id,
+    actorId: pub.actorId,
+    channel: pub.category,
+    variant: "normal",
+    image: pub.imageUrl,
+    mediaType: "image",
+    mediaUrl: pub.imageUrl,
+    title: pub.authorName,
+    description: pub.body,
+    sortAt: pub.publishedAt,
+    verificationBadge: pub.verificationBadge,
+    edited: pub.edited,
+    publishedAt: pub.publishedAt,
+  };
 }
 
-// Inicio es un feed exclusivamente de eventos (festivales, conciertos,
-// ferias, funciones, carreras...) — no de lugares fijos. Ver PROJECT.md.
+function mergeFeedSources(...sources) {
+  const now = Date.now();
+  return sources
+    .flat()
+    .sort(
+      (a, b) =>
+        Math.abs(now - new Date(a.sortAt).getTime()) - Math.abs(now - new Date(b.sortAt).getTime())
+    );
+}
+
+// Inicio combina Eventos y Publicaciones (Fase 4) en un solo feed, siempre
+// distinguibles por tipo — nunca mezclados sin jerarquía visual clara. El
+// orden sigue siendo estrictamente temporal (ver mergeFeedSources); ranking
+// por afinidad, personalización y contenido patrocinado quedan, a
+// propósito, fuera de esta fase (Fase 6 y Fase 11).
 export async function getFeed({ channel } = {}) {
-  const events = await listUpcomingEvents({ channel });
+  const [events, publications] = await Promise.all([
+    listUpcomingEvents({ channel }),
+    listPublishedFeedPublications(),
+  ]);
 
   const eventItems = events.map(mapEventToFeedItem);
-  const items = mergeFeedSources(eventItems);
+  const publicationItems = (channel ? publications.filter((p) => p.category === channel) : publications).map(
+    mapPublicationToFeedItem
+  );
+  const items = mergeFeedSources(eventItems, publicationItems);
 
   const selection = pickEditorSelection(events);
   if (selection.length >= 3) {

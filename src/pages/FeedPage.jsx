@@ -13,6 +13,7 @@ import { FeedCardSkeleton } from "../components/ui/LoadingSkeleton";
 import CategoryPillsRow from "../features/feed/CategoryPillsRow";
 import EditorialShelf from "../features/feed/EditorialShelf";
 import FeedCard from "../features/feed/FeedCard";
+import PublicationFeedCard from "../features/feed/PublicationFeedCard";
 import GuideCapsule from "../features/ai/GuideCapsule";
 import EventSheet from "../features/events/EventSheet";
 import InterestsPrompt from "../features/auth/InterestsPrompt";
@@ -137,19 +138,25 @@ export default function FeedPage() {
             description="No hay eventos próximos en esta categoría por ahora. Prueba con otra o vuelve pronto."
           />
         )}
-        {/* item.kind despacha entre una tarjeta de evento normal y un bloque
-            editorial horizontal ("Selección del editor" hoy; el sistema
-            queda listo para más bloques de este tipo más adelante). */}
-        {items.map((item) =>
-          item.kind === "editorial-shelf" ? (
-            <EditorialShelf
-              key={item.id}
-              title={item.title}
-              subtitle={item.subtitle}
-              items={item.items}
-              onOpenItem={(id) => withViewTransition(() => setSelectedEventId(id))}
-            />
-          ) : (
+        {/* item.kind/item.type despachan entre un bloque editorial, una
+            Publicación (Fase 4, Bloque 2) y una tarjeta de evento normal —
+            el sistema queda listo para más tipos de fuente más adelante. */}
+        {items.map((item) => {
+          if (item.kind === "editorial-shelf") {
+            return (
+              <EditorialShelf
+                key={item.id}
+                title={item.title}
+                subtitle={item.subtitle}
+                items={item.items}
+                onOpenItem={(id) => withViewTransition(() => setSelectedEventId(id))}
+              />
+            );
+          }
+          if (item.type === "publicacion") {
+            return <PublicationFeedCard key={item.id} item={item} />;
+          }
+          return (
             <FeedCard
               key={item.id}
               item={item}
@@ -159,8 +166,8 @@ export default function FeedPage() {
               onToggleLike={() => toggleLike(item)}
               onOpenEvent={(id) => withViewTransition(() => setSelectedEventId(id))}
             />
-          )
-        )}
+          );
+        })}
       </main>
 
       <EventSheet

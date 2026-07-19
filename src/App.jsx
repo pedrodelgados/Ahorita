@@ -16,6 +16,7 @@ import AdminEventsListPage from "./pages/admin/AdminEventsListPage";
 import AdminEventEditorPage from "./pages/admin/AdminEventEditorPage";
 import AdminPlacesListPage from "./pages/admin/AdminPlacesListPage";
 import AdminPlaceEditorPage from "./pages/admin/AdminPlaceEditorPage";
+import AdminEditorialPage from "./pages/admin/AdminEditorialPage";
 import MainLayout from "./components/layout/MainLayout";
 
 function RequireAccess({ children }) {
@@ -183,6 +184,14 @@ export default function App() {
         element={
           <RequireAuth>
             <AdminPlaceEditorPage />
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/admin/editorial"
+        element={
+          <RequireAuth>
+            <AdminEditorialPage />
           </RequireAuth>
         }
       />

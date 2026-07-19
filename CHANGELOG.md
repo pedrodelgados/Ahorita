@@ -2,6 +2,19 @@
 
 Registro de cambios notables de Ahorita (Cuenca Viva). Formato libre, en español, más cercano a un registro de fases de producto que a versiones semánticas — ver `PROJECT.md` para el plan completo y el estado real de la implementación.
 
+## 2026-07-19 — Fase 4, Bloque 2: Publicaciones alimentan el Feed
+
+Segundo bloque de la Fase 4. Incorpora cinco ajustes de producto acordados al aprobar el diseño: protección contra publicaciones accidentales (frontend, sin mecanismo nuevo de base de datos), límite de 500 caracteres exigido por restricción real de base de datos, edición transparente (`published_at` protegido por trigger, "Editado" siempre con fecha original visible), pérdida de verificación (el contenido ya publicado nunca desaparece; solo se bloquea crear contenido nuevo), y preparación de permalink (satisfecha por construcción con el `id` uuid estable, sin campo adicional).
+
+### Agregado
+- `supabase/migrations/0030_fase4_bloque2_publicaciones.sql`: núcleo `publications` + detalle `publication_posts`; `public.actor_can_author_publication()`; triggers de protección de `published_at` y de `updated_at` del detalle. `events` intacto.
+- `src/lib/publications.js`, extensión de `src/lib/interactions.js` (me gusta/guardado sobre Publicaciones, reutilizando `interactions` sin migración).
+- `src/lib/feed.js`: Publicaciones como segunda fuente real; `mergeFeedSources` pasa a ordenar por distancia absoluta respecto a "ahora" (retrocompatible: con una sola fuente, eventos, da el mismo resultado que antes).
+- `src/features/feed/PublicationFeedCard.jsx`, `src/features/profile/PublicationComposerSheet.jsx`, `src/features/profile/PublicationsSection.jsx`, `src/pages/admin/AdminEditorialPage.jsx` (Ahorita Editorial).
+
+### Verificado
+Postgres 16 real con roles de bajo privilegio: negocio verificado publica, no verificado rechazado, administrador operativo activo con éxito, revocado rechazado de inmediato (crear y editar), tercero ajeno rechazado, solo admin de plataforma publica como "Ahorita Editorial", borrador/oculto invisibles fuera de su dueño, texto >500 caracteres rechazado, `published_at` protegido tras ocultar-y-republicar, "Editado" correcto en ambos sentidos. Playwright (3 escenarios): feed mezclado con jerarquía visual, compatibilidad sin publicaciones, visitante sin sección montada. Regresión completa de Fases 1-3 y Bloque 1 sigue pasando (se corrigió, en archivos de prueba de sesiones anteriores, la falta de mock para la nueva llamada a `publications`; una falla puntual de doble-toque de la Entrega 6 se confirmó de nuevo como inestabilidad de entorno, no regresión). Build y lint limpios.
+
 ## 2026-07-18 — Fase 4, Bloque 1: el Feed como contrato central
 
 Primer bloque de la Fase 4, rediseñada tres veces antes de implementarse bajo `PRODUCT_MANIFESTO.md` y `PRODUCT_STRATEGY.md` — ver `FASE4_CONTRATO_ARQUITECTONICO.md` (autoridad de diseño de esta fase). Principio rector: nunca migrar un sistema estable (`events`) antes de validar completamente el nuevo (núcleo de Publicaciones, bloques siguientes). La fase se ordena alrededor del Feed, no de la base de datos.

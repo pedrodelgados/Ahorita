@@ -14,6 +14,7 @@ export default function SocialActions({
   onOpenComments,
   onShare,
   onToggleSave,
+  showComments = true,
 }) {
   const [pop, setPop] = useState(false);
 
@@ -48,11 +49,13 @@ export default function SocialActions({
         label={likeCount > 0 ? String(likeCount) : "Me gusta"}
         onClick={onToggleLike}
       />
-      <ActionButton
-        icon={<MessageCircle size={24} color="#FFFFFF" />}
-        label={commentCount > 0 ? String(commentCount) : "Comentar"}
-        onClick={onOpenComments}
-      />
+      {showComments && (
+        <ActionButton
+          icon={<MessageCircle size={24} color="#FFFFFF" />}
+          label={commentCount > 0 ? String(commentCount) : "Comentar"}
+          onClick={onOpenComments}
+        />
+      )}
       <ActionButton icon={<Send size={22} color="#FFFFFF" />} label="Compartir" onClick={onShare} />
       <ActionButton
         icon={<Bookmark size={24} fill={saved ? "#FFFFFF" : "none"} color="#FFFFFF" />}

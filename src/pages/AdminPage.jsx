@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Calendar, MapPin } from "lucide-react";
+import { ArrowLeft, Calendar, MapPin, Newspaper } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
 import { getProfile } from "../lib/profile";
 import {
@@ -100,6 +100,22 @@ export default function AdminPage() {
             <div>
               <p style={{ fontWeight: 600, fontSize: 14, margin: 0 }}>Lugares</p>
               <p style={{ fontSize: 12.5, color: "#948A80", margin: 0 }}>Ver, crear y editar</p>
+            </div>
+          </Card>
+        </div>
+
+        <h2 style={{ fontSize: 16, marginBottom: 12 }}>Ahorita Editorial</h2>
+        <div style={{ marginBottom: 28 }}>
+          <Card
+            style={{ display: "flex", alignItems: "center", gap: 12, cursor: "pointer" }}
+            onClick={() => navigate("/admin/editorial")}
+          >
+            <Newspaper size={20} color="#8B7CE0" />
+            <div>
+              <p style={{ fontWeight: 600, fontSize: 14, margin: 0 }}>Publicaciones editoriales</p>
+              <p style={{ fontSize: 12.5, color: "#948A80", margin: 0 }}>
+                Contenido curado por el equipo, identificado como tal en el feed
+              </p>
             </div>
           </Card>
         </div>
