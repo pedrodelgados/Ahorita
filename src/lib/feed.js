@@ -1,5 +1,6 @@
 import { listUpcomingEvents } from "./events";
 import { listPublishedFeedPublications } from "./publications";
+import { listPublishedFeedPromotions } from "./promotions";
 
 const TAG_LABELS = {
   nuevo: "NUEVO",
@@ -114,6 +115,45 @@ function mapPublicationToFeedItem(pub) {
   };
 }
 
+// Fase 4, Bloque 3: Promoción se suma como tercera fuente, sin ningún
+// algoritmo nuevo — un solo criterio de orden (distancia a "ahora"), cada
+// fuente decide su propio sortAt según su propia fase, exactamente como ya
+// hacen Eventos (siempre start_at) y Publicaciones (siempre published_at).
+// Una Promoción cambia de fase con el tiempo, así que su sortAt es el
+// momento que la hace relevante ahora mismo: por empezar → starts_at
+// (genera expectativa, ventana de 24h ya resuelta por list_feed_promotions);
+// vigente o recién finalizada → ends_at/ended_early_at (la urgencia de que
+// se acabe, o el cierre honesto de que ya se acabó, son la misma señal de
+// "cuánto falta/hace" que ya usan Eventos).
+function mapPromotionToFeedItem(promo) {
+  const sortAt =
+    promo.computedStatus === "programada_proxima" ? promo.startsAt : promo.endedEarlyAt || promo.endsAt;
+  return {
+    id: `promocion-${promo.id}`,
+    type: "promocion",
+    targetType: "promocion",
+    targetId: promo.id,
+    publicationId: promo.id,
+    actorId: promo.actorId,
+    variant: "normal",
+    image: promo.imageUrl,
+    mediaType: "image",
+    mediaUrl: promo.imageUrl,
+    title: promo.authorName,
+    promoTitle: promo.title,
+    benefitDescription: promo.benefitDescription,
+    redemptionCondition: promo.redemptionCondition,
+    restrictions: promo.restrictions,
+    startsAt: promo.startsAt,
+    endsAt: promo.endsAt,
+    endedEarlyAt: promo.endedEarlyAt,
+    computedStatus: promo.computedStatus,
+    sortAt,
+    verificationBadge: promo.verificationBadge,
+    publishedAt: promo.publishedAt,
+  };
+}
+
 function mergeFeedSources(...sources) {
   const now = Date.now();
   return sources
@@ -130,16 +170,18 @@ function mergeFeedSources(...sources) {
 // por afinidad, personalización y contenido patrocinado quedan, a
 // propósito, fuera de esta fase (Fase 6 y Fase 11).
 export async function getFeed({ channel } = {}) {
-  const [events, publications] = await Promise.all([
+  const [events, publications, promotions] = await Promise.all([
     listUpcomingEvents({ channel }),
     listPublishedFeedPublications(),
+    listPublishedFeedPromotions(),
   ]);
 
   const eventItems = events.map(mapEventToFeedItem);
   const publicationItems = (channel ? publications.filter((p) => p.category === channel) : publications).map(
     mapPublicationToFeedItem
   );
-  const items = mergeFeedSources(eventItems, publicationItems);
+  const promotionItems = promotions.map(mapPromotionToFeedItem);
+  const items = mergeFeedSources(eventItems, publicationItems, promotionItems);
 
   const selection = pickEditorSelection(events);
   if (selection.length >= 3) {

@@ -14,6 +14,7 @@ import CategoryPillsRow from "../features/feed/CategoryPillsRow";
 import EditorialShelf from "../features/feed/EditorialShelf";
 import FeedCard from "../features/feed/FeedCard";
 import PublicationFeedCard from "../features/feed/PublicationFeedCard";
+import PromotionFeedCard from "../features/feed/PromotionFeedCard";
 import GuideCapsule from "../features/ai/GuideCapsule";
 import EventSheet from "../features/events/EventSheet";
 import InterestsPrompt from "../features/auth/InterestsPrompt";
@@ -155,6 +156,9 @@ export default function FeedPage() {
           }
           if (item.type === "publicacion") {
             return <PublicationFeedCard key={item.id} item={item} />;
+          }
+          if (item.type === "promocion") {
+            return <PromotionFeedCard key={item.id} item={item} />;
           }
           return (
             <FeedCard

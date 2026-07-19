@@ -30,6 +30,37 @@ export function formatCuencaTime(dateString) {
   });
 }
 
+// Fase 4, Bloque 3: etiquetas temporales de Promoción. "Empieza hoy/mañana"
+// (ventana de anticipación de 24h) y "Válido hasta…" (siempre visible junto
+// a "Publicado hace…", nunca uno reemplaza al otro — ajuste de producto
+// aprobado). Mismo criterio de comparación de día que formatEventDateTime.
+function dayDiff(dateString) {
+  const date = new Date(dateString);
+  const now = new Date();
+  const dayMs = 24 * 60 * 60 * 1000;
+  const startOfDay = (d) => new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  return Math.round((startOfDay(date) - startOfDay(now)) / dayMs);
+}
+
+export function formatPromotionStartLabel(dateString) {
+  const diffDays = dayDiff(dateString);
+  const time = new Date(dateString).toLocaleTimeString("es-EC", { hour: "numeric", minute: "2-digit" });
+  return diffDays <= 0 ? `Empieza hoy · ${time}` : `Empieza mañana · ${time}`;
+}
+
+export function formatPromotionEndLabel(dateString) {
+  const diffDays = dayDiff(dateString);
+  const time = new Date(dateString).toLocaleTimeString("es-EC", { hour: "numeric", minute: "2-digit" });
+  if (diffDays === 0) return `Válido hasta hoy · ${time}`;
+  if (diffDays === 1) return `Válido hasta mañana · ${time}`;
+  const day = new Date(dateString).toLocaleDateString("es-EC", { weekday: "short", day: "numeric", month: "short" });
+  return `Válido hasta ${day} · ${time}`;
+}
+
+export function formatPromotionFinishedLabel(dateString) {
+  return `Finalizó ${formatRelativeTime(dateString)}`;
+}
+
 // "Hoy · 7:00 p.m.", "Mañana · 3:00 p.m.", "sáb 20 jul · 9:00 a.m."
 export function formatEventDateTime(dateString) {
   const date = new Date(dateString);

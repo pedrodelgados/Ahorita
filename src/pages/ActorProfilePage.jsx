@@ -12,6 +12,7 @@ import ActivityStrip from "../features/profile/ActivityStrip";
 import ActionBar from "../features/profile/ActionBar";
 import CatalogSection from "../features/profile/CatalogSection";
 import PublicationsSection from "../features/profile/PublicationsSection";
+import PromotionsSection from "../features/profile/PromotionsSection";
 import EventsShelf from "../features/profile/EventsShelf";
 import GallerySection from "../features/profile/GallerySection";
 import GuideTeaser from "../features/profile/GuideTeaser";
@@ -168,6 +169,11 @@ export default function ActorProfilePage() {
             {isNegocio && (
               <>
                 <PublicationsSection
+                  actorId={state.data.actor.id}
+                  authorName={state.data.actor.display_name}
+                  canEdit={canEdit}
+                />
+                <PromotionsSection
                   actorId={state.data.actor.id}
                   authorName={state.data.actor.display_name}
                   canEdit={canEdit}

@@ -2,6 +2,23 @@
 
 Registro de cambios notables de Ahorita (Cuenca Viva). Formato libre, en español, más cercano a un registro de fases de producto que a versiones semánticas — ver `PROJECT.md` para el plan completo y el estado real de la implementación.
 
+## 2026-07-19 — Fase 4, Bloque 3: Promociones alimentan el Feed
+
+Tercer bloque de la Fase 4. Incorpora siete ajustes de producto acordados al aprobar el diseño: ventana de anticipación de 24 horas ("Empieza hoy"/"Empieza mañana"), reutilización estricta del criterio de orden por distancia a "ahora" (sin algoritmo nuevo), sin "Quiero ir" (exclusivo de Eventos), restricciones siempre visibles, beneficio exigido como frase completa, doble etiqueta temporal siempre junta ("Publicado hace…" + "Válido hasta…"), y ventana de gracia de 3 horas tras finalizar ("Finalizó hace…") antes de desaparecer del Feed. Incluye además la corrección de un hallazgo de seguridad del Bloque 2: la RLS de `publications` no volvía a exigir verificación al reactivar/publicar contenido ya existente.
+
+### Agregado
+- `supabase/migrations/0031_fase4_bloque3_promociones.sql`: detalle `promotion_details` sobre el núcleo `publications` (subtype `promocion`); `actor_can_author_promotion()` (Ahorita Editorial excluido permanentemente); `enforce_publication_publish_authorization()` (corrige el hallazgo de verificación, aplica a Publicación y Promoción); `promotion_status()` (seis fases, única fuente de verdad computada); `list_feed_promotions()` (función pública estrecha); inmutabilidad de `ended_early_at`.
+- `src/lib/promotions.js`, extensión de `src/lib/time.js` (etiquetas de fase) y de `src/lib/interactions.js` (me gusta/guardado sobre Promociones).
+- `src/lib/feed.js`: Promociones como tercera fuente real, con `sortAt` calculado por fase.
+- `src/features/feed/PromotionFeedCard.jsx`, `src/features/profile/PromotionComposerSheet.jsx`, `src/features/profile/PromotionsSection.jsx`.
+
+### Corregido
+- Hallazgo de seguridad del Bloque 2: un negocio que pierde la verificación ya no puede publicar un borrador ni reactivar contenido oculto (antes sí podía, por un vacío en la RLS de `update` de `publications`).
+- Corrección visual (afecta también al Bloque 2): la etiqueta de tipo de tarjeta ("Promoción"/"Publicación") se superponía al nombre del autor cuando el contenido no tiene imagen; ahora fluye en el documento en ese caso, sin afectar el caso con imagen.
+
+### Verificado
+Postgres 16 real con roles de bajo privilegio: negocio vigente crea y publica, negocio sin verificar rechazado incluso en borrador, "Ahorita Editorial" siempre rechazado, beneficio corto y fechas inválidas rechazados por la base de datos, un negocio que **pierde** la verificación (transición real `aprobado → vencido` vía `service_role`) queda bloqueado al publicar/reactivar pero conserva edición y eliminación, `promotion_status()` correcto en sus seis fases, `ended_early_at` inmutable, `list_feed_promotions()` solo expone fases públicas. Playwright (5 escenarios): Feed con Promoción completa, sin comentarios ni "Quiero ir", etiqueta propia para promociones programadas, compatibilidad sin promociones, visitante sin sección montada. Regresión completa de Fases 1-3 y Bloques 1-2 sigue pasando (se agregaron mocks de `rpc/actor_can_author_promotion` y `rpc/list_feed_promotions` en archivos de prueba de sesiones anteriores; la misma inestabilidad de doble-toque de la Entrega 6 se confirmó de nuevo como ruido de entorno). Build y lint limpios.
+
 ## 2026-07-19 — Fase 4, Bloque 2: Publicaciones alimentan el Feed
 
 Segundo bloque de la Fase 4. Incorpora cinco ajustes de producto acordados al aprobar el diseño: protección contra publicaciones accidentales (frontend, sin mecanismo nuevo de base de datos), límite de 500 caracteres exigido por restricción real de base de datos, edición transparente (`published_at` protegido por trigger, "Editado" siempre con fecha original visible), pérdida de verificación (el contenido ya publicado nunca desaparece; solo se bloquea crear contenido nuevo), y preparación de permalink (satisfecha por construcción con el `id` uuid estable, sin campo adicional).

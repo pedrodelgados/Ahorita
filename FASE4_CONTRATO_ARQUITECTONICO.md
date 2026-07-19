@@ -40,9 +40,22 @@ Núcleo nuevo de Publicación (subtipo "publicación regular"), independiente de
 
 Ver el detalle completo de implementación y verificación en `PROJECT.md`, sección "FASE 4", Bloque 2.
 
-## Bloque 3 — Promociones alimentan el Feed
+## Bloque 3 — Promociones alimentan el Feed ✅ (implementado 2026-07-19)
 
 Subtipo "promoción" sobre el mismo núcleo: vigencia obligatoria, condición de canje en texto claro, expiración automática. Distinción permanente frente a "contenido patrocinado" (Fase 11, no construido todavía) — una promoción es un beneficio real ofrecido por el negocio, nunca un espacio pagado. Canje físico validado queda, a propósito, en la Fase 9.
+
+**Siete ajustes de producto incorporados antes de implementar:**
+1. **Promociones programadas.** Ventana de anticipación de 24 horas antes de `starts_at`, mostrando "Empieza hoy"/"Empieza mañana" — nunca semanas antes, nunca confundida con "vigente".
+2. **Orden del Feed.** Sin algoritmo nuevo — se reutiliza estrictamente el criterio de distancia a "ahora" del Bloque 1/2; Promoción calcula su propio `sortAt` según su fase (`starts_at` mientras está por empezar; `ended_early_at`/`ends_at` mientras está vigente o recién finalizada).
+3. **Interacciones.** Sin "Quiero ir" — pertenece naturalmente a Eventos; Promoción solo tiene me gusta/guardar/compartir, sin comentarios, sin check-in, sin QR.
+4. **Restricciones.** Siempre visibles, nunca detrás de un desplegable.
+5. **Beneficio como frase completa.** Nunca un token suelto ("50%", "Gratis", "2x1") — exigido como frase comprensible (mínimo 10 caracteres a nivel de base de datos), preparando además el terreno para la futura Guía IA.
+6. **Contexto temporal.** "Publicado hace…" y "Válido hasta…" siempre juntos, nunca uno reemplaza al otro.
+7. **Fin de la promoción.** Ventana de gracia de 3 horas después de `ends_at` mostrando "Finalizó hace…" antes de desaparecer del Feed público — deliberadamente más corta que la ventana de anticipación (mirar hacia adelante tiene utilidad real; mirar hacia atrás es solo una cortesía de cierre).
+
+**Hallazgo de seguridad corregido como parte de este bloque (no reabre la arquitectura del Bloque 2).** La política RLS de `update` de `publications` nunca volvía a exigir verificación después de la creación — un negocio que perdía la verificación podía, en teoría, publicar un borrador existente o reactivar contenido oculto. Corregido con `enforce_publication_publish_authorization()`, un trigger adicional que bloquea esa transición específica para ambos subtipos, verificado con un escenario real de vencimiento (`aprobado → vencido` vía `service_role`) contra Postgres 16.
+
+Ver `PROJECT.md` (sección "Bloque 3 — Promociones alimentan el Feed") para el detalle completo de migración, verificación, capa de datos/frontend y pruebas.
 
 ## Bloque 4 — Compartidos fortalecen el Feed
 
