@@ -1469,3 +1469,144 @@ Antes de implementarse, esta fase pasó por tres rediseños arquitectónicos suc
 **Deuda técnica.** Ninguna nueva — este bloque cierra la deuda documentada en el hallazgo del Bloque 4.
 
 ---
+
+## FASE 4 CERRADA — Contenido social ampliado, el Feed como centro (2026-07-19)
+
+Cierre formal de la Fase 4 completa del `MASTERPLAN.md`, aprobado explícitamente tras completar los cuatro bloques y la corrección del hallazgo pendiente. Checkpoint de Git: tag `checkpoint-fase4-feed-social`.
+
+### Resumen ejecutivo
+
+La Fase 4 amplió el contenido del Feed más allá de los Eventos, sin tocar nunca el sistema que ya funcionaba. A diferencia de las tres fases anteriores (pensadas desde el modelo de datos hacia afuera), esta fase se rediseñó tres veces antes de implementarse hasta quedar ordenada mentalmente alrededor del Feed, no de la base de datos — decisión documentada en detalle en `FASE4_CONTRATO_ARQUITECTONICO.md`. El resultado: el Feed pasó de mostrar un solo tipo de contenido (Eventos) a combinar cuatro fuentes con jerarquía visual clara y un único criterio de orden compartido, y "compartir" —reservado desde la Fase 1 pero nunca conectado— se convirtió en una señal real y medible en las cinco superficies del ecosistema.
+
+### Objetivo original y resultado final
+
+**Objetivo original** (`MASTERPLAN.md`, antes del rediseño): agregar Publicaciones y Promociones como contenido social ampliado sobre el núcleo de Actor ya construido en la Fase 3.
+
+**Resultado final**, tras el rediseño aprobado bajo `PRODUCT_MANIFESTO.md`/`PRODUCT_STRATEGY.md`: se cumplió ese objetivo y además se estableció un principio permanente para toda fase futura — **nunca migrar un sistema estable antes de validar completamente el nuevo**. `events` nunca se tocó; en su lugar, se construyó primero la capacidad del Feed de combinar múltiples fuentes (Bloque 1), probada exclusivamente con Eventos, y solo después se le agregaron Publicaciones (Bloque 2), Promociones (Bloque 3) y, por último, la señal de Compartir sobre las cinco superficies del ecosistema (Bloque 4). El objetivo se amplió, no se redujo: la fase entrega más de lo que pedía el plan original, con una arquitectura más honesta sobre cuál es realmente el centro del producto.
+
+### Bloques implementados
+
+1. **Bloque 1 — El Feed como contrato central** (2026-07-18): `mapEventToFeedItem` extraído con `sortAt` como criterio de orden compartido, y `mergeFeedSources(...sources)` — el contrato de composición multi-fuente, probado con una sola fuente real (Eventos) para que el resultado fuera idéntico al feed anterior. Sin migración. Cero diferencia observable para el usuario, criterio de aceptación explícito.
+2. **Bloque 2 — Publicaciones alimentan el Feed** (2026-07-19): núcleo `publications`+`publication_posts` (migración `0030`), con cinco ajustes de producto (protección contra publicaciones accidentales, límite de 500 caracteres exigido por la base de datos, edición transparente, pérdida de verificación no retroactiva, preparación de permalink satisfecha por construcción). Segunda fuente real del Feed, con el criterio de orden cambiando de "fecha ascendente" a "distancia absoluta a ahora".
+3. **Bloque 3 — Promociones alimentan el Feed** (2026-07-19): detalle `promotion_details` sobre el mismo núcleo (migración `0031`), `promotion_status()` como única fuente de verdad computada (seis fases), con siete ajustes de producto (ventana de anticipación de 24h, sin algoritmo nuevo de orden, sin "Quiero ir", restricciones siempre visibles, beneficio como frase completa, doble contexto temporal, ventana de gracia de 3h al finalizar). Corrigió además, como parte del propio bloque, un hallazgo de seguridad heredado del Bloque 2.
+4. **Bloque 4 — Compartidos fortalecen el Feed** (2026-07-19): "compartir" (reservado en `interactions` desde la Fase 1, nunca usado) conectado a Evento, Publicación, Promoción y Perfil (persona y negocio) mediante un único hook (`useShareContent`), sin ninguna migración nueva. Encontró y documentó, sin decidir unilateralmente, un hallazgo de layout heredado del Bloque 2 (riel de acciones recortado en contenido corto sin imagen) — corregido después, con aprobación explícita separada, mediante `ContentActionsRow`.
+
+### Funcionalidades visibles construidas
+
+- Inicio combina Eventos, Publicaciones y Promociones en un solo Feed, cada tipo siempre distinguible por su propia etiqueta y tratamiento visual, ordenados por un único criterio compartido (distancia temporal a "ahora").
+- Un negocio verificado publica novedades reales (texto + imagen opcional) desde su Centro del Negocio, sin que se sienta un formulario administrativo; puede editarlas, ocultarlas y ver honestamente cuándo fueron editadas.
+- "Ahorita Editorial" publica contenido curado del equipo, siempre identificable como tal, usando el mismo composer que cualquier negocio.
+- Un negocio verificado publica promociones reales y vigentes, con beneficio siempre expresado como frase completa, condición de canje clara, restricciones siempre visibles, y contexto temporal doble ("Publicado hace…" + "Válido hasta…").
+- Una promoción por empezar se anuncia con antelación honesta ("Empieza hoy/mañana"); una que acaba de finalizar se despide con un cierre honesto ("Finalizó hace…") antes de desaparecer.
+- Compartir (nativo del dispositivo, o copiar enlace como respaldo) funciona igual que siempre en Evento, Publicación y Promoción, y ahora también existe en el perfil de cualquier persona (antes solo en negocios) — visible para cualquiera, con o sin sesión.
+- Me gusta, Compartir y Guardar en Publicación/Promoción se ven y funcionan de forma idéntica y predecible sea cual sea el contenido, gracias a la corrección final del bloque.
+
+### Arquitectura lograda
+
+- **El Feed como contrato de composición, no como consulta ad hoc**: `mergeFeedSources` es el único punto donde las fuentes se combinan; cada fuente nueva solo necesita producir items en la forma común y calcular su propio `sortAt` — nunca hubo que tocar el criterio de orden ya probado al agregar Publicaciones, Promociones o (en el futuro) cualquier otra fuente.
+- **Un solo criterio de orden para contenido de naturaleza distinta**: "distancia absoluta a ahora" resuelve, con una sola fórmula, que un Evento futuro, una Publicación reciente y una Promoción vigente convivan de forma coherente — sin ranking, sin personalización, estrictamente cronológico por diseño de esta fase.
+- **Núcleo genérico + detalle por subtipo, extendido por segunda vez**: `publications` (núcleo) + `publication_posts`/`promotion_details` (detalle) repite exactamente el patrón que `event_details` inauguró en la Fase 1 — Promoción se agregó ampliando un `check` existente, sin ninguna tabla nueva de núcleo.
+- **Autorización de creación centralizada y reutilizada, no reinventada por subtipo**: `actor_can_author_publication_of_subtype()` enruta por subtipo hacia `actor_can_author_publication()`/`actor_can_author_promotion()`, ambas apoyadas en `actor_verification_badge()` (Fase 3) — ninguna regla de verificación se escribió dos veces.
+- **Funciones públicas de alcance estrecho, patrón ya consolidado en la Fase 3, extendido a contenido con vigencia**: `promotion_status()` (mismo patrón que `business_open_status()`) y `list_feed_promotions()` (mismo patrón que `search_actors()`) calculan y exponen exactamente lo necesario, nunca la tabla completa.
+- **`interactions` (Fase 1, Bloque 1) demostró estar completa desde el origen**: ni "compartir" como tipo, ni la deduplicación por `unique(actor_id, type, target_type, target_id)`, necesitaron ninguna migración cuatro fases después — la arquitectura fundacional sostuvo un caso de uso que no se construyó hasta ahora.
+- **Un solo hook para una acción que vive en cuatro superficies**: `useShareContent` reemplazó cuatro implementaciones casi idénticas y sin señal real — el mismo patrón de consolidación que ya demostró su valor con `useActorSocialState` en la Fase 3.
+- **Componentes de tarjeta separados por tipo, nunca un componente monolítico con condicionales**: `FeedCard`/`PublicationFeedCard`/`PromotionFeedCard` cada uno con su propia forma, compartiendo solo lo que genuinamente es común (`ContentActionsRow`, `SocialActions`, `VerificationBadge`).
+
+### Decisiones de producto incorporadas
+
+- Nunca migrar `events` al nuevo núcleo al inicio de la fase — validar primero el núcleo nuevo con uso real, evaluar la consolidación como una decisión futura y separada.
+- Reordenar los bloques de la fase alrededor del Feed (no de la base de datos) tras un ejercicio de arquitectura dedicado, adoptando el Feed como centro explícito de la fase.
+- Cinco ajustes de autenticidad y transparencia para Publicaciones (protección contra accidentes, límite de 500 caracteres, edición transparente, pérdida de verificación no retroactiva, permalink satisfecho por construcción).
+- Siete ajustes de producto para Promociones (ventana de 24h, sin algoritmo nuevo de orden, sin "Quiero ir", restricciones siempre visibles, beneficio como frase completa, doble contexto temporal, ventana de gracia de 3h).
+- Nueve reglas de comportamiento para Compartir (nunca bloquea al invitado, solo registra con sesión real, cancelar nunca es error, un fallo al registrar nunca revierte el compartir, segundo intento nunca se muestra como error, un único hook, Compartir habilitado también para personas, señal fuera de ranking por ahora, sin contador visible en ninguna superficie).
+- Corrección de dos hallazgos encontrados durante la propia implementación, ambos documentados y corregidos con aprobación explícita separada en vez de decididos en silencio: el vacío de re-verificación al republicar/reactivar contenido (Bloque 3), y el recorte del riel de acciones en contenido corto sin imagen (cierre del Bloque 4).
+- Se incorporó formalmente un quinto pilar de producto — **Economía local** — a los "Principios de Evolución de Producto" de `FASE4_CONTRATO_ARQUITECTONICO.md`, junto con tres reglas permanentes nuevas: el usuario debe volver por el valor que encuentra, nunca por retención artificial; toda funcionalidad debe explicarse en una sola frase clara; la ciudad siempre tiene prioridad sobre la plataforma.
+
+### Relación con `PRODUCT_MANIFESTO.md` y `PRODUCT_STRATEGY.md`
+
+Esta fue la primera fase en construirse bajo la autoridad de ambos documentos, aprobados justo después del cierre funcional de la Fase 3. El `PRODUCT_MANIFESTO.md` estableció que **el corazón de Ahorita es la Guía IA — la personificación del criterio local**, y que todo módulo del ecosistema (incluido el Feed) existe para producir material útil para ella, no para competir entre sí. La Fase 4 tradujo ese principio en arquitectura concreta: el Feed se convirtió en el punto único donde converge todo el contenido que la futura Guía IA (Fase 7) observará, y cada bloque se diseñó preguntando explícitamente qué señal nueva le aporta (ver más abajo). `FASE4_CONTRATO_ARQUITECTONICO.md`, subordinado a ambos, tradujo esa autoridad en el contrato técnico que gobernó los cuatro bloques — ningún bloque se implementó sin que su diseño rindiera cuentas primero a ese contrato.
+
+### Cómo la Fase 4 fortalece los cinco pilares del producto
+
+- **Descubrimiento.** El Feed ya no depende de una sola fuente: un usuario descubre eventos, novedades reales de negocios y beneficios vigentes en el mismo lugar, sin cambiar de pantalla ni de mentalidad.
+- **Confianza.** Publicaciones y Promociones heredan directamente el sistema de verificación de la Fase 2/3 (solo un negocio verificado puede publicar contenido nuevo) y lo extienden con una regla nueva y explícita: perder la verificación nunca borra el pasado, pero sí impide publicar o reactivar contenido nuevo hasta recuperarla — confianza sin castigar retroactivamente a nadie.
+- **Hábito diario.** Publicaciones y Promociones le dan al usuario una razón real para volver a Inicio más de una vez al día — no un evento programado con semanas de anticipación, sino algo que puede estar pasando ahorita mismo en un negocio real.
+- **Economía local.** Cada Publicación y cada Promoción es, literalmente, un negocio de Cuenca hablándole directo a su comunidad sin pagar por un espacio — el pilar que esta misma fase incorporó formalmente al contrato de producto.
+- **Inteligencia de la Guía IA (futura).** Ver la sección siguiente — la Fase 4 no construye IA, pero le entrega tres tipos de señal nuevos que antes no existían.
+
+### Problemas encontrados y cómo fueron resueltos
+
+- **Bifurcación de secuenciación propuesta y rechazada** (antes del Bloque 1): mi primera propuesta migraba `events` al nuevo núcleo al inicio de la fase; el Product Owner la rechazó explícitamente ("nunca migres un sistema estable antes de validar completamente el nuevo") y exigió una re-arquitectura completa, que se convirtió en el `FASE4_CONTRATO_ARQUITECTONICO.md` definitivo.
+- **Vacío de re-verificación al republicar/reactivar contenido** (encontrado durante el análisis del Bloque 3, antes de implementar): la RLS de `update` de `publications` (Bloque 2) nunca volvía a exigir verificación después de la creación — un negocio que perdía la verificación podía, en teoría, publicar un borrador existente o reactivar contenido oculto. Se propuso como un ajuste pequeño y aditivo dentro del Bloque 3 (no una reapertura de la arquitectura del Bloque 2), aprobado explícitamente, y corregido con `enforce_publication_publish_authorization()`, verificado con un escenario real de vencimiento contra Postgres 16.
+- **Riel de acciones recortado en contenido corto sin imagen** (encontrado durante las pruebas del Bloque 4, no introducido por él): `SocialActions` asumía una tarjeta siempre alta; en Publicaciones/Promociones sin imagen y con poco texto, el riel quedaba parcial o totalmente fuera del área clickeable, recortado por `overflow: hidden`. Documentado sin decidir un arreglo unilateral (implicaba una decisión de diseño real con varias alternativas válidas), presentado con mediciones exactas, y corregido después con aprobación explícita separada mediante `ContentActionsRow` — una fila estática compartida, verificada en las seis combinaciones exigidas con `elementFromPoint`, no solo presencia en el DOM.
+- **Errores de datos de prueba durante la verificación del Bloque 3** (no defectos de código): un primer intento de simular "verificación vencida" solo movía `expires_at` al pasado sin cambiar `status`, lo que `actor_verification_badge()` interpreta correctamente como "en gracia", no "vencida" — corregido simulando la transición real (`aprobado → vencido`) que solo puede ejecutar `service_role`, exactamente como lo hace la Edge Function real de la Fase 2.
+
+### Confirmación de que Events permaneció intacto
+
+`events`, `event_details`, `lib/events.js`, `EventSheet`, la administración de eventos (`/admin/eventos`) y todas las interacciones existentes sobre eventos (me gusta, comentarios, guardado, "Quiero ir"/"Ya fui") **no cambiaron su esquema, su RLS, ni su comportamiento en ningún bloque de la fase** — verificado explícitamente en cada bloque con la misma batería de pruebas de regresión (`test_fase4_bloque1.js` primero, y de ahí en adelante como parte de la regresión general), sin necesitar nunca una sola actualización de aserciones. El único cambio que tocó al Evento como tarjeta fue el Bloque 4 (`FeedCard.jsx` adoptó el hook `useShareContent` para registrar la señal de compartir) — un cambio aditivo de comportamiento interno, sin ninguna diferencia visible ni de esquema.
+
+### Convivencia temporal entre Events y el núcleo de Publicaciones
+
+Por diseño explícito del `FASE4_CONTRATO_ARQUITECTONICO.md`, `events` y el núcleo `publications` conviven como dos sistemas independientes durante toda la fase, unidos únicamente en el Feed a través del contrato de composición (`mergeFeedSources`) — nunca a nivel de base de datos. La eventual consolidación de `events` sobre el núcleo compartido de Publicación queda, a propósito, como **un punto de decisión futuro, explícitamente no resuelto en esta fase**: se evaluará formalmente solo después de que Publicaciones y Promociones acumulen un período real de uso en producción y demuestren que el modelo es correcto — nunca por inercia arquitectónica. Esta es la primera vez en el proyecto que una convivencia temporal entre dos sistemas se declara así de explícita desde el inicio, en vez de descubrirse como deuda después (principio 6 de "Evolución de Producto", incorporado en esta misma fase).
+
+### Señales nuevas disponibles para la futura Guía IA
+
+- **Promociones activas en tiempo real**, con su fase computada (`programada_proxima`/`vigente`/`finalizada_reciente`) — la variable "promociones activas" de la lista original de `AI_PHILOSOPHY.md` nace, literalmente, en esta fase.
+- **Variedad real de contenido más allá de eventos** (Publicaciones + Promociones) — más superficie de "qué está pasando ahorita" sobre la que razonar, no solo lo programado con anticipación.
+- **Compartir como señal de interés genuino**: más peso que una visualización pasiva, documentado explícitamente en `AI_PHILOSOPHY.md` (nueva sección "'Compartir' como señal, no como métrica de ranking") con sus límites igual de explícitos — nunca supera a la verificación, no se usa para ranking todavía.
+
+Ninguna de estas señales se usa hoy para ranking, recomendación ni personalización — quedan registradas y documentadas para cuando la Fase 6 (Descubrimiento inteligente v2) y la Fase 7 (Guía IA v2) las necesiten, exactamente el mismo patrón ya usado con `actor_search_index` al cierre de la Fase 3.
+
+### Deudas técnicas pendientes (consolidado, obligatorio documentar antes de producción)
+
+- **Prueba end-to-end contra un proyecto Supabase real desplegado** (Auth+PostgREST+RLS+Storage+Edge Functions+triggers programados) — heredada desde la Fase 1, nunca resuelta en ningún bloque de ninguna fase por falta de Docker/Supabase real en este entorno de desarrollo.
+- **Canje físico validado de Promoción** — reservado a propósito para la Fase 9 (QR y experiencias físicas); una Promoción de esta fase es un beneficio declarado, no un cupón validado en el punto de venta.
+- **Todas las deudas técnicas heredadas de las Fases 1-3** siguen sin resolver y sin empeorar (ver `PROJECT.md`, secciones "FASE 1/2/3 CERRADA", y `ROADMAP.md`) — la Fase 4 no las tocó ni las agravó.
+- **Concurrencia real del `unique` de `interactions` bajo el nuevo caso de uso de Compartir** — aproximada con inserción duplicada secuencial en Postgres real y Playwright, nunca probada con múltiples conexiones simultáneas genuinas (mismo límite ya documentado para me gusta/guardar desde la Fase 3, ahora extendido a compartir).
+
+### Funcionalidades deliberadamente no construidas
+
+- **Ranking, afinidad, personalización o contenido patrocinado en el Feed** — límite explícito y repetido en cada bloque de `FASE4_CONTRATO_ARQUITECTONICO.md`; el orden sigue siendo estrictamente cronológico por diseño, reservado para la Fase 6 y la Fase 11.
+- **Contador visible de "compartidos"** en cualquier superficie — decisión deliberada del Bloque 4 para no agregar una tercera métrica social (Me gusta y Guardar ya cumplen ese rol) ni convertir compartir en una métrica de vanidad.
+- **Notificaciones o analítica de negocio sobre Compartir** — explícitamente fuera de alcance del Bloque 4, sin adelantar trabajo de fases futuras.
+- **Consolidación de `events` sobre el núcleo compartido de Publicación** — punto de decisión futuro explícito, no resuelto ni asumido en esta fase (ver "Convivencia temporal" arriba).
+- **Moderación de contenido más allá de las reglas de autenticidad ya construidas** — reservada para la Fase 13.
+
+### Dependencias habilitadas para las fases siguientes
+
+- **El contrato de composición del Feed (`mergeFeedSources`) ya probado con tres fuentes reales** — cualquier fuente futura (Compartidos ya la usa como señal, Historias en la Fase 8, contenido patrocinado en la Fase 11) puede sumarse sin rediseñar el criterio de orden ya validado.
+- **El patrón núcleo genérico + detalle por subtipo, ahora probado dos veces** (`event_details` en la Fase 1, `publication_posts`/`promotion_details` en esta fase) — cualquier subtipo de contenido futuro puede seguir el mismo patrón con confianza real, no teórica.
+- **`useShareContent` y el registro de "compartir" en `interactions`** — la Fase 6 (recomendaciones) y la Fase 7 (Guía IA v2) heredan una señal de interés ya registrada y consistente en las cinco superficies, sin tener que instrumentarla de cero.
+- **`promotion_status()` como función de vigencia computada, mismo patrón que `business_open_status()`** — cualquier futuro tipo de contenido con vigencia temporal (por ejemplo, ofertas de comercio en la Fase 10) puede replicar el mismo patrón de cálculo, ya probado en producción de código.
+- **El "hallazgo" de `enforce_publication_publish_authorization()` deja un precedente de seguridad reutilizable** — cualquier tabla futura con el patrón "crear vs. reactivar" debe considerar explícitamente si la reactivación necesita re-validar las mismas condiciones que la creación.
+
+### Criterios que demuestran que la Fase 4 puede considerarse funcionalmente terminada
+
+1. Los cuatro bloques planificados están completos — cada uno propuesto, implementado, verificado contra Postgres 16 real (cuando aplicaba) y Playwright, y aprobado explícitamente por separado.
+2. Los dos hallazgos encontrados durante la propia implementación (vacío de re-verificación, riel de acciones recortado) se documentaron con transparencia total y se corrigieron solo después de una aprobación explícita separada — ninguno se decidió en silencio ni quedó sin resolver.
+3. `events` permaneció verificablemente intacto durante toda la fase — la misma batería de regresión (`test_fase4_bloque1.js` en adelante) nunca necesitó una sola actualización de aserciones sobre el comportamiento de eventos.
+4. Build y lint quedaron limpios, sin advertencias nuevas, al cierre de cada bloque.
+5. La regresión acumulada de Playwright de toda la fase (33 escenarios propios entre los cuatro bloques y su corrección, más la regresión completa de Fases 1-3 reejecutada en cada bloque) pasa sin fallas reales — la única inestabilidad observada (el mismo escenario de doble-toque de la Entrega 6 de la Fase 3) se reconfirmó como ruido de entorno, no una regresión de código.
+6. Toda deuda técnica pendiente está identificada, nombrada explícitamente y documentada como requisito de pre-producción — ninguna quedó oculta o implícita.
+7. El principio rector de la fase (nunca migrar un sistema estable antes de validar el nuevo) se sostuvo sin excepciones durante los cuatro bloques — `events` nunca se tocó, y su eventual consolidación queda como una decisión futura explícita, no una tarea pendiente por omisión.
+
+### Listado de pruebas acumuladas
+
+- `test_fase4_bloque1.js` — 5 escenarios (contrato de composición del Feed, sin migración).
+- `test_fase4_bloque2.js` — 3 escenarios (Publicaciones en el Feed, compatibilidad sin publicaciones, sección no montada para visitante sin contenido).
+- `test_fase4_bloque3.js` — 5 escenarios (Promoción completa en el Feed, sin comentarios/"Quiero ir", etiqueta de programada, compatibilidad sin promociones, sección no montada).
+- `test_fase4_bloque4.js` — 11 escenarios + 1 verificación adicional de no-redirección (completar/cancelar/fallback de copiar enlace con éxito y fallo, invitado sin bloqueo y sin registro, segundo intento sin error, las cinco superficies).
+- `test_fase4_bloque4_fix.js` — 9 escenarios (las seis combinaciones de contenido/imagen exigidas, verificadas con `elementFromPoint`; estado activo/inactivo; estado ocupado; no competencia visual con etiqueta/autor).
+- Verificación directa contra Postgres 16 real con roles de bajo privilegio, repetida en cada bloque que tocó base de datos (Bloques 2, 3 y 4) — incluidos los escenarios de vencimiento real de verificación, RLS de compartir, y dedup por `unique`.
+- Regresión completa de Fases 1-3 (Entregas 1-7 del Bloque C más `test_actor_profile.js`, `test_actor_edit.js`, `test_centro_negocio.js`, `test_entrega5.js`, `test_entrega6.js`, `test_entrega6_authortag.js`, `test_entrega7.js`, `test_hours_catalog_editor.js`, `test_regression.js`) reejecutada al cierre de cada bloque de esta fase, sin necesitar cambios de aserciones en ningún momento.
+- Build y lint limpios verificados al cierre de cada bloque y de la corrección final.
+
+### Commits principales de cada bloque
+
+- `0176a57` — Fase 4, Bloque 1: el Feed como contrato central de composición multi-fuente.
+- `6cfdb87` — Fase 4, Bloque 2: Publicaciones alimentan el Feed.
+- `f116571` — Fase 4, Bloque 3: Promociones alimentan el Feed.
+- `3db46a8` — Fase 4, Bloque 4: Compartidos fortalecen el Feed.
+- `8cdb864` — Corrección: fila estática de acciones en Publicación/Promoción.
+
+---

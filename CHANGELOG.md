@@ -2,6 +2,19 @@
 
 Registro de cambios notables de Ahorita (Cuenca Viva). Formato libre, en español, más cercano a un registro de fases de producto que a versiones semánticas — ver `PROJECT.md` para el plan completo y el estado real de la implementación.
 
+## 2026-07-19 — Cierre formal de la Fase 4: Contenido social ampliado, el Feed como centro
+
+Cierre formal solicitado tras completar los cuatro bloques (Feed como contrato central, Publicaciones, Promociones, Compartidos) y la corrección del último hallazgo pendiente (riel de acciones recortado). Los cuatro bloques del alcance aprobado en `FASE4_CONTRATO_ARQUITECTONICO.md` quedaron implementados, verificados y aprobados por separado; el principio rector de la fase (nunca migrar `events` antes de validar el nuevo núcleo) se sostuvo sin excepciones.
+
+### Documentación (sin cambios de código)
+- `PROJECT.md`: nueva sección "FASE 4 CERRADA — Contenido social ampliado, el Feed como centro (2026-07-19)" — resumen ejecutivo de los cuatro bloques, objetivo original vs. resultado final, arquitectura lograda, decisiones de producto, relación con `PRODUCT_MANIFESTO.md`/`PRODUCT_STRATEGY.md`, cómo la fase fortalece los cinco pilares del producto, problemas encontrados y su resolución, confirmación de que Events permaneció intacto, convivencia temporal entre Events y el núcleo de Publicaciones, señales nuevas disponibles para la futura Guía IA, deudas técnicas consolidadas, funcionalidades deliberadamente no construidas, dependencias habilitadas para las fases siguientes, criterios de cierre funcional, listado de pruebas acumuladas y commits principales de cada bloque.
+- `ROADMAP.md`: Fase 4 movida de "en progreso" a "Fases completas" (ítem 11); deuda técnica acumulada actualizada para incluir la Fase 4.
+- `FASE4_CONTRATO_ARQUITECTONICO.md`: nueva sección de cierre formal al final del documento, apuntando al detalle completo en `PROJECT.md`.
+- Checkpoint de Git: tag `checkpoint-fase4-feed-social`.
+
+### Pendiente, no forma parte de esta fase
+Ninguna Fase 5B (ni ninguna otra fase futura del `MASTERPLAN.md`) queda autorizada ni iniciada por este cierre. Las deudas técnicas registradas (validación end-to-end contra Supabase real, canje físico de Promoción reservado para la Fase 9, concurrencia real del `unique` de `interactions`, consolidación futura de `events` sobre el núcleo compartido, entre otras heredadas de fases anteriores) permanecen como pendientes obligatorios antes de producción, documentadas en `PROJECT.md` y `ROADMAP.md`.
+
 ## 2026-07-19 — Corrección: fila estática de acciones en Publicación/Promoción
 
 Corrección puntual, aprobada explícitamente, del hallazgo del Bloque 4 (riel de acciones recortado en contenido corto sin imagen). Alcance acotado a la solución elegida: no reabre arquitectura, no toca `FeedCard.jsx` (Eventos nunca tuvo el problema).

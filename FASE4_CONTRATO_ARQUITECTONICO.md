@@ -65,11 +65,11 @@ Conectar el tipo de interacción "compartir" (reservado desde la Fase 1, nunca u
 
 **Comportamiento aprobado.** Compartir nunca se bloquea por falta de sesión (a diferencia de me gusta/guardar); solo se registra con sesión real; cancelar el diálogo nativo nunca es un error; un fallo al registrar nunca revierte el compartir que ya ocurrió; un segundo intento sobre el mismo contenido nunca se muestra como error. Un único hook, `useShareContent`, reemplaza las cuatro implementaciones que existían por separado en Evento/Publicación/Promoción/Perfil. Sin contador visible de "compartidos" en ninguna superficie por ahora — decisión deliberada para no agregar una métrica de vanidad.
 
-**Hallazgo encontrado durante las pruebas, documentado sin decidir arreglo.** El riel de acciones (Me gusta/Compartir/Guardar) de Publicación/Promoción puede quedar recortado por `overflow: hidden` en contenido corto sin imagen — defecto preexistente del Bloque 2, no introducido por este bloque. Implica una decisión de diseño real (varias soluciones válidas); no se decidió unilateralmente.
+**Hallazgo encontrado durante las pruebas, documentado sin decidir arreglo, y corregido después con aprobación explícita separada.** El riel de acciones (Me gusta/Compartir/Guardar) de Publicación/Promoción podía quedar recortado por `overflow: hidden` en contenido corto sin imagen — defecto preexistente del Bloque 2, no introducido por este bloque. Se documentó sin decidir un arreglo unilateral, y se corrigió mediante `ContentActionsRow` (fila estática compartida, siempre en flujo normal del documento) una vez aprobada la solución por el Product Owner.
 
 Ver `PROJECT.md` (sección "Bloque 4 — Compartidos fortalecen el Feed") para el detalle completo de verificación, capa de datos/frontend y pruebas.
 
-Con este bloque, los cuatro bloques del alcance aprobado de la Fase 4 están completos. El cierre formal de la fase requiere una aprobación explícita separada (mismo patrón que el cierre de la Fase 3).
+Con este bloque, los cuatro bloques del alcance aprobado de la Fase 4 quedaron completos, y con la corrección del hallazgo de layout aprobada por separado, la Fase 4 se cerró formalmente el 2026-07-19 — ver `PROJECT.md`, sección "FASE 4 CERRADA", para el cierre completo.
 
 ## Condición previa no técnica (pendiente antes del Bloque 2)
 
@@ -97,4 +97,8 @@ La futura consolidación de `events` sobre el núcleo compartido de Publicación
 
 ---
 
-*Documento aprobado. La implementación sigue la metodología: Análisis → Aprobación → Implementación → Verificación → Documentación → Cierre, bloque por bloque, empezando por el Bloque 1.*
+## FASE 4 CERRADA (2026-07-19)
+
+Los cuatro bloques de este contrato (Feed como contrato central, Publicaciones, Promociones, Compartidos) se implementaron, verificaron y aprobaron por separado, siguiendo exactamente la metodología Análisis → Aprobación → Implementación → Verificación → Documentación → Cierre en cada uno. El principio rector (nunca migrar `events` antes de validar el nuevo núcleo) se sostuvo sin excepciones durante toda la fase. El cierre formal, con resumen ejecutivo completo, arquitectura lograda, deudas técnicas y dependencias habilitadas para las fases siguientes, está documentado en `PROJECT.md`, sección "FASE 4 CERRADA". Checkpoint de Git: tag `checkpoint-fase4-feed-social`.
+
+*Documento aprobado. La implementación siguió la metodología: Análisis → Aprobación → Implementación → Verificación → Documentación → Cierre, bloque por bloque. Fase cerrada formalmente.*
