@@ -229,6 +229,11 @@ export async function togglePromotionInteraction({ viewerProfileId, publicationI
 // `post_likes`/`saved_events`/`saved_places` dejan de ser la fuente activa
 // para estos dos tipos; Comunidad (status/question) sigue exactamente igual
 // sobre `post_likes`, sin ningún cambio.
+//
+// Estas dos siguen siendo lecturas *masivas* (todos los eventos que el
+// usuario likeó/guardó, en una sola consulta) — las usa FeedPage/
+// SavedEventsContext para poblar el estado de muchas tarjetas a la vez, un
+// caso de uso distinto al de una sola tarjeta/detalle (ver más abajo).
 export async function listMyLikedEventIds(viewerProfileId) {
   const myActorId = await getMyActorId(viewerProfileId);
   const { data, error } = await supabase
@@ -239,25 +244,6 @@ export async function listMyLikedEventIds(viewerProfileId) {
     .eq("target_type", "event");
   if (error) throw error;
   return data.map((r) => r.target_id);
-}
-
-export async function toggleEventLike({ viewerProfileId, eventId, active }) {
-  const myActorId = await getMyActorId(viewerProfileId);
-  if (active) {
-    const { error } = await supabase
-      .from("interactions")
-      .delete()
-      .eq("actor_id", myActorId)
-      .eq("type", "me_gusta")
-      .eq("target_type", "event")
-      .eq("target_id", eventId);
-    if (error) throw error;
-  } else {
-    const { error } = await supabase
-      .from("interactions")
-      .insert({ actor_id: myActorId, type: "me_gusta", target_type: "event", target_id: eventId });
-    if (error) throw error;
-  }
 }
 
 export async function listMySavedEventIds(viewerProfileId) {
@@ -272,23 +258,92 @@ export async function listMySavedEventIds(viewerProfileId) {
   return data.map((r) => r.target_id);
 }
 
-export async function toggleSavedEvent({ viewerProfileId, eventId, active }) {
+// Fase 5B, Bloque 2: capa coherente para las cuatro interacciones posibles
+// sobre un Evento (me_gusta/quiero_ir/ya_fui/guardado) — reemplaza
+// `toggleEventLike` del Bloque 1, que era una función dedicada a un solo
+// tipo; mismo espíritu de generalización que `toggleActorInteraction`
+// (Entrega 6, Fase 3). `EVENT_INTERACTION_TYPES` es una lista de permiso
+// para este contexto, no el catálogo completo de `interactions.type` — a
+// propósito, para que nadie pueda pasar por aquí un tipo que no tiene
+// sentido sobre un Evento (por ejemplo "seguimiento", que es de Actor).
+const EVENT_INTERACTION_TYPES = ["me_gusta", "quiero_ir", "ya_fui", "guardado"];
+
+// Lectura de UN evento a la vez (EventSheet) — distinta de las lecturas
+// masivas de arriba, pensada para el detalle, no para el scroll del feed.
+export async function getMyEventReactions(viewerProfileId, eventId) {
+  const myActorId = await getMyActorId(viewerProfileId);
+  const { data, error } = await supabase
+    .from("interactions")
+    .select("type")
+    .eq("actor_id", myActorId)
+    .eq("target_type", "event")
+    .eq("target_id", eventId)
+    .in("type", EVENT_INTERACTION_TYPES);
+  if (error) throw error;
+  return {
+    meGusta: data.some((r) => r.type === "me_gusta"),
+    quieroIr: data.some((r) => r.type === "quiero_ir"),
+    yaFui: data.some((r) => r.type === "ya_fui"),
+    guardado: data.some((r) => r.type === "guardado"),
+  };
+}
+
+// Conteos públicos de "Quiero ir"/"Ya fui" — en vivo, sin columna
+// desnormalizada ni trigger de conteo (decisión explícita del Bloque 2: sin
+// necesidad de rendimiento real todavía que lo justifique). "Guardado" no
+// se cuenta aquí ni en ningún otro lugar de la aplicación — es privado.
+export async function getEventReactionCounts(eventId) {
+  const [quieroIr, yaFui] = await Promise.all([
+    supabase
+      .from("interactions")
+      .select("id", { count: "exact", head: true })
+      .eq("target_type", "event")
+      .eq("target_id", eventId)
+      .eq("type", "quiero_ir"),
+    supabase
+      .from("interactions")
+      .select("id", { count: "exact", head: true })
+      .eq("target_type", "event")
+      .eq("target_id", eventId)
+      .eq("type", "ya_fui"),
+  ]);
+  if (quieroIr.error) throw quieroIr.error;
+  if (yaFui.error) throw yaFui.error;
+  return { quieroIr: quieroIr.count ?? 0, yaFui: yaFui.count ?? 0 };
+}
+
+// Única función de escritura para las cuatro interacciones de un Evento.
+// La compuerta temporal de "quiero_ir"/"ya_fui" (ver migración 0033) vive en
+// la base de datos, no aquí — este código nunca decide si el momento es
+// válido, solo intenta la operación y deja que `describeInteractionError`
+// traduzca el rechazo (código 23514) a un mensaje legible si ocurre.
+export async function toggleEventInteraction({ viewerProfileId, eventId, type, active }) {
+  if (!EVENT_INTERACTION_TYPES.includes(type)) {
+    throw new Error(`Tipo de interacción no permitido para un Evento: ${type}`);
+  }
   const myActorId = await getMyActorId(viewerProfileId);
   if (active) {
     const { error } = await supabase
       .from("interactions")
       .delete()
       .eq("actor_id", myActorId)
-      .eq("type", "guardado")
+      .eq("type", type)
       .eq("target_type", "event")
       .eq("target_id", eventId);
     if (error) throw error;
   } else {
     const { error } = await supabase
       .from("interactions")
-      .insert({ actor_id: myActorId, type: "guardado", target_type: "event", target_id: eventId });
+      .insert({ actor_id: myActorId, type, target_type: "event", target_id: eventId });
     if (error) throw error;
   }
+}
+
+// `toggleSavedEvent` (Bloque 1) delega en la función de arriba en vez de
+// duplicar el mismo cuerpo — SavedEventsContext sigue llamándola igual,
+// sin necesitar ningún cambio.
+export async function toggleSavedEvent({ viewerProfileId, eventId, active }) {
+  return toggleEventInteraction({ viewerProfileId, eventId, type: "guardado", active });
 }
 
 export async function listMySavedPlaceIds(viewerProfileId) {

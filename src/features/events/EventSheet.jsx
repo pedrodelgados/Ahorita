@@ -1,6 +1,13 @@
 import { useEffect, useState } from "react";
 import { Send, Bookmark } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { getEvent, listEventComments, createEventComment } from "../../lib/events";
+import {
+  getMyEventReactions,
+  getEventReactionCounts,
+  toggleEventInteraction,
+  describeInteractionError,
+} from "../../lib/interactions";
 import { useAuth } from "../../contexts/AuthContext";
 import { useSavedEvents } from "../../contexts/SavedEventsContext";
 import { CHANNELS, COLORS, SPACE, textStyle, TYPE } from "../../styles/theme";
@@ -12,25 +19,80 @@ import LocationMetadata from "../../components/ui/LocationMetadata";
 import Button from "../../components/ui/Button";
 import AuthorTag from "../social/AuthorTag";
 import DirectionsSection from "../places/DirectionsSection";
+import EventReactionChips from "./EventReactionChips";
 
 export default function EventSheet({ eventId, onClose }) {
-  const { user } = useAuth();
+  const { user, isAuthenticated } = useAuth();
+  const navigate = useNavigate();
   const { savedIds, toggleSave } = useSavedEvents();
   const [event, setEvent] = useState(null);
   const [comments, setComments] = useState([]);
   const [commentText, setCommentText] = useState("");
   const [loading, setLoading] = useState(true);
+  const [reactions, setReactions] = useState({ quieroIr: false, yaFui: false });
+  const [reactionCounts, setReactionCounts] = useState({ quieroIr: 0, yaFui: 0 });
+  const [reactionBusy, setReactionBusy] = useState({ quieroIr: false, yaFui: false });
+  const [reactionError, setReactionError] = useState(null);
 
   useEffect(() => {
     if (!eventId) return;
     setLoading(true);
-    Promise.all([getEvent(eventId), listEventComments(eventId)])
-      .then(([ev, cmts]) => {
+    setReactionError(null);
+    Promise.all([getEvent(eventId), listEventComments(eventId), getEventReactionCounts(eventId)])
+      .then(([ev, cmts, counts]) => {
         setEvent(ev);
         setComments(cmts);
+        setReactionCounts(counts);
       })
       .finally(() => setLoading(false));
-  }, [eventId]);
+
+    if (isAuthenticated) {
+      getMyEventReactions(user.id, eventId).then((r) =>
+        setReactions({ quieroIr: r.quieroIr, yaFui: r.yaFui })
+      );
+    } else {
+      setReactions({ quieroIr: false, yaFui: false });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [eventId, isAuthenticated]);
+
+  function requireAuth(action) {
+    if (!isAuthenticated) {
+      navigate("/login");
+      return;
+    }
+    action();
+  }
+
+  async function toggleReaction(type, key) {
+    if (reactionBusy[key]) return;
+    const wasActive = reactions[key];
+    setReactionBusy((prev) => ({ ...prev, [key]: true }));
+    setReactionError(null);
+    setReactions((prev) => ({ ...prev, [key]: !wasActive }));
+    setReactionCounts((prev) => ({ ...prev, [key]: prev[key] + (wasActive ? -1 : 1) }));
+    try {
+      await toggleEventInteraction({ viewerProfileId: user.id, eventId, type, active: wasActive });
+    } catch (err) {
+      setReactions((prev) => ({ ...prev, [key]: wasActive }));
+      setReactionCounts((prev) => ({ ...prev, [key]: prev[key] + (wasActive ? 1 : -1) }));
+      setReactionError(describeInteractionError(err));
+    } finally {
+      setReactionBusy((prev) => ({ ...prev, [key]: false }));
+    }
+  }
+
+  // "Finalización" de un evento = coalesce(end_at, start_at) — mismo
+  // criterio que ya usa listUpcomingEvents (lib/events.js) para decidir qué
+  // sigue "próximo" en el feed. Solo se bloquea la ACTIVACIÓN nueva; quitar
+  // una reacción ya existente nunca se restringe por fecha.
+  const startAt = event ? new Date(event.start_at).getTime() : null;
+  const finishesAt = event ? new Date(event.end_at || event.start_at).getTime() : null;
+  const now = Date.now();
+  const yaFuiAvailable = startAt !== null && now >= startAt;
+  const quieroIrAvailable = finishesAt !== null && now <= finishesAt;
+  const yaFuiDisabled = !reactions.yaFui && !yaFuiAvailable;
+  const quieroIrDisabled = !reactions.quieroIr && !quieroIrAvailable;
 
   async function submitComment(e) {
     e.preventDefault();
@@ -106,6 +168,26 @@ export default function EventSheet({ eventId, onClose }) {
           >
             {isPaid ? `$${event.price}` : "Gratis"}
           </p>
+
+          <EventReactionChips
+            quieroIr={reactions.quieroIr}
+            quieroIrCount={reactionCounts.quieroIr}
+            quieroIrBusy={reactionBusy.quieroIr}
+            quieroIrDisabled={quieroIrDisabled}
+            quieroIrUnavailableReason="Este evento ya finalizó."
+            onToggleQuieroIr={() => requireAuth(() => toggleReaction("quiero_ir", "quieroIr"))}
+            yaFui={reactions.yaFui}
+            yaFuiCount={reactionCounts.yaFui}
+            yaFuiBusy={reactionBusy.yaFui}
+            yaFuiDisabled={yaFuiDisabled}
+            yaFuiUnavailableReason="Disponible cuando empiece el evento."
+            onToggleYaFui={() => requireAuth(() => toggleReaction("ya_fui", "yaFui"))}
+          />
+          {reactionError && (
+            <p style={textStyle(TYPE.metadata, { color: COLORS.error, margin: `0 0 ${SPACE.sm}px` })}>
+              {reactionError}
+            </p>
+          )}
 
           {event.description && (
             <p style={textStyle(TYPE.body, { margin: `0 0 ${SPACE.lg}px` })}>{event.description}</p>

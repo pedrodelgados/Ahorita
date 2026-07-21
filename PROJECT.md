@@ -1711,3 +1711,54 @@ Build y lint limpios (las advertencias de lint presentes son preexistentes, no i
 Bloque 2 (reacciones "Quiero ir"/"Ya fui" exclusivas de Eventos, coexistentes sin exclusión mutua) y Bloque 3 (comentarios generalizados con vista de detalle propia para Publicación), ambos pendientes de su propia aprobación explícita antes de implementarse — no se avanza automáticamente.
 
 ---
+
+## Fase 5B, Bloque 2 — Reacciones "Quiero ir" y "Ya fui", exclusivas de Eventos (implementado)
+
+Segundo bloque de la Fase 5B: construye por primera vez las dos reacciones reservadas en `interactions.type` desde la Fase 1, nunca implementadas hasta ahora. Diseño aprobado tras análisis previo: exclusivas de Eventos, coexistentes sin exclusión mutua, visibles únicamente dentro de `EventSheet` (nunca en `FeedCard`/`PublicationFeedCard`/`PromotionFeedCard`), con conteo público en vivo (sin columnas desnormalizadas) y una capa de datos generalizada en vez de funciones dedicadas por tipo.
+
+### Diseño aprobado
+
+- **Ubicación**: solo `EventSheet`, como dos chips independientes (nunca un control segmentado) después del precio. `FeedCard` permanece exactamente como quedó en el Bloque 1 — evita repetir el hallazgo de recorte ya resuelto en la Fase 4 para Publicación/Promoción, y coincide con que "quiero ir"/"ya fui" son decisiones que se toman con la información completa que solo el detalle muestra, no en el scroll rápido del feed.
+- **Compuerta temporal, en interfaz y en base de datos**: "Ya fui" nunca puede registrarse antes de `start_at`; "Quiero ir" nunca puede registrarse por primera vez después de `coalesce(end_at, start_at)` (mismo criterio de "finalización" que ya usa `listUpcomingEvents` en `lib/events.js` para decidir qué eventos siguen "próximos"). Ninguna de las dos reglas restringe la eliminación — una intención histórica nunca se borra automáticamente y el usuario siempre puede quitarla, sin importar la fecha.
+- **Exclusividad de Eventos reforzada también en la base de datos**, no solo por ausencia de interfaz: un intento de escribir `quiero_ir`/`ya_fui` contra cualquier `target_type` que no sea `'event'` se rechaza con el mismo mecanismo de la compuerta temporal.
+- **Conteo en vivo**: sin columnas desnormalizadas ni triggers de conteo nuevos — decisión explícita, sin necesidad de rendimiento real todavía que lo justifique.
+- **Semántica documentada explícitamente** (`AI_PHILOSOPHY.md`, nueva sección "La jerarquía de señales declaradas sobre un Evento"): Me gusta = afinidad; Quiero ir = intención declarada; Ya fui = asistencia declarada; check-in futuro (Fase 9) = presencia verificada. "Ya fui" nunca debe presentarse ni interpretarse como equivalente a un check-in validado. Ninguna de las tres se usa todavía para ranking ni recomendaciones.
+
+### `supabase/migrations/0033_fase5b_bloque2_reacciones_evento.sql` (nuevo)
+
+Una sola función (`enforce_event_reaction_timing()`, `security definer`, disparada `before insert on interactions`) resuelve las tres reglas de negocio del bloque: exclusividad de Eventos, compuerta de "ya_fui" y compuerta de "quiero_ir" — sin ninguna tabla ni columna nueva, sin cambio de RLS (la política pública de `interactions` desde la Fase 1 ya cubre estos dos tipos).
+
+### Capa de datos (`lib/interactions.js`)
+
+Reemplaza `toggleEventLike` (Bloque 1, específica de un solo tipo) por una capa coherente para las cuatro interacciones posibles sobre un Evento: `getMyEventReactions` (lectura de un solo evento, para `EventSheet`), `getEventReactionCounts` (conteo público en vivo de "quiero ir"/"ya fui"), y `toggleEventInteraction` (única función de escritura, valida el `type` contra una lista de permiso — `me_gusta`/`quiero_ir`/`ya_fui`/`guardado` — en vez de aceptar cualquier valor del catálogo). `toggleSavedEvent` (Bloque 1) pasa a delegar en esta misma función en vez de duplicar su cuerpo. Las lecturas masivas del Bloque 1 (`listMyLikedEventIds`/`listMySavedEventIds`, usadas por `FeedPage`/`SavedEventsContext` para poblar el estado de muchas tarjetas a la vez) no se tocan — siguen siendo el caso de uso correcto para el feed, distinto del de una sola tarjeta/detalle.
+
+### Frontend
+
+`EventReactionChips.jsx` (nuevo): dos chips independientes con icono, conteo, estado activo/inactivo/ocupado, `aria-pressed`, y una nota breve cuando "Ya fui" o "Quiero ir" están deshabilitados por la compuerta temporal ("Disponible cuando empiece el evento." / "Este evento ya finalizó."). Integrado en `EventSheet.jsx` con el mismo patrón `requireAuth` (redirección a `/login`) ya usado en `FeedCard`/`PublicationFeedCard`/`PromotionFeedCard`, en vez del `AuthGate` en línea que usa el formulario de comentarios — consistente con el resto de acciones sociales de tipo toggle de la aplicación.
+
+### Verificación realizada
+
+Postgres 16 real, las 33 migraciones aplicadas en orden contra una base limpia (dos veces, la segunda con la versión final que ya incluye el refuerzo de exclusividad). Escenario de prueba con dos actores, un evento futuro, uno en curso y uno puntual ya finalizado sin `end_at`:
+
+- "Ya fui" antes de `start_at` rechazado; permitido desde que el evento ya comenzó.
+- "Quiero ir" permitido mientras el evento no ha finalizado; una nueva activación rechazada después de `coalesce(end_at, start_at)`.
+- Ambas reacciones activas simultáneamente sobre el mismo evento, sin ningún conflicto.
+- Una intención histórica (`quiero_ir` insertada legítimamente antes de la finalización, simulada deshabilitando la compuerta temporalmente para la inserción de prueba) se conserva sin borrado automático y se elimina sin problema incluso después de finalizado el evento — confirmando que la compuerta solo actúa sobre `INSERT`, nunca sobre `DELETE`.
+- Exclusividad de Eventos confirmada: un intento de `quiero_ir` contra `target_type='publicacion'` fue rechazado.
+- Deduplicación por `unique` confirmada. Un actor sin sesión (sin `auth.uid()`) rechazado por RLS, no por el trigger nuevo. Un actor no puede escribir a nombre de otro (RLS ya existente desde la Fase 1).
+- Conteos públicos verificados exactos.
+- `me_gusta`/`guardado` de Eventos (Bloque 1) siguen funcionando sin ninguna interferencia del trigger nuevo, incluido el contador `events.likes_count`.
+- Reversión ejecutada de verdad (eliminar el trigger/función nuevos) sin pérdida de datos en ninguna tabla.
+
+Build y lint limpios (sin advertencias nuevas). Playwright limitado a confirmar ausencia de errores de ejecución tras el cambio — misma limitación de entorno ya aceptada desde la Fase 1, sin proyecto Supabase real desplegado.
+
+### Deuda técnica detectada
+
+- **Prueba end-to-end contra un proyecto Supabase real desplegado** — heredada, sin resolver por el mismo motivo de siempre.
+- Ninguna deuda nueva propia de este bloque.
+
+### Qué sigue
+
+Bloque 3 (comentarios generalizados, con vista de detalle propia para Publicación), pendiente de su propia aprobación explícita antes de implementarse.
+
+---

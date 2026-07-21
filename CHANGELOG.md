@@ -2,6 +2,30 @@
 
 Registro de cambios notables de Ahorita (Cuenca Viva). Formato libre, en español, más cercano a un registro de fases de producto que a versiones semánticas — ver `PROJECT.md` para el plan completo y el estado real de la implementación.
 
+## 2026-07-21 — Fase 5B, Bloque 2: reacciones "Quiero ir" y "Ya fui"
+
+Construye por primera vez las dos reacciones reservadas en `interactions.type` desde la Fase 1. Exclusivas de Eventos, coexistentes sin exclusión mutua, visibles únicamente en `EventSheet` (nunca en las tarjetas del Feed).
+
+### Agregado
+
+- `supabase/migrations/0033_fase5b_bloque2_reacciones_evento.sql`: `enforce_event_reaction_timing()` (trigger `before insert` sobre `interactions`, `security definer`) — rechaza "ya_fui" antes de que el evento comience, rechaza una nueva activación de "quiero_ir" después de `coalesce(end_at, start_at)`, y rechaza cualquier intento de escribir estos dos tipos contra un `target_type` distinto de `'event'`. Nunca restringe `DELETE`.
+- `lib/interactions.js`: `getMyEventReactions`, `getEventReactionCounts` (conteo en vivo, sin columnas desnormalizadas), `toggleEventInteraction` (única función de escritura para Eventos, valida el tipo contra una lista de permiso).
+- `src/features/events/EventReactionChips.jsx`: dos chips independientes con conteo, estado activo/inactivo/ocupado, `aria-pressed`, y nota breve cuando están deshabilitados por la compuerta temporal.
+- `AI_PHILOSOPHY.md`: nueva sección "La jerarquía de señales declaradas sobre un Evento" — documenta Me gusta/Quiero ir/Ya fui/check-in futuro como señales de fuerza creciente, y que "Ya fui" nunca equivale a un check-in validado.
+
+### Cambiado
+
+- `EventSheet.jsx`: integra los chips nuevos, mismo patrón `requireAuth` ya usado en las tarjetas del Feed.
+- `toggleEventLike` (Bloque 1) retirada en favor de `toggleEventInteraction`; `toggleSavedEvent` (Bloque 1) ahora delega en la misma función en vez de duplicar su cuerpo. `FeedPage.jsx` actualizado.
+
+### Verificado
+
+Postgres 16 real (33 migraciones desde cero, dos veces), los siete escenarios de la compuerta temporal y de exclusividad, coexistencia simultánea, conservación y eliminación de una intención histórica, deduplicación, RLS de actor ajeno y de sesión ausente, conteos exactos, `events.likes_count` sin interferencia, reversión completa sin pérdida de datos. Build y lint limpios.
+
+### Limitación de entorno
+
+Sin proyecto Supabase real desplegado — misma limitación ya documentada desde la Fase 1.
+
 ## 2026-07-21 — Fase 5B, Bloque 1: Eventos y Lugares migran a `interactions`
 
 Primer bloque de la Fase 5B: cierra la deuda de "cambio de fuente de verdad" dejada pendiente desde el cierre del Bloque 4 de la Fase 1. "Me gusta" y "guardado" de Eventos y Lugares dejan de vivir en `post_likes`/`saved_events`/`saved_places` y pasan a `interactions`, con reconciliación bidireccional (no un backfill simple).

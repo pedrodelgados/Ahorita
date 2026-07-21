@@ -173,6 +173,19 @@ Aun así, compartir **no equivale automáticamente a calidad ni a confianza**: a
 
 Por diseño de esta fase, la señal de compartir **todavía no se usa para ranking ni para recomendaciones** — se registra (una sola vez por persona y por contenido, nunca como conteo de repeticiones) y queda disponible para cuando el motor de afinidad de la Fase 6 exista. Introducirla antes de tener ese motor sería exactamente el tipo de "número que crece por sí solo" que estos principios ya rechazan en otras partes de este documento.
 
+### La jerarquía de señales declaradas sobre un Evento (Fase 5B, Bloque 2)
+
+"Me gusta", "Quiero ir" y "Ya fui" no son intercambiables — cada una describe un momento distinto del comportamiento de una persona frente a un Evento, y la Guía IA debe tratarlas como señales de fuerza creciente, nunca como sinónimos:
+
+- **Me gusta = afinidad u opinión positiva.** La señal más liviana — ni siquiera implica intención de asistir.
+- **Quiero ir = intención declarada.** Más fuerte que "me gusta" porque implica un plan real, pero sigue siendo solo una intención — puede no concretarse.
+- **Ya fui = asistencia declarada.** Más fuerte que "quiero ir" porque afirma que algo ya ocurrió, no que se planea — pero sigue siendo **autodeclarada, sin ninguna verificación**.
+- **Check-in físico confirmado (futuro, Fase 9) = presencia verificada.** La única de las cuatro que no depende de la palabra de la persona.
+
+**"Ya fui" nunca debe presentarse ni interpretarse como equivalente a un check-in validado.** Es la señal autodeclarada más fuerte que existe hoy, pero sigue siendo autodeclarada — la Guía IA debe conservar esa distinción con la misma disciplina con la que ya distingue verificación vigente de verificación vencida (arriba): tratar una asistencia declarada como si fuera una asistencia confirmada sería inventar certeza donde solo hay una afirmación de la propia persona, exactamente el tipo de error que estos principios existen para prevenir.
+
+Por diseño de este bloque, ninguna de las tres reacciones se usa todavía para ranking, recomendaciones ni ninguna interpretación algorítmica — se registran y quedan disponibles para cuando el motor de afinidad de la Fase 6 y la Guía IA v2 de la Fase 7 existan, mismo criterio ya aplicado a "compartir" arriba.
+
 ### Cuentas oficiales e institucionales (visión futura, no implementada)
 
 En el futuro podrán existir cuentas oficiales institucionales en el ecosistema (por ejemplo, el Municipio de Cuenca, ETAPA, Turismo Cuenca, la Universidad de Cuenca). Estas cuentas se representarán mediante el sistema de verificación y la identidad del Actor — un tipo de verificación distinto, no un rol administrativo ni ningún privilegio especial de plataforma. Cuando existan, la Guía IA podrá identificar y comunicar que una recomendación proviene de una entidad oficial (por ejemplo, "esto lo organiza el Municipio de Cuenca") de la misma forma en que ya comunica el estado de verificación de cualquier otro actor — es una precisión adicional de confianza e identidad, sujeta exactamente a los mismos límites de esta sección: nunca desplaza la relevancia real, nunca es un criterio principal por sí solo.

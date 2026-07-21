@@ -4,7 +4,7 @@ import { Bell, CalendarX2, Search } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
 import { getFeed } from "../lib/feed";
 import { getProfile } from "../lib/profile";
-import { listMyLikedEventIds, toggleEventLike } from "../lib/interactions";
+import { listMyLikedEventIds, toggleEventInteraction } from "../lib/interactions";
 import { withViewTransition } from "../lib/viewTransition";
 import { COLORS, textStyle, TYPE } from "../styles/theme";
 import AppHeader from "../components/layout/AppHeader";
@@ -76,7 +76,12 @@ export default function FeedPage() {
       [item.id]: { liked: nextLiked, count: Math.max(0, current.count + (nextLiked ? 1 : -1)) },
     }));
     try {
-      await toggleEventLike({ viewerProfileId: user.id, eventId: item.targetId, active: current.liked });
+      await toggleEventInteraction({
+        viewerProfileId: user.id,
+        eventId: item.targetId,
+        type: "me_gusta",
+        active: current.liked,
+      });
     } catch {
       setLikeState((prev) => ({ ...prev, [item.id]: current }));
     }
