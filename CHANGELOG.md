@@ -2,6 +2,19 @@
 
 Registro de cambios notables de Ahorita (Cuenca Viva). Formato libre, en español, más cercano a un registro de fases de producto que a versiones semánticas — ver `PROJECT.md` para el plan completo y el estado real de la implementación.
 
+## 2026-07-19 — Corrección: fila estática de acciones en Publicación/Promoción
+
+Corrección puntual, aprobada explícitamente, del hallazgo del Bloque 4 (riel de acciones recortado en contenido corto sin imagen). Alcance acotado a la solución elegida: no reabre arquitectura, no toca `FeedCard.jsx` (Eventos nunca tuvo el problema).
+
+### Agregado
+- `src/features/feed/ContentActionsRow.jsx`: fila estática de Me gusta/Compartir/Guardar, compartida entre Publicación y Promoción, siempre en flujo normal del documento después del contenido — nunca flotante, nunca depende de una altura mínima artificial.
+
+### Cambiado
+- `PublicationFeedCard.jsx`/`PromotionFeedCard.jsx`: reemplazan `SocialActions` (riel flotante) por `ContentActionsRow`. El bloque de foto (cuando existe) pasa a tener una altura propia y acotada en vez de llenar toda la tarjeta.
+
+### Verificado
+Playwright (`test_fase4_bloque4_fix.js`, 9 escenarios): las seis combinaciones exigidas (Publicación/Promoción × corta sin imagen/larga sin imagen/con imagen) con los tres controles verificados clickeables vía `elementFromPoint` (no solo presentes en el DOM); estado activo/inactivo y ocupado confirmados con interacción real. Regresión completa de Eventos, Publicaciones, Promociones y Compartir sigue pasando. Build y lint limpios. Capturas antes/después adjuntas.
+
 ## 2026-07-19 — Fase 4, Bloque 4: Compartidos fortalecen el Feed
 
 Cuarto y último bloque de la Fase 4 — alcance deliberadamente pequeño e instrumental: convertir cada acción real de compartir (Evento, Publicación, Promoción, Perfil de persona o negocio) en una señal medible dentro de `interactions`, sin cambiar la experiencia nativa de compartir. Sin migración nueva — `interactions` ya estaba preparada para esto desde el Bloque 1 de la Fase 1 (`'compartir'` en el `check` de `type`, `target_type` genérico, `unique(actor_id, type, target_type, target_id)`).

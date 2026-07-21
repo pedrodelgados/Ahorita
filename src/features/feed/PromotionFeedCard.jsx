@@ -17,7 +17,7 @@ import { useShareContent } from "../../hooks/useShareContent";
 import { COLORS, photoOverlay, textStyle, TYPE } from "../../styles/theme";
 import ImageWithFallback from "../../components/ui/ImageWithFallback";
 import VerificationBadge from "../profile/VerificationBadge";
-import SocialActions from "./SocialActions";
+import ContentActionsRow from "./ContentActionsRow";
 
 // Fase 4, Bloque 3: tarjeta propia de Promoción, separada de FeedCard y de
 // PublicationFeedCard — cada tipo de contenido tiene su propia forma
@@ -25,6 +25,12 @@ import SocialActions from "./SocialActions";
 // vigencia). Ajustes de producto aprobados: restricciones SIEMPRE visibles
 // (nunca detrás de un "ver más"); "Publicado hace…" y la etiqueta temporal
 // de fase (empieza/válido hasta/finalizó) se muestran siempre juntas.
+//
+// Fase 4, Bloque 4 (hallazgo corregido, ver PROJECT.md): mismo motivo y
+// misma solución que en PublicationFeedCard — Me gusta/Compartir/Guardar
+// pasan de un riel flotante (SocialActions) a `ContentActionsRow`, en
+// flujo normal después del contenido, para que nunca queden recortados por
+// overflow:hidden en promociones sin imagen y con poco texto.
 export default function PromotionFeedCard({ item }) {
   const { user, isAuthenticated } = useAuth();
   const navigate = useNavigate();
@@ -112,7 +118,6 @@ export default function PromotionFeedCard({ item }) {
     <section
       style={{
         position: "relative",
-        minHeight: item.image ? "60svh" : "auto",
         borderRadius: "var(--radius-card)",
         overflow: "hidden",
         marginBottom: 16,
@@ -121,90 +126,98 @@ export default function PromotionFeedCard({ item }) {
         flexShrink: 0,
       }}
     >
-      {item.image && (
-        <>
-          <ImageWithFallback
-            src={item.image}
-            alt={item.promoTitle}
-            iconSize={28}
-            style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }}
-          />
-          <div style={{ position: "absolute", inset: 0, background: photoOverlay() }} />
-        </>
-      )}
+      <div style={{ position: "relative" }}>
+        {item.image && (
+          <div style={{ position: "relative", width: "100%", paddingTop: "100%" }}>
+            <ImageWithFallback
+              src={item.image}
+              alt={item.promoTitle}
+              iconSize={28}
+              style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }}
+            />
+            <div style={{ position: "absolute", inset: 0, background: photoOverlay() }} />
+          </div>
+        )}
 
-      <span
-        style={{
-          position: item.image ? "absolute" : "static",
-          top: 16,
-          left: 16,
-          margin: item.image ? 0 : "16px 0 0 16px",
-          display: "inline-block",
-          background: COLORS.accent,
-          color: "#FFFFFF",
-          padding: "6px 13px",
-          borderRadius: "var(--radius-full)",
-          ...textStyle(TYPE.label, { letterSpacing: 0.5 }),
-        }}
-      >
-        Promoción
-      </span>
+        <span
+          style={{
+            position: item.image ? "absolute" : "static",
+            top: 16,
+            left: 16,
+            margin: item.image ? 0 : "16px 0 0 16px",
+            display: "inline-block",
+            background: COLORS.accent,
+            color: "#FFFFFF",
+            padding: "6px 13px",
+            borderRadius: "var(--radius-full)",
+            ...textStyle(TYPE.label, { letterSpacing: 0.5 }),
+          }}
+        >
+          Promoción
+        </span>
 
-      <SocialActions
+        <div
+          style={{
+            position: item.image ? "absolute" : "static",
+            left: 16,
+            right: 16,
+            bottom: 16,
+            color: item.image ? "#FFFFFF" : COLORS.ink,
+            padding: item.image ? 0 : "16px 16px 0",
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
+            <p style={textStyle(TYPE.kicker, { color: "inherit", opacity: 0.9, margin: 0 })}>{item.title}</p>
+            <VerificationBadge status={item.verificationBadge} />
+          </div>
+
+          <h2 style={textStyle(TYPE.cardTitle, { color: "inherit", margin: "0 0 4px" })}>{item.promoTitle}</h2>
+          <p style={textStyle(TYPE.body, { color: "inherit", margin: "0 0 8px", opacity: 0.98, fontWeight: 600 })}>
+            {item.benefitDescription}
+          </p>
+          <p style={textStyle(TYPE.bodySmall, { color: "inherit", margin: "0 0 6px", opacity: 0.9 })}>
+            {item.redemptionCondition}
+          </p>
+          {/* Restricciones: siempre visibles, nunca detrás de un desplegable
+              (ajuste de producto aprobado) — si no hay, simplemente no se
+              renderiza nada. */}
+          {item.restrictions && (
+            <p style={textStyle(TYPE.metadata, { color: "inherit", margin: "0 0 8px", opacity: 0.8 })}>
+              {item.restrictions}
+            </p>
+          )}
+
+          <p style={textStyle(TYPE.metadata, { color: "inherit", opacity: 0.7, margin: 0 })}>
+            Publicado {formatRelativeTime(item.publishedAt)}
+          </p>
+          <p style={textStyle(TYPE.metadata, { color: "inherit", opacity: 0.85, fontWeight: 700, margin: 0 })}>
+            {phaseLabel}
+          </p>
+        </div>
+      </div>
+
+      <ContentActionsRow
         liked={mine.meGusta}
         likeCount={counts.meGusta}
-        saved={mine.guardado}
-        showComments={false}
-        bottom={130}
+        busyLike={busy.meGusta}
         onToggleLike={() => requireAuth(() => toggle("me_gusta", "meGusta"))}
-        onShare={handleShare}
+        saved={mine.guardado}
+        busySave={busy.guardado}
         onToggleSave={() => requireAuth(() => toggle("guardado", "guardado"))}
+        onShare={handleShare}
       />
-
-      <div
-        style={{
-          position: item.image ? "absolute" : "static",
-          left: 16,
-          right: 84,
-          bottom: 20,
-          color: item.image ? "#FFFFFF" : COLORS.ink,
-          padding: item.image ? 0 : "16px 16px 0",
-        }}
-      >
-        <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
-          <p style={textStyle(TYPE.kicker, { color: "inherit", opacity: 0.9, margin: 0 })}>{item.title}</p>
-          <VerificationBadge status={item.verificationBadge} />
-        </div>
-
-        <h2 style={textStyle(TYPE.cardTitle, { color: "inherit", margin: "0 0 4px" })}>{item.promoTitle}</h2>
-        <p style={textStyle(TYPE.body, { color: "inherit", margin: "0 0 8px", opacity: 0.98, fontWeight: 600 })}>
-          {item.benefitDescription}
+      {error && (
+        <p
+          style={textStyle(TYPE.metadata, {
+            color: COLORS.error,
+            margin: 0,
+            padding: "0 16px 10px",
+            background: COLORS.surface,
+          })}
+        >
+          {error}
         </p>
-        <p style={textStyle(TYPE.bodySmall, { color: "inherit", margin: "0 0 6px", opacity: 0.9 })}>
-          {item.redemptionCondition}
-        </p>
-        {/* Restricciones: siempre visibles, nunca detrás de un desplegable
-            (ajuste de producto aprobado) — si no hay, simplemente no se
-            renderiza nada. */}
-        {item.restrictions && (
-          <p style={textStyle(TYPE.metadata, { color: "inherit", margin: "0 0 8px", opacity: 0.8 })}>
-            {item.restrictions}
-          </p>
-        )}
-
-        <p style={textStyle(TYPE.metadata, { color: "inherit", opacity: 0.7, margin: 0 })}>
-          Publicado {formatRelativeTime(item.publishedAt)}
-        </p>
-        <p style={textStyle(TYPE.metadata, { color: "inherit", opacity: 0.85, fontWeight: 700, margin: 0 })}>
-          {phaseLabel}
-        </p>
-
-        {error && (
-          <p style={textStyle(TYPE.metadata, { color: item.image ? "#FFD9D9" : COLORS.error, margin: "6px 0 0" })}>
-            {error}
-          </p>
-        )}
-      </div>
+      )}
     </section>
   );
 }
