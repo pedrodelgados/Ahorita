@@ -2,6 +2,18 @@
 
 Registro de cambios notables de Ahorita (Cuenca Viva). Formato libre, en español, más cercano a un registro de fases de producto que a versiones semánticas — ver `PROJECT.md` para el plan completo y el estado real de la implementación.
 
+## 2026-07-21 — Cierre de la etapa conceptual y metodología permanente de trabajo
+
+El Product Owner declaró oficialmente cerrada la etapa de construcción conceptual del proyecto y aprobó la adopción de `VISION_MAESTRA.md` como definitiva. `VISION_MAESTRA.md`, `PRODUCT_MANIFESTO.md`, `PRODUCT_STRATEGY.md`, `AI_PHILOSOPHY.md`, `ARCHITECTURE.md` y `MASTERPLAN.md` quedan congelados salvo decisión estratégica excepcional; `ROADMAP.md`, `PROJECT.md` y `CHANGELOG.md` continúan como registro de ejecución. La prioridad vuelve al desarrollo del producto.
+
+### Agregado
+
+- `PROJECT.md`: nueva sección "METODOLOGÍA PERMANENTE DE TRABAJO" — el flujo de nueve pasos obligatorio para toda fase futura (revisar la Visión Maestra, analizar coherencia filosófica, detectar contradicciones antes de código, presentar análisis, esperar aprobación explícita, implementar solo el alcance aprobado, verificar contra Postgres real/RLS/Playwright/build/lint, documentar, no avanzar de bloque sin aprobación), el criterio permanente ("¿esta decisión fortalece la Visión Maestra?") y el principio de evolución por coherencia, no por acumulación de funciones.
+
+### Nota
+
+- Ningún código, componente ni funcionalidad fue modificado — cambio exclusivamente documental, de registro de metodología.
+
 ## 2026-07-21 — Adopción formal de `VISION_MAESTRA.md` como autoridad conceptual máxima del proyecto
 
 Pausa estratégica solicitada explícitamente por el Product Owner tras el cierre de la Fase 4, antes de autorizar cualquier fase nueva: ningún código, ninguna migración, ninguna funcionalidad — trabajo puramente conceptual sobre la identidad de Ahorita, desarrollado en tres iteraciones (análisis profundo de los trece temas fundacionales, segunda iteración centrada en el ciudadano/identidad editorial/IA/ciudad viva/utilidad sobre atención, y revisión editorial final) hasta quedar aprobado y congelado.

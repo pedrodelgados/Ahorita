@@ -1630,3 +1630,27 @@ Tras el cierre formal de la Fase 4, y antes de autorizar cualquier fase nueva de
 **Confirmación explícita.** Ninguna funcionalidad, componente, migración o comportamiento de la aplicación fue modificado durante este proceso — el trabajo fue exclusivamente documental y conceptual, tal como se autorizó.
 
 ---
+
+## METODOLOGÍA PERMANENTE DE TRABAJO — Etapa conceptual cerrada, retorno al desarrollo (2026-07-21)
+
+Con `VISION_MAESTRA.md` ya aprobada y congelada, el Product Owner declaró oficialmente cerrada la etapa de construcción conceptual del proyecto. `VISION_MAESTRA.md`, `PRODUCT_MANIFESTO.md`, `PRODUCT_STRATEGY.md`, `AI_PHILOSOPHY.md`, `ARCHITECTURE.md` y `MASTERPLAN.md` quedan **congelados**: no deben seguir ampliándose ni refinándose, salvo una decisión estratégica excepcional del Product Owner con el mismo rigor de análisis que dio origen a cada uno. `ROADMAP.md`, `PROJECT.md` y `CHANGELOG.md` siguen actualizándose con normalidad como registro de ejecución — su naturaleza es documentar lo que se construye fase por fase, no definir la identidad del producto, y por lo tanto no están sujetos a este congelamiento.
+
+La prioridad vuelve a ser el desarrollo del producto. A partir de esta fecha, **el siguiente flujo de trabajo es obligatorio para toda fase futura**, sin excepción, hasta que el Product Owner decida explícitamente lo contrario:
+
+1. Revisar `VISION_MAESTRA.md` y los documentos relacionados antes de proponer cualquier funcionalidad.
+2. Analizar críticamente si la nueva idea fortalece la filosofía del producto.
+3. Detectar posibles contradicciones antes de escribir código.
+4. Presentar al Product Owner el análisis técnico y de producto.
+5. Esperar siempre su aprobación explícita antes de implementar.
+6. Implementar únicamente el alcance aprobado — nada más.
+7. Verificar rigurosamente contra PostgreSQL real, RLS, Playwright, build y lint.
+8. Documentar con el mismo nivel de detalle mantenido hasta ahora.
+9. No avanzar automáticamente al siguiente bloque o fase — cada uno requiere su propia aprobación.
+
+**Criterio permanente.** Toda propuesta debe responder primero una única pregunta: *¿esta decisión fortalece la Visión Maestra de Ahorita?* Si la respuesta es no, debe señalarse explícitamente como tal — incluso si es técnicamente posible implementarla, incluso si ninguna regla técnica la prohíbe. Se prefiere descartar una funcionalidad antes que debilitar la identidad del producto.
+
+**Principio de evolución.** Ahorita no debe crecer por acumulación de funciones, sino por coherencia. Cada característica nueva debe sentirse como una consecuencia natural de la Visión Maestra, nunca como una idea aislada que se justifica solo porque es técnicamente viable o porque otra aplicación ya la tiene.
+
+Esta metodología rige, sin necesidad de repetirla, para cada fase pendiente del `MASTERPLAN.md` (Fase 5B en adelante) y para cualquier propuesta de producto futura.
+
+---
