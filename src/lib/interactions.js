@@ -222,6 +222,120 @@ export async function togglePromotionInteraction({ viewerProfileId, publicationI
   }
 }
 
+// Fase 5B, Bloque 1: me gusta/guardado sobre Eventos y Lugares — mismo
+// patrón que Publicación/Promoción (Bloque 2/3 de la Fase 4), cerrando el
+// "cambio de fuente de verdad" que quedó pendiente desde la Fase 1, Bloque 4
+// (que solo copió los datos históricos, sin migrar quién los lee/escribe).
+// `post_likes`/`saved_events`/`saved_places` dejan de ser la fuente activa
+// para estos dos tipos; Comunidad (status/question) sigue exactamente igual
+// sobre `post_likes`, sin ningún cambio.
+export async function listMyLikedEventIds(viewerProfileId) {
+  const myActorId = await getMyActorId(viewerProfileId);
+  const { data, error } = await supabase
+    .from("interactions")
+    .select("target_id")
+    .eq("actor_id", myActorId)
+    .eq("type", "me_gusta")
+    .eq("target_type", "event");
+  if (error) throw error;
+  return data.map((r) => r.target_id);
+}
+
+export async function toggleEventLike({ viewerProfileId, eventId, active }) {
+  const myActorId = await getMyActorId(viewerProfileId);
+  if (active) {
+    const { error } = await supabase
+      .from("interactions")
+      .delete()
+      .eq("actor_id", myActorId)
+      .eq("type", "me_gusta")
+      .eq("target_type", "event")
+      .eq("target_id", eventId);
+    if (error) throw error;
+  } else {
+    const { error } = await supabase
+      .from("interactions")
+      .insert({ actor_id: myActorId, type: "me_gusta", target_type: "event", target_id: eventId });
+    if (error) throw error;
+  }
+}
+
+export async function listMySavedEventIds(viewerProfileId) {
+  const myActorId = await getMyActorId(viewerProfileId);
+  const { data, error } = await supabase
+    .from("interactions")
+    .select("target_id")
+    .eq("actor_id", myActorId)
+    .eq("type", "guardado")
+    .eq("target_type", "event");
+  if (error) throw error;
+  return data.map((r) => r.target_id);
+}
+
+export async function toggleSavedEvent({ viewerProfileId, eventId, active }) {
+  const myActorId = await getMyActorId(viewerProfileId);
+  if (active) {
+    const { error } = await supabase
+      .from("interactions")
+      .delete()
+      .eq("actor_id", myActorId)
+      .eq("type", "guardado")
+      .eq("target_type", "event")
+      .eq("target_id", eventId);
+    if (error) throw error;
+  } else {
+    const { error } = await supabase
+      .from("interactions")
+      .insert({ actor_id: myActorId, type: "guardado", target_type: "event", target_id: eventId });
+    if (error) throw error;
+  }
+}
+
+export async function listMySavedPlaceIds(viewerProfileId) {
+  const myActorId = await getMyActorId(viewerProfileId);
+  const { data, error } = await supabase
+    .from("interactions")
+    .select("target_id")
+    .eq("actor_id", myActorId)
+    .eq("type", "guardado")
+    .eq("target_type", "place")
+    .order("created_at", { ascending: false });
+  if (error) throw error;
+  return data.map((r) => r.target_id);
+}
+
+export async function toggleSavedPlace({ viewerProfileId, placeId, active }) {
+  const myActorId = await getMyActorId(viewerProfileId);
+  if (active) {
+    const { error } = await supabase
+      .from("interactions")
+      .delete()
+      .eq("actor_id", myActorId)
+      .eq("type", "guardado")
+      .eq("target_type", "place")
+      .eq("target_id", placeId);
+    if (error) throw error;
+  } else {
+    const { error } = await supabase
+      .from("interactions")
+      .insert({ actor_id: myActorId, type: "guardado", target_type: "place", target_id: placeId });
+    if (error) throw error;
+  }
+}
+
+// Equivalente a `listSavedPlaces` (lib/savedPlaces.js, ahora legacy), pero
+// sobre `interactions` — sin relación formal de clave foránea con `places`
+// (`target_id` es polimórfico), así que se resuelve en dos pasos, mismo
+// patrón ya usado por `listFollowedProfileIds` (Entrega 6, Fase 3).
+export async function listMySavedPlaces(viewerProfileId) {
+  const placeIds = await listMySavedPlaceIds(viewerProfileId);
+  if (placeIds.length === 0) return [];
+  const { data, error } = await supabase.from("places").select("*").in("id", placeIds);
+  if (error) throw error;
+  const order = new Map(placeIds.map((id, i) => [id, i]));
+  return data.sort((a, b) => order.get(a.id) - order.get(b.id));
+}
+
 // Fase 4, Bloque 4: "compartir" como señal medible, para Evento, Publicación,
 // Promoción y Actor (persona/negocio) por igual — un único punto de escritura
 // reutilizado por `useShareContent` (ver src/hooks/useShareContent.js) en vez

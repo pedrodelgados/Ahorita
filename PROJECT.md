@@ -1654,3 +1654,60 @@ La prioridad vuelve a ser el desarrollo del producto. A partir de esta fecha, **
 Esta metodología rige, sin necesidad de repetirla, para cada fase pendiente del `MASTERPLAN.md` (Fase 5B en adelante) y para cualquier propuesta de producto futura.
 
 ---
+
+## Fase 5B, Bloque 1 — Cambio de fuente de verdad: Eventos y Lugares migran a `interactions` (implementado)
+
+Primer bloque de la Fase 5B, siguiendo la metodología permanente recién institucionalizada: análisis previo presentado y aprobado, decisiones de producto explícitas, y solo entonces implementación. Cierra la deuda dejada pendiente desde el cierre del Bloque 4 de la Fase 1, que solo copió los datos de `post_likes`/`saved_events`/`saved_places` hacia `interactions` sin migrar quién los lee y escribe.
+
+### Verificación previa contra el código real, no solo contra la documentación narrativa
+
+Antes de diseñar la migración se inspeccionó directamente el esquema y `src/`, revelando tres hechos que no estaban documentados con esa precisión en ningún lugar: (1) `post_likes.target_type` también sirve a Comunidad (`status`/`question`), compartiendo tabla, vista de conteo y módulo de datos con Eventos/Lugares; (2) `events.likes_count` se mantenía con un trigger anclado a `post_likes`, no a `interactions`; (3) `places` no tiene contador propio — solo una vista agregada en vivo sobre `post_likes`, sin ningún consumidor real de "me gusta" en la interfaz hoy (capacidad de esquema sin uso). Este hallazgo cambió el diseño: la migración debía ser bidireccional (insertar lo que falta, eliminar lo que el usuario ya deshizo en la tabla legacy sin que `interactions` se enterara), no un backfill aditivo simple como el de la Fase 1.
+
+### `supabase/migrations/0032_fase5b_bloque1_fuente_de_verdad_interacciones.sql` (nuevo)
+
+- Reconciliación bidireccional (insertar + eliminar huérfanos, con comparación exacta) de `post_likes` (event/place) y `saved_events`/`saved_places` contra `interactions`, resolviendo `actor_id` vía `actors.profile_id`, mismo patrón de resolución que la Fase 1, Bloque 4.
+- `public.sync_event_likes_count_from_interactions()` (trigger nuevo sobre `interactions`) reemplaza a `sync_event_likes_count()` (trigger sobre `post_likes`, deshabilitado con `alter table ... disable trigger`, no eliminado, para permitir reversión sin pérdida de historial).
+- `post_likes.target_type` pierde `'event'/'place'` de su `check` (agregado `not valid` para no invalidar retroactivamente las filas históricas de esos dos tipos, que se conservan intactas) — decisión de arquitectura explícita del Product Owner: ninguna funcionalidad nueva puede volver a escribir ahí para Eventos o Lugares.
+- `post_likes` queda documentada (`comment on table`) como parcialmente legacy — activa para Comunidad, retiro definitivo condicionado a que Comunidad migre a `interactions` en su propia migración futura. `saved_events`/`saved_places` quedan completamente legacy, mismo tratamiento que `follows` desde la Entrega 6 de la Fase 3.
+
+### Hallazgo encontrado y corregido antes del commit
+
+El trigger nuevo, en su primera versión, no llevaba `security definer`, igual que el trigger original que reemplaza. Verificado con un actor autenticado real sin privilegios de administrador (no con superusuario): el `update` interno sobre `events.likes_count` quedaba bloqueado por la política RLS "Admins editan eventos", y el contador nunca se movía — un defecto silencioso heredado, presente también en el trigger original desde su creación, que nunca se había manifestado porque toda verificación previa del proyecto se hizo con rol de servicio o superusuario. Corregido agregando `security definer set search_path = public` a la función nueva, mismo patrón ya usado en `handle_new_user`/`on_profile_created_actor`. Verificado de nuevo con el mismo actor no administrador: el conteo ahora sí sube y baja correctamente.
+
+### Verificación realizada
+
+Postgres 16 real, las 32 migraciones (`0001`-`0032`, saltando `0002`/`0022` por Storage) aplicadas en orden contra una base limpia, dos veces (una para depurar el hallazgo de `security definer`, otra final desde cero con la versión ya corregida). Escenario de prueba con 4 actores (ana/beto/caro/admin), 2 eventos y 2 lugares de prueba, deliberadamente desincronizado para probar ambas direcciones de la reconciliación:
+
+- **Inserción de lo que faltaba**: una fila de "me gusta"/"guardado" presente solo en la tabla legacy (nunca copiada a `interactions`) se insertó correctamente.
+- **Eliminación de huérfanos**: una fila de "me gusta"/"guardado" presente solo en `interactions` sin respaldo en la tabla legacy (simulando que el usuario deshizo la acción mientras el frontend todavía escribía solo en la tabla vieja) se eliminó correctamente — el escenario que la migración original de la Fase 1 nunca necesitó resolver, porque partía de una tabla vacía.
+- **Filas ya coincidentes en ambos lados**: no se duplicaron ni se tocaron.
+- **`events.likes_count`**: verificado con un actor autenticado real (no superusuario) insertando y eliminando su propio "me gusta" vía `interactions` — el contador sube y baja exactamente igual que antes.
+- **Privacidad de "guardado" preservada**: un actor no ve el guardado ajeno (0 filas visibles), sí ve el propio (1 fila) — misma política heredada de la Fase 1, sin cambios.
+- **"Me gusta" sigue siendo público**: un actor ve el "me gusta" de otro sin restricción.
+- **Comunidad completamente intacta**: `post_likes` sigue aceptando filas nuevas de `'question'`/`'status'` sin ningún cambio; un intento de insertar `'event'`/`'place'` en `post_likes` fue rechazado por el nuevo `check constraint`, confirmando la decisión 4 del Product Owner a nivel de base de datos, no solo de disciplina de código.
+- **Deduplicación**: un segundo intento de la misma interacción fue rechazado por el `unique` ya existente desde la Fase 1.
+- **Trigger viejo deshabilitado**: confirmado vía `pg_trigger.tgenabled = 'D'`.
+- **Reversión ejecutada de verdad**: restaurar el `check constraint` original, reactivar el trigger viejo y eliminar el trigger/función nuevos devolvió el comportamiento exacto previo al bloque — verificado insertando de nuevo directamente en `post_likes` y confirmando que `events.likes_count` volvía a incrementarse por esa vía. Las tres tablas legacy (`post_likes`, `saved_events`, `saved_places`) nunca perdieron una sola fila durante todo el proceso.
+
+### Capa de datos y frontend
+
+`lib/interactions.js` gana `listMyLikedEventIds`/`toggleEventLike`, `listMySavedEventIds`/`toggleSavedEvent`, `listMySavedPlaceIds`/`toggleSavedPlace`/`listMySavedPlaces` (esta última resuelta en dos pasos, mismo patrón que `listFollowedProfileIds` de la Entrega 6, ya que `interactions.target_id` es polimórfico y no tiene relación formal de clave foránea con `places`). Migrados a la nueva fuente: `FeedPage.jsx` (me gusta de Eventos), `SavedEventsContext.jsx`, `SavedPlacesContext.jsx`, `SettingsPage.jsx` (lista de lugares guardados). `postLikes.js`/`savedEvents.js`/`savedPlaces.js` permanecen en el repositorio con una nota de cabecera que documenta su estado legacy, sin que ningún archivo activo vuelva a importarlos para Eventos/Lugares.
+
+### Limitación de entorno (misma que todas las fases anteriores)
+
+Sin proyecto Supabase real desplegado en este entorno, la verificación de Playwright se limitó a confirmar que la aplicación carga sin errores de ejecución (`pageerror`) en Inicio y en Ajustes tras el refactor — no fue posible ejercitar el flujo real de dar "me gusta"/guardar contra una sesión autenticada real, misma limitación ya documentada en cada fase anterior desde la Fase 1.
+
+### Verificado
+
+Build y lint limpios (las advertencias de lint presentes son preexistentes, no introducidas por este bloque — mismo patrón ya señalado en `FollowContext.jsx`/`AuthContext.jsx`).
+
+### Deuda técnica detectada
+
+- **Prueba end-to-end contra un proyecto Supabase real desplegado** — heredada desde la Fase 1, sin resolver por el mismo motivo de siempre.
+- **`post_likes` permanece parcialmente legacy**, condicionada a que Comunidad migre a `interactions` en una fase futura — no forma parte del alcance de la Fase 5B.
+
+### Qué sigue
+
+Bloque 2 (reacciones "Quiero ir"/"Ya fui" exclusivas de Eventos, coexistentes sin exclusión mutua) y Bloque 3 (comentarios generalizados con vista de detalle propia para Publicación), ambos pendientes de su propia aprobación explícita antes de implementarse — no se avanza automáticamente.
+
+---

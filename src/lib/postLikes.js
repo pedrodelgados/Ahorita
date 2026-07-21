@@ -1,3 +1,8 @@
+// Fase 5B, Bloque 1: parcialmente legacy. `listLikeCounts`/`listMyLikedIds`/
+// `likeTarget`/`unlikeTarget` para 'event'/'place' ya no las usa el frontend
+// (ver lib/interactions.js) — el check constraint de post_likes.target_type
+// ya no admite filas nuevas de esos dos tipos. Este módulo sigue vivo y
+// vigente para 'status'/'question' (Comunidad), sin ningún cambio.
 import { supabase } from "./supabaseClient";
 
 export async function listLikeCounts(targetType, targetIds) {

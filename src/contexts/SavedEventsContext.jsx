@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useState } from "react";
 import { useAuth } from "./AuthContext";
-import { listSavedEventIds, saveEvent, unsaveEvent } from "../lib/savedEvents";
+import { listMySavedEventIds, toggleSavedEvent } from "../lib/interactions";
 
 const SavedEventsContext = createContext(null);
 
@@ -13,7 +13,7 @@ export function SavedEventsProvider({ children }) {
       setSavedIds(new Set());
       return;
     }
-    listSavedEventIds(user.id)
+    listMySavedEventIds(user.id)
       .then((ids) => setSavedIds(new Set(ids)))
       .catch(() => {});
   }, [user]);
@@ -22,17 +22,13 @@ export function SavedEventsProvider({ children }) {
     async (eventId) => {
       if (!user) return;
       const isSaved = savedIds.has(eventId);
-      if (isSaved) {
-        await unsaveEvent(user.id, eventId);
-        setSavedIds((prev) => {
-          const next = new Set(prev);
-          next.delete(eventId);
-          return next;
-        });
-      } else {
-        await saveEvent(user.id, eventId);
-        setSavedIds((prev) => new Set(prev).add(eventId));
-      }
+      await toggleSavedEvent({ viewerProfileId: user.id, eventId, active: isSaved });
+      setSavedIds((prev) => {
+        const next = new Set(prev);
+        if (isSaved) next.delete(eventId);
+        else next.add(eventId);
+        return next;
+      });
     },
     [user, savedIds]
   );

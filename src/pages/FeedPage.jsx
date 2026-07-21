@@ -4,7 +4,7 @@ import { Bell, CalendarX2, Search } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
 import { getFeed } from "../lib/feed";
 import { getProfile } from "../lib/profile";
-import { listMyLikedIds, likeTarget, unlikeTarget } from "../lib/postLikes";
+import { listMyLikedEventIds, toggleEventLike } from "../lib/interactions";
 import { withViewTransition } from "../lib/viewTransition";
 import { COLORS, textStyle, TYPE } from "../styles/theme";
 import AppHeader from "../components/layout/AppHeader";
@@ -58,7 +58,7 @@ export default function FeedPage() {
     }
 
     if (isAuthenticated) {
-      const likedIds = await listMyLikedIds(user.id, "event");
+      const likedIds = await listMyLikedEventIds(user.id);
       const likedSet = new Set(likedIds);
       for (const item of feedItems) {
         if (likedSet.has(item.targetId)) state[item.id].liked = true;
@@ -76,8 +76,7 @@ export default function FeedPage() {
       [item.id]: { liked: nextLiked, count: Math.max(0, current.count + (nextLiked ? 1 : -1)) },
     }));
     try {
-      if (nextLiked) await likeTarget(user.id, item.targetType, item.targetId);
-      else await unlikeTarget(user.id, item.targetType, item.targetId);
+      await toggleEventLike({ viewerProfileId: user.id, eventId: item.targetId, active: current.liked });
     } catch {
       setLikeState((prev) => ({ ...prev, [item.id]: current }));
     }

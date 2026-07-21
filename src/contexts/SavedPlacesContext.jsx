@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useState } from "react";
 import { useAuth } from "./AuthContext";
-import { listSavedPlaceIds, savePlace, unsavePlace } from "../lib/savedPlaces";
+import { listMySavedPlaceIds, toggleSavedPlace } from "../lib/interactions";
 
 const SavedPlacesContext = createContext(null);
 
@@ -13,7 +13,7 @@ export function SavedPlacesProvider({ children }) {
       setSavedIds(new Set());
       return;
     }
-    listSavedPlaceIds(user.id)
+    listMySavedPlaceIds(user.id)
       .then((ids) => setSavedIds(new Set(ids)))
       .catch(() => {});
   }, [user]);
@@ -22,17 +22,13 @@ export function SavedPlacesProvider({ children }) {
     async (placeId) => {
       if (!user) return;
       const isSaved = savedIds.has(placeId);
-      if (isSaved) {
-        await unsavePlace(user.id, placeId);
-        setSavedIds((prev) => {
-          const next = new Set(prev);
-          next.delete(placeId);
-          return next;
-        });
-      } else {
-        await savePlace(user.id, placeId);
-        setSavedIds((prev) => new Set(prev).add(placeId));
-      }
+      await toggleSavedPlace({ viewerProfileId: user.id, placeId, active: isSaved });
+      setSavedIds((prev) => {
+        const next = new Set(prev);
+        if (isSaved) next.delete(placeId);
+        else next.add(placeId);
+        return next;
+      });
     },
     [user, savedIds]
   );

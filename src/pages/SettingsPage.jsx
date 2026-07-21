@@ -3,7 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { ArrowLeft, ShieldCheck } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
 import { getProfile, updateProfile } from "../lib/profile";
-import { listSavedPlaces } from "../lib/savedPlaces";
+import { listMySavedPlaces } from "../lib/interactions";
 import { CHANNELS } from "../styles/theme";
 import Button from "../components/ui/Button";
 import Card from "../components/ui/Card";
@@ -32,7 +32,7 @@ export default function SettingsPage() {
       setProfile(p);
       setUsername(p.username ?? "");
     });
-    listSavedPlaces(user.id).then(setSavedPlaces).catch(() => {});
+    listMySavedPlaces(user.id).then(setSavedPlaces).catch(() => {});
   }, [user.id]);
 
   async function saveUsername() {

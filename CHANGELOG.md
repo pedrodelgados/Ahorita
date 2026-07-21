@@ -2,6 +2,32 @@
 
 Registro de cambios notables de Ahorita (Cuenca Viva). Formato libre, en español, más cercano a un registro de fases de producto que a versiones semánticas — ver `PROJECT.md` para el plan completo y el estado real de la implementación.
 
+## 2026-07-21 — Fase 5B, Bloque 1: Eventos y Lugares migran a `interactions`
+
+Primer bloque de la Fase 5B: cierra la deuda de "cambio de fuente de verdad" dejada pendiente desde el cierre del Bloque 4 de la Fase 1. "Me gusta" y "guardado" de Eventos y Lugares dejan de vivir en `post_likes`/`saved_events`/`saved_places` y pasan a `interactions`, con reconciliación bidireccional (no un backfill simple).
+
+### Agregado
+
+- `supabase/migrations/0032_fase5b_bloque1_fuente_de_verdad_interacciones.sql`: reconciliación bidireccional (inserta lo que falta, elimina huérfanos) de `post_likes`(event/place) y `saved_events`/`saved_places` contra `interactions`; `sync_event_likes_count_from_interactions()` (nuevo trigger sobre `interactions`, `security definer`) reemplaza a `sync_event_likes_count()` (deshabilitado, no eliminado); `post_likes.target_type` ya no admite filas nuevas de `'event'`/`'place'` (`check` `not valid`, sin afectar filas históricas).
+- `lib/interactions.js`: `listMyLikedEventIds`/`toggleEventLike`, `listMySavedEventIds`/`toggleSavedEvent`, `listMySavedPlaceIds`/`toggleSavedPlace`/`listMySavedPlaces`.
+
+### Cambiado
+
+- `FeedPage.jsx`, `SavedEventsContext.jsx`, `SavedPlacesContext.jsx`, `SettingsPage.jsx` migrados a la nueva capa de datos.
+- `postLikes.js`/`savedEvents.js`/`savedPlaces.js` marcados como legacy (parcial el primero, completo los otros dos) con nota de cabecera; sin cambio de comportamiento exportado.
+
+### Corregido
+
+- **Hallazgo encontrado y corregido antes del commit**: el trigger nuevo, sin `security definer` en su primera versión, no lograba actualizar `events.likes_count` para un actor autenticado sin privilegios de administrador — la política RLS de `events` bloqueaba el `update` interno. Defecto heredado del trigger original (nunca tuvo `security definer` tampoco), nunca antes detectado porque toda verificación previa se hizo con rol de servicio o superusuario. Corregido agregando `security definer set search_path = public`.
+
+### Verificado
+
+- Postgres 16 real, las 32 migraciones aplicadas en orden contra una base limpia (dos veces). Reconciliación bidireccional probada con inserción de filas faltantes y eliminación de huérfanos simultáneamente. `events.likes_count` verificado con un actor real no administrador. Privacidad de "guardado" y publicidad de "me gusta" sin cambios. `post_likes` bloquea nuevas filas de `event`/`place`, sigue aceptando `status`/`question` sin ningún cambio. Deduplicación por `unique` confirmada. Trigger viejo confirmado deshabilitado (`tgenabled='D'`). Reversión completa ejecutada de verdad, sin pérdida de datos en ninguna tabla legacy. Build y lint limpios.
+
+### Limitación de entorno
+
+Sin proyecto Supabase real desplegado — Playwright se limitó a confirmar ausencia de errores de ejecución tras el refactor, misma limitación documentada desde la Fase 1.
+
 ## 2026-07-21 — Cierre de la etapa conceptual y metodología permanente de trabajo
 
 El Product Owner declaró oficialmente cerrada la etapa de construcción conceptual del proyecto y aprobó la adopción de `VISION_MAESTRA.md` como definitiva. `VISION_MAESTRA.md`, `PRODUCT_MANIFESTO.md`, `PRODUCT_STRATEGY.md`, `AI_PHILOSOPHY.md`, `ARCHITECTURE.md` y `MASTERPLAN.md` quedan congelados salvo decisión estratégica excepcional; `ROADMAP.md`, `PROJECT.md` y `CHANGELOG.md` continúan como registro de ejecución. La prioridad vuelve al desarrollo del producto.
