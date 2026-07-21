@@ -1,6 +1,6 @@
 # Ahorita (Cuenca Viva) — Prompt maestro
 
-> **Ver `ARCHITECTURE.md` primero.** Ese documento es la visión y arquitectura fundacional del ecosistema completo (sin código) y es la autoridad de producto para las fases futuras. Para todo lo relacionado con la Guía IA específicamente, `AI_PHILOSOPHY.md` es la autoridad absoluta — define su filosofía, personalidad y comportamiento, y ninguna implementación futura de IA puede contradecirlo. Este archivo (`PROJECT.md`) es el registro fase por fase de lo ya implementado — se actualiza para reflejar cada fase construida, pero cuando entra en conflicto con `ARCHITECTURE.md` o `AI_PHILOSOPHY.md`, este archivo es el que debe ajustarse.
+> **Ver `VISION_MAESTRA.md` primero.** Ese documento es, desde el 2026-07-21, la máxima autoridad conceptual del proyecto — identidad, misión, filosofía de producto y crecimiento. Ver luego `ARCHITECTURE.md`, la visión y arquitectura fundacional del ecosistema completo (sin código), coherente con la Visión Maestra y autoridad de producto técnica para las fases futuras. Para todo lo relacionado con la Guía IA específicamente, `AI_PHILOSOPHY.md` es la autoridad absoluta — define su filosofía, personalidad y comportamiento, y ninguna implementación futura de IA puede contradecirlo. Este archivo (`PROJECT.md`) es el registro fase por fase de lo ya implementado — se actualiza para reflejar cada fase construida, pero cuando entra en conflicto con `VISION_MAESTRA.md`, `ARCHITECTURE.md` o `AI_PHILOSOPHY.md`, este archivo es el que debe ajustarse.
 
 Quiero construir **"Ahorita"** (nombre de trabajo, también evaluamos "Cuenca Viva") — una red social hiperlocal para descubrir Cuenca, Ecuador en tiempo real. No es una guía turística: es una red social donde todo gira alrededor de lugares — preguntas, respuestas, reportes en vivo y contenido curado — con una IA que responde usando datos reales de la app, no genéricos.
 
@@ -1608,5 +1608,25 @@ Ninguna de estas señales se usa hoy para ranking, recomendación ni personaliza
 - `f116571` — Fase 4, Bloque 3: Promociones alimentan el Feed.
 - `3db46a8` — Fase 4, Bloque 4: Compartidos fortalecen el Feed.
 - `8cdb864` — Corrección: fila estática de acciones en Publicación/Promoción.
+
+---
+
+## VISIÓN MAESTRA ADOPTADA — Autoridad conceptual máxima del proyecto (2026-07-21)
+
+Tras el cierre formal de la Fase 4, y antes de autorizar cualquier fase nueva del `MASTERPLAN.md`, el Product Owner solicitó una pausa estratégica completa del proyecto: ningún código, ninguna migración, ninguna funcionalidad nueva — únicamente un trabajo conceptual pensado desde los roles de fundador, Product Owner, diseñador de producto, experto en UX, estratega de negocio, arquitecto de producto e investigador de inteligencia artificial. El resultado de ese proceso es `VISION_MAESTRA.md`, adoptado en esta fecha como la **máxima autoridad conceptual de todo el proyecto**.
+
+**Cuándo.** 2026-07-21, tras tres iteraciones explícitas: una versión inicial de análisis profundo sobre los trece temas solicitados (esencia, misión, visión a cinco años, filosofía, diferenciación, economía local, inteligencia artificial, cultura, comunidad, experiencia de usuario, descubrimiento, el usuario, y una revisión crítica), una segunda iteración que profundizó específicamente en el ciudadano como protagonista, la identidad editorial, la identidad completa de la Guía IA, la ciudad como organismo vivo, y una nueva filosofía de utilidad sobre atención, y una tercera iteración de revisión editorial (coherencia, fluidez, estructura, precisión conceptual) que resolvió además dos preguntas de diseño documental: mantener "ciudad" en vez de "territorio" (para no responder en silencio, con un cambio de vocabulario, la pregunta de expansión geográfica que el propio documento deja abierta), e incorporar un principio explícito de responsabilidad ética (accesibilidad, equidad de representación del criterio local, y el riesgo de que una recomendación exitosa dañe lo que recomienda).
+
+**Por qué se creó.** Después de cuatro fases de construcción real, el proyecto había adquirido una identidad propia que ningún documento existente capturaba de forma unificada — cada uno definía una porción (el corazón, la inteligencia, el plan de ejecución), pero ninguno respondía, de una sola vez, qué es Ahorita en su esencia, para quién existe realmente, y qué contradicciones internas del propio proyecto merecían resolverse antes de seguir construyendo.
+
+**Propósito y alcance.** Ser el punto de referencia único al que cualquier decisión futura de arquitectura, producto, experiencia de usuario, inteligencia artificial, monetización o crecimiento debe rendir cuentas. Es estrictamente conceptual y estratégico — no contiene arquitectura técnica, especificaciones de implementación ni fases de desarrollo.
+
+**Cómo debe utilizarse en el futuro.** Antes de aprobar cualquier fase nueva del `MASTERPLAN.md`, verificar su coherencia explícita con `VISION_MAESTRA.md`. El producto se adapta a esta visión, nunca al revés — ninguna funcionalidad se justifica por precedente de otras aplicaciones ni por conveniencia puntual de una fase.
+
+**Congelamiento.** Declarado explícitamente estable por el Product Owner. No se modifica por ideas nuevas aisladas ni por presión de una fase futura; cualquier cambio requiere una decisión estratégica explícita, con el mismo rigor de análisis que dio origen al documento.
+
+**Jerarquía documental resultante**, en orden de autoridad: `VISION_MAESTRA.md` (máxima autoridad conceptual) → `PRODUCT_MANIFESTO.md` (principios de producto, subordinado) → `PRODUCT_STRATEGY.md` (materialización 2026-2028, subordinado al Manifesto) → `AI_PHILOSOPHY.md` y `ARCHITECTURE.md` (autoridades técnicas y de comportamiento de IA, ambas subordinadas a la Visión Maestra) → `MASTERPLAN.md` y los contratos de cada fase (planificación) → `ROADMAP.md`, `PROJECT.md` y `CHANGELOG.md` (documentación de lo ejecutado). Referencias actualizadas en `PRODUCT_MANIFESTO.md`, `PRODUCT_STRATEGY.md`, `AI_PHILOSOPHY.md`, `ARCHITECTURE.md`, `MASTERPLAN.md`, `ROADMAP.md` y `README.md` en esta misma formalización.
+
+**Confirmación explícita.** Ninguna funcionalidad, componente, migración o comportamiento de la aplicación fue modificado durante este proceso — el trabajo fue exclusivamente documental y conceptual, tal como se autorizó.
 
 ---

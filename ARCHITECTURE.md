@@ -1,8 +1,8 @@
 # Ahorita — Arquitectura del Ecosistema
 
-**Documento fundacional. Nivel: visión y arquitectura. No contiene código, componentes ni implementación.**
+**Documento fundacional, subordinado a `VISION_MAESTRA.md`** (máxima autoridad conceptual del proyecto, adoptada el 2026-07-21). **Nivel: visión y arquitectura técnica. No contiene código, componentes ni implementación.**
 
-Este documento es la constitución técnica y de producto de Ahorita para los próximos años. Es distinto de `PROJECT.md` (el registro fase por fase de lo ya implementado), `ROADMAP.md` (qué fase sigue) y `CHANGELOG.md` (qué cambió en cada commit). Aquí no se responde "qué se construyó" sino "qué es Ahorita, por qué está diseñado así, y sobre qué cimientos se construirá todo lo demás". Cuando este documento y `PROJECT.md` entren en conflicto en el futuro, este documento es la autoridad de visión; `PROJECT.md` debe ajustarse a él, no al revés.
+Este documento es la constitución técnica de Ahorita para los próximos años, coherente con la identidad y los principios definidos en `VISION_MAESTRA.md`. Es distinto de `PROJECT.md` (el registro fase por fase de lo ya implementado), `ROADMAP.md` (qué fase sigue) y `CHANGELOG.md` (qué cambió en cada commit). Aquí no se responde "qué se construyó" sino "qué es Ahorita técnicamente, por qué está diseñado así, y sobre qué cimientos se construirá todo lo demás". Cuando este documento y `PROJECT.md` entren en conflicto en el futuro, este documento es la autoridad de visión técnica; `PROJECT.md` debe ajustarse a él, no al revés.
 
 Este documento fue encargado explícitamente para pensar como se pensaría un ecosistema urbano diseñado para durar años, no una app de eventos con funciones agregadas sobre la marcha. Cada decisión aquí explica su "por qué", y en varios puntos se recomienda replantear piezas ya construidas cuando el análisis a largo plazo lo justifica — señalado explícitamente donde ocurre.
 

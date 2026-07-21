@@ -2,6 +2,28 @@
 
 Registro de cambios notables de Ahorita (Cuenca Viva). Formato libre, en español, más cercano a un registro de fases de producto que a versiones semánticas — ver `PROJECT.md` para el plan completo y el estado real de la implementación.
 
+## 2026-07-21 — Adopción formal de `VISION_MAESTRA.md` como autoridad conceptual máxima del proyecto
+
+Pausa estratégica solicitada explícitamente por el Product Owner tras el cierre de la Fase 4, antes de autorizar cualquier fase nueva: ningún código, ninguna migración, ninguna funcionalidad — trabajo puramente conceptual sobre la identidad de Ahorita, desarrollado en tres iteraciones (análisis profundo de los trece temas fundacionales, segunda iteración centrada en el ciudadano/identidad editorial/IA/ciudad viva/utilidad sobre atención, y revisión editorial final) hasta quedar aprobado y congelado.
+
+### Agregado
+
+- `VISION_MAESTRA.md` — documento nuevo, máxima autoridad conceptual de todo el proyecto. Trece secciones: esencia, misión, visión a cinco años, filosofía del producto (incluye el principio de responsabilidad ética: accesibilidad, equidad de representación del criterio local, riesgo de que una recomendación exitosa dañe lo que recomienda), diferenciación, economía local, inteligencia artificial, identidad editorial, comunidad, experiencia de usuario, descubrimiento, el ciudadano, y una sección final de tensiones estratégicas sin resolver, nombradas con la misma honestidad que el resto del documento.
+- `PROJECT.md`: nueva sección "VISIÓN MAESTRA ADOPTADA" — registro formal de cuándo, por qué, propósito, alcance, cómo debe usarse y la jerarquía documental resultante.
+
+### Cambiado
+
+- `PRODUCT_MANIFESTO.md`, `PRODUCT_STRATEGY.md`, `AI_PHILOSOPHY.md`, `ARCHITECTURE.md`, `MASTERPLAN.md`, `ROADMAP.md`, `README.md`, `PROJECT.md`: referencias de autoridad actualizadas para reflejar que `VISION_MAESTRA.md` es ahora la máxima autoridad conceptual, y que el resto de los documentos quedan subordinados a ella (directamente o a través de `PRODUCT_MANIFESTO.md`).
+
+### Verificado
+
+- Ninguna funcionalidad, componente, migración ni comportamiento de la aplicación fue tocado — cambio exclusivamente documental.
+- Sin contradicciones ni referencias obsoletas entre los ocho documentos de autoridad tras la actualización cruzada.
+
+### Nota
+
+- Documento declarado explícitamente congelado por el Product Owner: no se modifica por ideas nuevas aisladas ni por conveniencia de una fase futura — cualquier cambio requiere una nueva decisión estratégica explícita.
+
 ## 2026-07-19 — Cierre formal de la Fase 4: Contenido social ampliado, el Feed como centro
 
 Cierre formal solicitado tras completar los cuatro bloques (Feed como contrato central, Publicaciones, Promociones, Compartidos) y la corrección del último hallazgo pendiente (riel de acciones recortado). Los cuatro bloques del alcance aprobado en `FASE4_CONTRATO_ARQUITECTONICO.md` quedaron implementados, verificados y aprobados por separado; el principio rector de la fase (nunca migrar `events` antes de validar el nuevo núcleo) se sostuvo sin excepciones.

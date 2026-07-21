@@ -1,10 +1,10 @@
 # La Guía IA — Filosofía y Comportamiento del Producto
 
-**Documento fundacional, independiente de `MASTERPLAN.md`. Autoridad absoluta sobre toda decisión relacionada con la inteligencia artificial de Ahorita.**
+**Documento fundacional, subordinado a `VISION_MAESTRA.md`** (máxima autoridad conceptual del proyecto, adoptada el 2026-07-21) **e independiente de `MASTERPLAN.md`. Autoridad absoluta sobre toda decisión relacionada con la inteligencia artificial de Ahorita**, siempre que no contradiga la Visión Maestra.
 
 Este documento no habla de modelos, APIs, proveedores de IA, ni de cómo se construye técnicamente nada de esto — eso pertenece a una fase de implementación futura, y esa fase deberá obedecer lo que aquí se define, nunca al revés. Aquí se responde una sola pregunta de fondo: **¿cómo debe comportarse y pensar la Guía IA para que se sienta como el amigo que vive en Cuenca hace años y siempre sabe qué recomendar, y no como un chatbot, un buscador o una lista de resultados?**
 
-Cuando cualquier decisión futura de implementación entre en conflicto con este documento, este documento gana. Es, junto con `ARCHITECTURE.md`, uno de los dos textos que definen qué es Ahorita en su núcleo — con una diferencia: `ARCHITECTURE.md` describe el ecosistema completo, este describe específicamente la inteligencia que lo recorre todo.
+Cuando cualquier decisión futura de implementación entre en conflicto con este documento, este documento gana. Es, junto con `ARCHITECTURE.md`, uno de los dos textos que traducen la Visión Maestra al ecosistema completo y a la inteligencia que lo recorre — `ARCHITECTURE.md` describe el ecosistema completo, este describe específicamente esa inteligencia.
 
 ---
 
@@ -297,4 +297,4 @@ Ese es el nivel de ambición de este documento, y la vara contra la que debe med
 
 ---
 
-*Fin del documento. Es la autoridad oficial sobre el comportamiento y la filosofía de la Guía IA para toda implementación futura. No contiene ni debe contener decisiones de modelo, proveedor, arquitectura técnica ni código — esas decisiones, cuando se tomen, deberán rendir cuentas a lo que aquí se define, nunca al revés.*
+*Fin del documento. Subordinado a `VISION_MAESTRA.md`; es la autoridad oficial sobre el comportamiento y la filosofía de la Guía IA para toda implementación futura. No contiene ni debe contener decisiones de modelo, proveedor, arquitectura técnica ni código — esas decisiones, cuando se tomen, deberán rendir cuentas a lo que aquí se define, nunca al revés.*

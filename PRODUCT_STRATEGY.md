@@ -1,6 +1,6 @@
 # AHORITA — PRODUCT STRATEGY 2026–2028
 
-**Subordinado a `PRODUCT_MANIFESTO.md`**, del cual hereda identidad, corazón y principios. Responde "cómo se materializa esa identidad en los próximos dos a tres años". Aprobado el 2026-07-18.
+**Subordinado a `VISION_MAESTRA.md`** (máxima autoridad conceptual del proyecto, adoptada el 2026-07-21) **y a `PRODUCT_MANIFESTO.md`**, del cual hereda identidad, corazón y principios. Responde "cómo se materializa esa identidad en los próximos dos a tres años". Aprobado el 2026-07-18.
 
 ## 1. Visión definitiva
 
@@ -54,4 +54,4 @@ El orden técnico de dependencias del `MASTERPLAN.md` no cambia, pero el criteri
 
 ---
 
-*Fin del documento. Autoridad subordinada al `PRODUCT_MANIFESTO.md`; autoridad superior sobre cualquier documento de diseño técnico de fase.*
+*Fin del documento. Autoridad subordinada a `VISION_MAESTRA.md` y a `PRODUCT_MANIFESTO.md`; autoridad superior sobre cualquier documento de diseño técnico de fase.*
