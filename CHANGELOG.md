@@ -2,6 +2,41 @@
 
 Registro de cambios notables de Ahorita (Cuenca Viva). Formato libre, en español, más cercano a un registro de fases de producto que a versiones semánticas — ver `PROJECT.md` para el plan completo y el estado real de la implementación.
 
+## 2026-07-22 — Fase 5B, Bloque 3: comentarios generalizados (Evento y Publicación)
+
+Generaliza los comentarios (antes exclusivos de Evento, sobre `event_comments`) a Evento y Publicación por igual, sobre `interactions`/`interaction_comments` — Promoción queda deliberadamente excluida. Introduce un actor de sistema "Cuenta eliminada" para anonimizar comentarios de cuentas eliminadas sin perder el contenido de terceros, y un índice único parcial que permite múltiples comentarios del mismo actor sobre el mismo contenido sin romper la unicidad de los otros seis tipos de interacción.
+
+### Agregado
+
+- `supabase/migrations/0034_fase5b_bloque3_comentarios_generalizados.sql`: catálogo de tipos ampliado con `'comentario'`; índice único parcial (`interactions_unique_toggle_idx`, excluye `type = 'comentario'`); actor de sistema "Cuenta eliminada"; tabla `interaction_comments` (soft-delete de dos estados, `check` a nivel de base de datos, `parent_comment_id` sin exponer todavía); `enforce_comment_rules()` (visibilidad, exclusividad de Evento/Publicación, exclusión explícita de Promoción, límite de tasa); `protect_comment_soft_delete()` (única transición de `UPDATE` permitida); backfill campo por campo de `event_comments`; `event_comments_sync_count` deshabilitado (tabla legacy, sin eliminar).
+- `lib/interactions.js`: `listComments`, `createComment`, `deleteComment`.
+- `lib/publications.js`: `getPublication`.
+- `src/features/social/CommentsSection.jsx` (nuevo): componente compartido de comentarios — lista, formulario con estado `busy` (previene doble envío), distinción "autor eliminado" vs. "comentario eliminado", eliminar solo el propio comentario.
+- `src/pages/PublicationDetailPage.jsx` (nueva) + ruta `/publicacion/:id`.
+- `supabase/functions/process-account-deletions/index.ts`: reasigna `interactions` `type = 'comentario'` del usuario a "Cuenta eliminada" antes de `auth.admin.deleteUser`; aborta la eliminación si la reasignación falla.
+
+### Cambiado
+
+- `EventSheet.jsx`: reemplaza su implementación en línea de comentarios (sobre `event_comments`) por `CommentsSection`.
+- `lib/events.js`: retira `listEventComments`/`createEventComment`, sin ningún llamador tras el cambio anterior.
+- `PublicationFeedCard.jsx`: "Ver más" navega a `/publicacion/:id` en vez de expandir la descripción en el sitio.
+
+### Corregido (encontrado durante la verificación contra Postgres real, antes de cualquier commit)
+
+- Constraint de dos estados con fuga de `NULL` (`char_length(btrim(body))` sobre `body is null` evaluaba `NULL`, no `false`) — envuelto en `coalesce`.
+- Correlación fragil del backfill por `(target_id, created_at)` — reescrita como bucle procedural con correspondencia 1:1 garantizada.
+- Doble conteo de `comments_count` (4→8) por crear el trigger de conteo antes del backfill — reordenado (mismo patrón ya usado en el Bloque 1).
+- Promoción comentable a nivel de base de datos (el chequeo de `target_type` no distinguía `subtype`) — añadido el rechazo explícito de `subtype = 'promocion'`.
+- Política de `UPDATE` sin `with check` explícito — ni el dueño ni un admin podían completar su propia eliminación porque RLS reutilizaba `using (deleted_at is null)` también como chequeo de la fila resultante — corregido con un `with check` propio.
+
+### Verificado
+
+Postgres 16 real (34 migraciones desde cero, múltiples veces), doble conteo, migración campo por campo, índice único parcial contra los seis tipos toggle y `comentario`, dos cuentas eliminadas reasignadas al mismo actor sobre Evento y Publicación sin conflicto, límite de tasa, soft-delete (transición válida, rechazo de doble-eliminación, rechazo de cambio estructural), RLS por rol (propio/ajeno/admin/Promoción/borrador/`target_type` inválido/invitado/actor de sistema), reversión completa en escenario limpio. Build y lint limpios.
+
+### Limitación de entorno
+
+Sin proyecto Supabase real desplegado — misma limitación ya documentada desde la Fase 1; afecta en particular la verificación end-to-end de `process-account-deletions`.
+
 ## 2026-07-21 — Fase 5B, Bloque 2: reacciones "Quiero ir" y "Ya fui"
 
 Construye por primera vez las dos reacciones reservadas en `interactions.type` desde la Fase 1. Exclusivas de Eventos, coexistentes sin exclusión mutua, visibles únicamente en `EventSheet` (nunca en las tarjetas del Feed).

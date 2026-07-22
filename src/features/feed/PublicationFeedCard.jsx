@@ -39,7 +39,6 @@ export default function PublicationFeedCard({ item }) {
   const [mine, setMine] = useState({ meGusta: false, guardado: false });
   const [busy, setBusy] = useState({ meGusta: false, guardado: false });
   const [error, setError] = useState(null);
-  const [expanded, setExpanded] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -172,16 +171,17 @@ export default function PublicationFeedCard({ item }) {
               color: "inherit",
               margin: "0 0 12px",
               opacity: 0.95,
-              ...(expanded
-                ? {}
-                : { display: "-webkit-box", WebkitLineClamp: 4, WebkitBoxOrient: "vertical", overflow: "hidden" }),
+              display: "-webkit-box",
+              WebkitLineClamp: 4,
+              WebkitBoxOrient: "vertical",
+              overflow: "hidden",
             })}
           >
             {item.description}
           </p>
-          {isLongText && !expanded && (
+          {isLongText && (
             <button
-              onClick={() => setExpanded(true)}
+              onClick={() => navigate(`/publicacion/${item.publicationId}`)}
               style={{ background: "none", border: "none", padding: 0, color: "inherit", opacity: 0.8 }}
             >
               <span style={textStyle(TYPE.metadata, { color: "inherit", fontWeight: 700 })}>Ver más</span>

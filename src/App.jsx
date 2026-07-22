@@ -10,6 +10,7 @@ import SearchPage from "./pages/SearchPage";
 import NotificationsPage from "./pages/NotificationsPage";
 import BusinessRegisterPage from "./pages/BusinessRegisterPage";
 import ActorProfilePage from "./pages/ActorProfilePage";
+import PublicationDetailPage from "./pages/PublicationDetailPage";
 import ActorEditPage from "./pages/ActorEditPage";
 import AdminPage from "./pages/AdminPage";
 import AdminEventsListPage from "./pages/admin/AdminEventsListPage";
@@ -102,6 +103,16 @@ export default function App() {
         element={
           <RequireAccess>
             <NotificationsPage />
+          </RequireAccess>
+        }
+      />
+      <Route
+        path="/publicacion/:id"
+        element={
+          <RequireAccess>
+            <MainLayout>
+              <PublicationDetailPage />
+            </MainLayout>
           </RequireAccess>
         }
       />

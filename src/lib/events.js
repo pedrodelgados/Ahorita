@@ -47,26 +47,6 @@ export async function createEvent(payload) {
   return data;
 }
 
-export async function listEventComments(eventId) {
-  const { data, error } = await supabase
-    .from("event_comments")
-    .select("*, author:profiles(id, username, avatar_url)")
-    .eq("event_id", eventId)
-    .order("created_at", { ascending: false });
-  if (error) throw error;
-  return data;
-}
-
-export async function createEventComment({ eventId, text, authorId }) {
-  const { data, error } = await supabase
-    .from("event_comments")
-    .insert({ event_id: eventId, text, author_id: authorId })
-    .select("*, author:profiles(id, username, avatar_url)")
-    .single();
-  if (error) throw error;
-  return data;
-}
-
 // --- Administración (/admin/eventos) ----------------------------------------
 
 export async function listAllEventsForAdmin({ search, category, status, from, to } = {}) {

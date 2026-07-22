@@ -23,6 +23,19 @@
 // invalidación de códigos QR quedan fuera de esta función — ver la nota en
 // 0019_bloque5_privacidad.sql sobre por qué (Storage necesita su propia
 // llamada; QR no existe todavía como entidad en el esquema).
+//
+// Fase 5B, Bloque 3: los comentarios (a diferencia de los otros seis tipos
+// de `interactions`, que sí cascadean con la cuenta) deben sobrevivir a la
+// eliminación — mismo principio que ya regía `event_comments` desde el
+// Bloque 5 de la Fase 1. Como `interactions.actor_id` tiene
+// `on delete cascade`, hay que reasignar explícitamente las filas
+// `type = 'comentario'` del actor persona de este usuario al actor de
+// sistema "Cuenta eliminada" ANTES de invocar `auth.admin.deleteUser` — una
+// vez borrado el usuario, el cascade ya se disparó y no hay nada que
+// reasignar. Si esta reasignación falla, la eliminación de ese usuario se
+// aborta (no se llama a deleteUser) y la solicitud queda 'pendiente' para
+// reintentarse, igual que cualquier otro fallo por usuario de este bucle —
+// nunca se deja una eliminación a medias.
 
 import { createClient } from "npm:@supabase/supabase-js@2";
 
@@ -31,6 +44,30 @@ const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const cronSecret = Deno.env.get("CRON_SECRET")!;
 
 const db = createClient(supabaseUrl, serviceRoleKey);
+
+async function reassignCommentsToDeletedAccount(userId: string) {
+  const { data: deletedAccountActor, error: actorError } = await db
+    .from("actors")
+    .select("id")
+    .eq("type", "sistema")
+    .eq("display_name", "Cuenta eliminada")
+    .single();
+  if (actorError) throw actorError;
+
+  const { data: ownActor, error: ownActorError } = await db
+    .from("actors")
+    .select("id")
+    .eq("profile_id", userId)
+    .single();
+  if (ownActorError) throw ownActorError;
+
+  const { error: reassignError } = await db
+    .from("interactions")
+    .update({ actor_id: deletedAccountActor.id })
+    .eq("actor_id", ownActor.id)
+    .eq("type", "comentario");
+  if (reassignError) throw reassignError;
+}
 
 Deno.serve(async (req) => {
   const providedSecret = req.headers.get("x-cron-secret") ?? "";
@@ -50,6 +87,8 @@ Deno.serve(async (req) => {
     const results = [];
     for (const request of dueRequests ?? []) {
       try {
+        await reassignCommentsToDeletedAccount(request.user_id);
+
         const { error: deleteError } = await db.auth.admin.deleteUser(request.user_id);
         if (deleteError) throw deleteError;
 

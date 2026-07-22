@@ -82,6 +82,24 @@ export async function listPublishedFeedPublications() {
   }));
 }
 
+// Fase 5B, Bloque 3: detalle de una Publicación (ruta /publicacion/:id) —
+// la propia RLS de `publications` ya decide qué puede ver el visitante
+// (publicada, o borrador/oculta si es su dueño o admin), la misma que ya
+// usa `enforce_comment_rules` en la base de datos para decidir si admite
+// comentarios — no se repite ese criterio aquí, solo se deja que la
+// consulta falle (fila inexistente) si no hay permiso.
+export async function getPublication(publicationId) {
+  const { data, error } = await supabase
+    .from("publications")
+    .select("*, post:publication_posts(*), actor:actors(display_name, type)")
+    .eq("id", publicationId)
+    .eq("subtype", "publicacion")
+    .single();
+  if (error) throw error;
+  const badge = await getVerificationBadge(data.actor_id);
+  return { ...normalizePublication(data), verificationBadge: badge };
+}
+
 async function getVerificationBadge(actorId) {
   const { data, error } = await supabase.rpc("actor_verification_badge", {
     check_actor_id: actorId,

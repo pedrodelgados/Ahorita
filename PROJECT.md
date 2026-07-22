@@ -1762,3 +1762,69 @@ Build y lint limpios (sin advertencias nuevas). Playwright limitado a confirmar 
 Bloque 3 (comentarios generalizados, con vista de detalle propia para Publicación), pendiente de su propia aprobación explícita antes de implementarse.
 
 ---
+
+## Fase 5B, Bloque 3 — Comentarios generalizados sobre Evento y Publicación (implementado)
+
+Tercer y último bloque de la Fase 5B: generaliza los comentarios (hasta ahora exclusivos de Evento, sobre `event_comments`) a Evento y Publicación por igual, sobre el mismo eje `interactions`/`actors` que ya usan los demás tipos de interacción — Promoción queda deliberadamente excluida. Aprobado tras un análisis de 16 puntos más un addendum crítico que el usuario identificó personalmente: la unicidad `unique(actor_id, type, target_type, target_id)` heredada del Bloque 4 de la Fase 1 habría impedido que un mismo actor comentara más de una vez el mismo contenido, y habría bloqueado la anonimización compartida de cuentas eliminadas en cuanto dos de ellas comentaran el mismo contenido.
+
+### Diseño aprobado
+
+- **Unicidad de `interactions`**: la restricción única original se reemplaza por un índice único parcial (`interactions_unique_toggle_idx`) que excluye `type = 'comentario'` — los seis tipos de alternancia (`me_gusta`/`quiero_ir`/`ya_fui`/`guardado`/`seguimiento`/`compartir`) conservan exactamente una fila por actor/objetivo; `comentario` permite filas ilimitadas del mismo actor sobre el mismo objetivo.
+- **Actor de sistema "Cuenta eliminada"**: mismo patrón que "Guía IA"/"Ahorita Editorial" (`type = 'sistema'`, sin `profile_id`/`business_id`, estructuralmente excluido de toda RLS basada en propiedad). Puede agregar comentarios de varias cuentas eliminadas distintas sin que eso implique la misma autoría — documentado explícitamente. No puede iniciar sesión, publicar, comentar ni interactuar como un usuario normal; solo recibe reasignaciones desde el proceso administrativo de eliminación de cuentas.
+- **Soft-delete con exactamente dos estados válidos**, forzado por un `check` en la base de datos: activo (`deleted_at is null`, `body` entre 1 y 500 caracteres tras `btrim`) o eliminado (`deleted_at is not null`, `body is null`) — ningún estado intermedio.
+- **Distinción visual**: "autor eliminado, comentario vigente" (el texto se sigue mostrando, el autor se muestra como "Cuenta eliminada", nunca se da a entender que el comentario mismo fue eliminado) vs. "comentario eliminado" (sin texto, solo "Comentario eliminado", autor desenfatizado, estructura conservada para futuras respuestas anidadas — `parent_comment_id` ya existe sin exponerse todavía).
+- **`comments_count`** (Eventos, desnormalizado) representa solo comentarios visibles (`deleted_at is null`); un comentario eliminado nunca infla el contador público pero sí sigue contando para el límite de tasa. Publicación usa conteo en vivo (sin desnormalizar), igual que sus demás contadores.
+- **Límite de tasa sin cambios**: 1 comentario/10s por actor, máximo 20/hora por actor, global (no por contenido) — un comentario eliminado sigue contando dentro de estas ventanas; el soft-delete nunca puede usarse para evadir el límite.
+- **Migración de `event_comments`**: campo por campo (evento, cuerpo, `created_at`, autor resuelto o "Cuenta eliminada" si ya estaba anonimizado), asumiendo que un mismo autor puede tener varios comentarios sobre el mismo Evento. `event_comments` permanece como respaldo legacy durante un periodo de convivencia — no se elimina en este bloque.
+
+### `supabase/migrations/0034_fase5b_bloque3_comentarios_generalizados.sql` (nuevo)
+
+Amplía el catálogo de `interactions.type` con `'comentario'`; reemplaza la restricción única por el índice parcial; siembra el actor "Cuenta eliminada"; crea `interaction_comments` (detalle 1:1 vía `interaction_id`, con `parent_comment_id` autorreferenciado sin exponer todavía, `deleted_at`, y el `check` de dos estados) con su propia RLS; `enforce_comment_rules()` (`security definer`, disparado `before insert on interactions`) valida `target_type in ('event','publicacion')`, rechaza explícitamente `subtype = 'promocion'`, valida visibilidad del contenido de destino, y aplica los dos límites de tasa; `protect_comment_soft_delete()` (`before update on interaction_comments`) fuerza la única transición válida de `UPDATE` (activo → eliminado) sin importar qué envíe el cliente, y rechaza tocar un comentario ya eliminado o su `parent_comment_id`; backfill procedural (`do $$ ... loop ... end $$`, no un `insert...select` con `join`) de `event_comments` hacia `interactions`/`interaction_comments`, deliberadamente **antes** de crear `sync_comments_count()` (mismo orden que el Bloque 1: crear el trigger de conteo antes del backfill duplicaría el conteo); finalmente deshabilita `event_comments_sync_count` y documenta el estado legacy de la tabla.
+
+### Hallazgos encontrados y corregidos durante la verificación (antes de cualquier commit)
+
+Cuatro defectos reales, ninguno detectado por inspección visual del SQL — los cuatro emergieron al ejecutar la migración contra Postgres 16 real con datos sembrados:
+
+1. **Constraint de dos estados con fuga de `NULL`**: `char_length(btrim(body)) between 1 and 500` evalúa a `NULL` (no `false`) cuando `body is null`, y Postgres acepta un `CHECK` que evalúa a `NULL` — permitía insertar una fila con `deleted_at is null and body is null`, violando el invariante de dos estados. Corregido envolviendo con `coalesce(..., 0)`.
+2. **Correlación fragil en el backfill**: el primer borrador correlacionaba las filas nuevas de vuelta a `event_comments` por `(target_id, created_at)` vía `join`, ambiguo si dos comentarios distintos compartieran exactamente el mismo instante. Corregido con un bucle procedural que preserva la correspondencia 1:1 fila por fila sin depender de coincidencias de timestamp.
+3. **Doble conteo (`comments_count` 4→8)**: el trigger de conteo se creaba *antes* del backfill en el primer borrador, así que cada inserción del backfill disparaba el trigger nuevo sumando sobre un conteo que el trigger legacy (todavía activo en ese punto) ya había dejado correcto — duplicando el total. Corregido reordenando el archivo: backfill primero, trigger de conteo después (mismo patrón que ya funcionó en el Bloque 1).
+4. **Promoción comentable a nivel de base de datos**: `enforce_comment_rules()` solo validaba `target_type in ('event','publicacion')` — como las Promociones viven en la misma tabla `publications` con `subtype='promocion'`, una Promoción publicada pasaba la validación sin ningún chequeo adicional, contradiciendo la decisión aprobada de excluirlas. Corregido añadiendo el chequeo explícito de `subtype`.
+5. **Política de `UPDATE` sin `with check` explícito**: la política "El dueño del actor o un admin eliminan (soft-delete)" solo tenía `using (deleted_at is null and ...)` — sin un `with check` propio, Postgres reutiliza la misma expresión para validar la fila resultante, pero `deleted_at` deja de ser `null` justo después de la transición que el propio trigger fuerza, así que ni el dueño ni un admin podían completar su propia eliminación (rechazado por RLS, no por el trigger). Corregido con un `with check` que valida identidad/rol sobre la fila (sin repetir la condición de `deleted_at`).
+
+### Capa de datos (`lib/interactions.js`)
+
+`listComments(targetType, targetId)`, `createComment({viewerProfileId, targetType, targetId, body})`, `deleteComment(interactionId)` — consultan desde `interactions` (no desde `interaction_comments`) porque `target_type`/`target_id` viven en la tabla padre. La resolución del autor maneja el caso del actor de sistema (`profile_id is null`) devolviendo `{id: null, username: "Cuenta eliminada", avatar_url: null}` en vez de intentar un join que devolvería `null`.
+
+### Frontend
+
+`CommentsSection.jsx` (nuevo, `src/features/social/`): componente compartido entre Evento y Publicación — lista, formulario con estado `busy` (previene el doble envío, un defecto real identificado durante el análisis pero nunca corregido en el composer original de Evento), estados vacío/con contador, eliminar solo el propio comentario, y la distinción visual "autor eliminado" vs. "comentario eliminado". `EventSheet.jsx` reemplaza su implementación en línea (sobre `event_comments`) por este componente — `lib/events.js` pierde `listEventComments`/`createEventComment`, ya sin ningún llamador. Nueva ruta `/publicacion/:id` (`PublicationDetailPage.jsx`, mismo patrón `RequireAccess`+`MainLayout` que `/actor/:actorId`) con `getPublication(id)` (`lib/publications.js`, nuevo) — `PublicationFeedCard.jsx` cambia su botón "Ver más" de expandir en línea a navegar aquí, mismo criterio que ya usa Evento (el detalle, no el scroll del feed, es donde vive la conversación).
+
+### `supabase/functions/process-account-deletions/index.ts`
+
+Antes de `auth.admin.deleteUser`, reasigna las `interactions` `type = 'comentario'` del actor persona del usuario hacia "Cuenta eliminada" (`reassignCommentsToDeletedAccount`) — los otros seis tipos de interacción siguen cascadeando normalmente con la cuenta, sin cambios. Si la reasignación falla, la eliminación de ese usuario se aborta (no se llama a `deleteUser`) y la solicitud queda `pendiente` para reintentarse, igual que cualquier otro fallo por usuario ya manejado en este bucle.
+
+### Verificación realizada
+
+Postgres 16 real, las 34 migraciones aplicadas en orden contra una base limpia (múltiples veces, con recreación completa de la base entre cada corrección para nunca verificar sobre estado parcialmente corregido):
+
+- **Doble conteo**: `comments_count` confirmado en 4 (no 8) tras backfillear 4 `event_comments` preexistentes (dos del mismo autor sobre el mismo Evento, una de un segundo autor, una ya anonimizada) y aplicar la migración corregida.
+- **Migración campo por campo**: los 4 comentarios preservados exactamente (texto, `created_at`, autor resuelto), incluidos los dos duplicados del mismo autor como filas distintas, y el ya anonimizado correctamente reasignado a "Cuenta eliminada".
+- **Índice único parcial**: duplicado rechazado para cada uno de `me_gusta`/`guardado`/`quiero_ir`/`seguimiento`/`compartir` (mismo actor, mismo objetivo); `comentario` permite múltiples filas del mismo actor sobre el mismo objetivo sin conflicto (bloqueado solo por el límite de tasa, nunca por unicidad).
+- **Dos cuentas eliminadas reasignadas al mismo actor "Cuenta eliminada"** sobre el mismo Evento y sobre la misma Publicación — sin ningún conflicto de unicidad en ningún caso.
+- **Soft-delete**: transición válida exitosa (`body` correctamente a `null`); un intento de "editar" el cuerpo de un comentario activo se convierte en la misma transición de eliminación (por diseño: no existe función de edición, así que cualquier `UPDATE` solo puede significar "eliminar"); un segundo intento de modificar un comentario ya eliminado, rechazado; un intento de cambiar `parent_comment_id`, rechazado.
+- **RLS por rol**: creación propia exitosa; suplantación de otro actor rechazada; comentario en Promoción rechazado (tras la corrección del hallazgo 4); comentario en Publicación en borrador ajena rechazado; comentario en Evento en borrador rechazado; `target_type` inválido (`place`) rechazado; eliminación por un tercero rechazada (0 filas afectadas); eliminación del propio comentario exitosa (tras la corrección del hallazgo 5); moderación mínima de un admin sobre un comentario ajeno exitosa; el actor "Cuenta eliminada" no puede usarse para crear una interacción nueva (RLS de propiedad lo excluye estructuralmente); un invitado sin sesión (rol `anon`) rechazado.
+- **Reversión** ejecutada de verdad en un escenario limpio previo a cualquier uso real: elimina los triggers/tabla/índice nuevos, restaura el trigger legacy de `event_comments` (vuelve a contar automáticamente), restaura la restricción única original, restaura el catálogo de tipos original — confirmado con datos reales tras la reversión (`event_comments` vuelve a contar solo, `comentario` vuelve a ser un tipo inválido, un duplicado de `me_gusta` vuelve a rechazarse). Documentado honestamente: esta limpieza solo está garantizada antes de que existan datos reales de uso (comentarios duplicados reales del mismo actor, comentarios reales de Publicación, reasignaciones reales a "Cuenta eliminada") — después de uso real, una reversión completa ya no se promete limpia.
+
+Build y lint limpios (sin advertencias nuevas más allá de las ya conocidas). Playwright limitado a confirmar ausencia de errores de ejecución en Inicio, `/publicacion/:id` (incluida una Publicación inexistente, que debe mostrar el mensaje de "no disponible" sin fallar) y Explorar — misma limitación de entorno aceptada desde la Fase 1 (sin proyecto Supabase real desplegado, no es posible ver la interfaz autenticada real en este entorno).
+
+### Deuda técnica detectada
+
+- **Prueba end-to-end contra un proyecto Supabase real desplegado** (Edge Function `process-account-deletions` incluida) — heredada, sin resolver por el mismo motivo de siempre; debe mantenerse expresamente registrada, tal como se acordó explícitamente para este bloque.
+- **Sin moderación de comentarios desde la interfaz de administración**: la base de datos ya permite que un admin haga soft-delete de cualquier comentario (verificado), pero no existe todavía una pantalla dedicada en `/admin` para ejercer esa capacidad — queda disponible para una fase de moderación futura si se decide construirla.
+- **Ninguna deuda nueva de integridad de datos o privacidad** — las cinco correcciones de este bloque se verificaron todas contra Postgres real antes del commit.
+
+### Qué sigue
+
+Cierre formal de la Fase 5B — pendiente de la revisión y aprobación explícita de este informe por el usuario antes de declararlo.
+
+---

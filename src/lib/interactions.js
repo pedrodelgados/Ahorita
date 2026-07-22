@@ -409,6 +409,104 @@ export async function registerShare({ viewerProfileId, targetType, targetId }) {
   if (error && error.code !== "23505") throw error;
 }
 
+// Fase 5B, Bloque 3: comentarios generalizados sobre Evento y Publicación
+// (nunca Promoción — la base de datos ya lo rechaza, ver migración 0034).
+// Reemplaza `listEventComments`/`createEventComment` (lib/events.js), que
+// quedan como respaldo legacy sobre `event_comments` sin que el frontend
+// vuelva a escribir ahí desde este bloque. `targetType` es 'event' o
+// 'publicacion', igual que en el resto de este archivo.
+//
+// Se consulta desde `interactions` (no desde `interaction_comments`) porque
+// `target_type`/`target_id` viven en la tabla padre — filtrar ahí, con un
+// join hacia el detalle, evita depender de un filtro sobre una tabla
+// embebida (que PostgREST no aplica a las filas de nivel superior).
+const COMMENT_SELECT = `
+  id,
+  created_at,
+  actor:actors (
+    id,
+    display_name,
+    profile:profiles (id, username, avatar_url)
+  ),
+  comment:interaction_comments!inner (body, deleted_at)
+`;
+
+function mapCommentRow(row) {
+  const actor = row.actor;
+  const comment = Array.isArray(row.comment) ? row.comment[0] : row.comment;
+  const deleted = comment?.deleted_at != null;
+  const author = actor?.profile
+    ? { id: actor.profile.id, username: actor.profile.username, avatar_url: actor.profile.avatar_url }
+    : { id: null, username: actor?.display_name || "Cuenta eliminada", avatar_url: null };
+  return {
+    id: row.id,
+    created_at: row.created_at,
+    body: deleted ? null : comment?.body ?? null,
+    deleted,
+    author,
+  };
+}
+
+export async function listComments(targetType, targetId) {
+  const { data, error } = await supabase
+    .from("interactions")
+    .select(COMMENT_SELECT)
+    .eq("type", "comentario")
+    .eq("target_type", targetType)
+    .eq("target_id", targetId)
+    .order("created_at", { ascending: false });
+  if (error) throw error;
+  return data.map(mapCommentRow);
+}
+
+export async function createComment({ viewerProfileId, targetType, targetId, body }) {
+  const myActorId = await getMyActorId(viewerProfileId);
+  const { data: interaction, error: interactionError } = await supabase
+    .from("interactions")
+    .insert({ actor_id: myActorId, type: "comentario", target_type: targetType, target_id: targetId })
+    .select("id, created_at")
+    .single();
+  if (interactionError) throw interactionError;
+
+  const { data: comment, error: commentError } = await supabase
+    .from("interaction_comments")
+    .insert({ interaction_id: interaction.id, body })
+    .select("body, deleted_at")
+    .single();
+  if (commentError) throw commentError;
+
+  // `auth.users` no trae username/avatar_url (viven en `profiles`) — se
+  // resuelven aquí para que el comentario recién creado pueda mostrarse de
+  // inmediato con su autor real, sin esperar a un refetch completo de la
+  // lista.
+  const { data: profile, error: profileError } = await supabase
+    .from("profiles")
+    .select("id, username, avatar_url")
+    .eq("id", viewerProfileId)
+    .single();
+  if (profileError) throw profileError;
+
+  return {
+    id: interaction.id,
+    created_at: interaction.created_at,
+    body: comment.body,
+    deleted: false,
+    author: { id: profile.id, username: profile.username, avatar_url: profile.avatar_url },
+  };
+}
+
+// El único UPDATE válido sobre `interaction_comments` es esta transición —
+// la base de datos (trigger `protect_comment_soft_delete`, migración 0034)
+// fuerza `deleted_at`/`body` de todas formas, sin importar qué se envíe
+// aquí, pero se envían igual para que el intento sea legible por sí mismo.
+export async function deleteComment(interactionId) {
+  const { error } = await supabase
+    .from("interaction_comments")
+    .update({ deleted_at: new Date().toISOString(), body: null })
+    .eq("interaction_id", interactionId);
+  if (error) throw error;
+}
+
 // Traduce un error real de Postgres/PostgREST a un mensaje breve y
 // comprensible — nunca un fallo silencioso (Entrega 6). El bloqueo de
 // autointeracción (código 23514, ver migración 0027) ya trae su propio

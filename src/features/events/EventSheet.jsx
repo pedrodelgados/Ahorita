@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
-import { Send, Bookmark } from "lucide-react";
+import { Bookmark } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { getEvent, listEventComments, createEventComment } from "../../lib/events";
+import { getEvent } from "../../lib/events";
 import {
   getMyEventReactions,
   getEventReactionCounts,
@@ -11,13 +11,12 @@ import {
 import { useAuth } from "../../contexts/AuthContext";
 import { useSavedEvents } from "../../contexts/SavedEventsContext";
 import { CHANNELS, COLORS, SPACE, textStyle, TYPE } from "../../styles/theme";
-import { formatEventDateTime, formatRelativeTime } from "../../lib/time";
+import { formatEventDateTime } from "../../lib/time";
 import BottomSheet from "../../components/layout/BottomSheet";
-import AuthGate from "../../components/ui/AuthGate";
 import ImageWithFallback from "../../components/ui/ImageWithFallback";
 import LocationMetadata from "../../components/ui/LocationMetadata";
 import Button from "../../components/ui/Button";
-import AuthorTag from "../social/AuthorTag";
+import CommentsSection from "../social/CommentsSection";
 import DirectionsSection from "../places/DirectionsSection";
 import EventReactionChips from "./EventReactionChips";
 
@@ -26,9 +25,6 @@ export default function EventSheet({ eventId, onClose }) {
   const navigate = useNavigate();
   const { savedIds, toggleSave } = useSavedEvents();
   const [event, setEvent] = useState(null);
-  const [comments, setComments] = useState([]);
-  const [commentText, setCommentText] = useState("");
-  const [loading, setLoading] = useState(true);
   const [reactions, setReactions] = useState({ quieroIr: false, yaFui: false });
   const [reactionCounts, setReactionCounts] = useState({ quieroIr: 0, yaFui: 0 });
   const [reactionBusy, setReactionBusy] = useState({ quieroIr: false, yaFui: false });
@@ -36,15 +32,11 @@ export default function EventSheet({ eventId, onClose }) {
 
   useEffect(() => {
     if (!eventId) return;
-    setLoading(true);
     setReactionError(null);
-    Promise.all([getEvent(eventId), listEventComments(eventId), getEventReactionCounts(eventId)])
-      .then(([ev, cmts, counts]) => {
-        setEvent(ev);
-        setComments(cmts);
-        setReactionCounts(counts);
-      })
-      .finally(() => setLoading(false));
+    Promise.all([getEvent(eventId), getEventReactionCounts(eventId)]).then(([ev, counts]) => {
+      setEvent(ev);
+      setReactionCounts(counts);
+    });
 
     if (isAuthenticated) {
       getMyEventReactions(user.id, eventId).then((r) =>
@@ -93,14 +85,6 @@ export default function EventSheet({ eventId, onClose }) {
   const quieroIrAvailable = finishesAt !== null && now <= finishesAt;
   const yaFuiDisabled = !reactions.yaFui && !yaFuiAvailable;
   const quieroIrDisabled = !reactions.quieroIr && !quieroIrAvailable;
-
-  async function submitComment(e) {
-    e.preventDefault();
-    if (!commentText.trim()) return;
-    const comment = await createEventComment({ eventId, text: commentText, authorId: user.id });
-    setComments((prev) => [comment, ...prev]);
-    setCommentText("");
-  }
 
   const channel = event && CHANNELS.find((c) => c.id === event.category);
   const isSaved = event && savedIds.has(event.id);
@@ -207,62 +191,7 @@ export default function EventSheet({ eventId, onClose }) {
 
           <DirectionsSection place={{ lat: event.lat, lng: event.lng, name: event.title, area: event.location_name }} />
 
-          <h3 style={textStyle(TYPE.h3, { margin: `0 0 ${SPACE.md}px` })}>Comentarios</h3>
-
-          <AuthGate prompt="Inicia sesión para comentar">
-            <form onSubmit={submitComment} style={{ display: "flex", gap: 8, marginBottom: SPACE.lg }}>
-              <input
-                value={commentText}
-                onChange={(e) => setCommentText(e.target.value)}
-                placeholder="Escribe un comentario…"
-                style={{
-                  flex: 1,
-                  border: "1px solid rgba(43, 38, 34, 0.12)",
-                  borderRadius: "var(--radius-full)",
-                  padding: "8px 14px",
-                  fontSize: 14,
-                }}
-              />
-              <button
-                type="submit"
-                style={{
-                  background: COLORS.accent,
-                  border: "none",
-                  borderRadius: "50%",
-                  width: 34,
-                  height: 34,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  flexShrink: 0,
-                }}
-              >
-                <Send size={15} color="#FFFFFF" />
-              </button>
-            </form>
-          </AuthGate>
-
-          {!loading && comments.length === 0 && (
-            <p style={textStyle(TYPE.bodySmall, { color: COLORS.inkSoft })}>Sé el primero en comentar.</p>
-          )}
-
-          {comments.map((comment, i) => (
-            <div
-              key={comment.id}
-              style={{
-                padding: `${SPACE.sm}px 0`,
-                borderTop: i === 0 ? "none" : "1px solid rgba(43, 38, 34, 0.08)",
-              }}
-            >
-              <p style={textStyle(TYPE.bodySmall, { margin: `0 0 ${SPACE.xxs}px` })}>{comment.text}</p>
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                <AuthorTag author={comment.author} />
-                <span style={textStyle(TYPE.metadata, { color: COLORS.inkSoft })}>
-                  {formatRelativeTime(comment.created_at)}
-                </span>
-              </div>
-            </div>
-          ))}
+          <CommentsSection targetType="event" targetId={event.id} />
         </div>
       )}
     </BottomSheet>
