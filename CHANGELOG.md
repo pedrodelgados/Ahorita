@@ -2,6 +2,27 @@
 
 Registro de cambios notables de Ahorita (Cuenca Viva). Formato libre, en español, más cercano a un registro de fases de producto que a versiones semánticas — ver `PROJECT.md` para el plan completo y el estado real de la implementación.
 
+## 2026-07-22 — Fase 6, Bloque 3: Motor Editorial
+
+Tercer bloque de la Fase 6 (ver `FASE6_CONTRATO_ARQUITECTONICO.md`). Decide qué contenido curado por el equipo está seleccionado y produce el universo completo de candidatos editoriales elegibles — nunca decide cantidad, posición ni interleaving (responsabilidad del futuro Compositor). Nuevo principio permanente incorporado al contrato: "Editorial nunca existe para corregir al algoritmo; existe para aportar criterio humano allí donde el algoritmo, por naturaleza, nunca puede sustituirlo."
+
+### Agregado
+
+- `supabase/migrations/0040_fase6_bloque3_motor_editorial.sql`: tabla `editorial_selections` (fila única mutable por `(target_type, target_id)`, sin ninguna política de escritura directa); `set_editorial_selection()`/`revoke_editorial_selection()` (único camino de escritura, `security definer`, solo `is_admin()`); `validate_editorial_selection_target()` (trigger que rechaza contenido inexistente o una Promoción disfrazada de Publicación); `candidatos_editorial()` (todos los candidatos elegibles, sin límite, `reason_code` crudo); `editorial_selection_public()` (lectura pública segura, nunca expone `decided_by`/`revoked_by`); backfill de `events.editor_pick` con administrador determinístico (falla explícitamente si no existe ninguno).
+- `src/lib/editorial.js` (nuevo): capa de datos del Motor Editorial.
+
+### Cambiado
+
+- `src/lib/feed.js`: `pickEditorSelection()` lee el conjunto de eventos seleccionados desde el nuevo mecanismo en vez de `event.editor_pick` — mismo comportamiento visible en el Feed.
+- `src/pages/admin/AdminEventEditorPage.jsx`: la casilla "Incluir en Selección del editor" ya escribe/lee contra `editorial_selections`, no contra la columna legacy.
+- `events.editor_pick` queda legacy (sin eliminarse) — sin nuevas escrituras desde la aplicación.
+
+### Verificado
+
+- Postgres 16 real (40 migraciones desde cero): backfill exacto sin duplicados; los 7 candidatos esperados frente a autor revocado/contenido oculto/evento finalizado/Promoción, todos correctamente ausentes; rechazo de Promoción, contenido inexistente, ventana inválida y autoselección de negocio; reactivación completa con `created_at` preservado; `geo_status` correcto; cero candidatos sin relleno; selección vencida ausente; RLS con roles de bajo privilegio (lectura cruda admin-only, escritura directa imposible incluso con `GRANT`); defensa en profundidad del `check` de pareo; lectura pública sin exponer identidad administrativa; reversión completa ejecutada de verdad; regresión de Bloques 1 y 2.
+- Build y lint limpios.
+- **Verificación visual (Playwright) no ejecutada**: este entorno no tenía una instancia local de Supabase disponible para probar el flujo completo en navegador — declarado honestamente en `PROJECT.md`, no se reclama una verificación que no ocurrió.
+
 ## 2026-07-22 — Fase 6, Bloque 2 (adenda): calibración geográfica
 
 Revisión de las dos constantes geográficas señaladas en el informe final del bloque, antes de su cierre definitivo.

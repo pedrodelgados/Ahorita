@@ -2159,4 +2159,62 @@ Antes de cerrar definitivamente el bloque, se auditaron las dos constantes seña
 
 Bloque 2 completo y verificado, incluida la adenda de calibración geográfica. El resto de la Fase 6 (Motor Editorial, Compositor del Feed extendido) permanece pendiente de análisis y aprobación explícita, bloque por bloque, siguiendo la misma metodología.
 
+## Fase 6, Bloque 3 — Motor Editorial (implementado)
+
+Tercer bloque de la Fase 6, construido tras un análisis exhaustivo de 22 puntos (auditoría evidence-based de los mecanismos editoriales ya existentes: `events.editor_pick` y el Actor de sistema "Ahorita Editorial", confirmando que estaban completamente desconectados y que la autoría nunca implicó ventaja algorítmica), tres precisiones conceptuales adicionales (el Compositor tiene seis entradas, nunca cinco; "ningún carril llega a cero" distingue ausencia real de ausencia causada por composición; auditoría reproducible sin historial de exposición personal), un diseño técnico completo de 16 puntos, y una revisión de ese diseño con cuatro ajustes arquitectónicos explícitos antes de autorizar la implementación.
+
+### Los cuatro ajustes arquitectónicos incorporados antes de implementar
+
+1. **`editorial_selections` deja de ser append-only** — una fila única y mutable por `(target_type, target_id)`, con reactivación sobre la misma fila. A diferencia de `affinity_contributions` (aprendizaje automático) o `verifications` (ciclo de vida con transiciones automáticas por cron), aquí no existe ningún proceso automático ni concurrente que dependa de una cronología completa — es una decisión humana, manual, de un único rol.
+2. **`candidatos_editorial()` sin límite de cantidad** — devuelve todos los candidatos elegibles; cantidad, posición e interleaving quedan reservados por completo al futuro Compositor.
+3. **Sin `editorial_calibration()` propia** — al quitar el límite de cantidad no quedó ninguna constante nueva que calibrar; `discovery_calibration()` (Bloque 2) sigue siendo la única fuente de calibración de todo el sistema de descubrimiento.
+4. **`reason_code` técnico separado de la redacción visible** — la función devuelve un enum cerrado, nunca una frase ya construida; la resolución a texto es una capa de presentación posterior, permitiendo varias redacciones por código sin multiplicar el catálogo.
+
+### Principio permanente incorporado a `FASE6_CONTRATO_ARQUITECTONICO.md`
+
+**Editorial nunca existe para corregir al algoritmo; existe para aportar criterio humano allí donde el algoritmo, por naturaleza, nunca puede sustituirlo.** El Motor Editorial no ajusta ni compensa lo que produzcan la Afinidad o las Garantías — nunca recibe su resultado como entrada para "corregirlo", y ninguna selección editorial se justifica en términos de lo que el algoritmo no mostró.
+
+### `supabase/migrations/0040_fase6_bloque3_motor_editorial.sql` (nuevo)
+
+- **`public.editorial_selections`**: fila única por `(target_type, target_id)` — `reason_code` (enum cerrado: `seleccionado_equipo`/`informacion_util`/`relevante_fecha`/`historia_ciudad`), `starts_at`/`ends_at` (`check` de ventana válida), `created_at` (protegido por trigger, inmutable), `decided_by`/`decided_at` (siempre la decisión vigente), `revoked_by`/`revoked_at` (`check` de pareo: ambos o ninguno). **Sin ninguna política de `INSERT`/`UPDATE`/`DELETE`** — ni siquiera `is_admin()` puede escribirla directamente.
+- **`public.set_editorial_selection(...)`** y **`public.revoke_editorial_selection(...)`** (`security definer`, solo `is_admin()`): único camino de escritura sancionado — upsert que crea/reactiva/modifica, y retiro explícito que nunca elimina la fila.
+- **`public.validate_editorial_selection_target()`** (trigger `before insert or update`): exige que el contenido exista de verdad y rechaza una Publicación con `subtype='promocion'` aunque `target_type='publicacion'` — exclusión permanente de Promociones.
+- **`public.candidatos_editorial(...)`**: universo completo de candidatos elegibles (sin límite), con `reason_code` crudo y `geo_status` (reutiliza `geo_eligible()` del Bloque 2). Base de elegibilidad deliberadamente opuesta a `discoverable_content()`: permite al actor "Ahorita Editorial" y a eventos sin negocio/organizador detrás, exige verificación `vigente`/`en_gracia` solo cuando el autor sí es negocio/organizador.
+- **`public.editorial_selection_public(...)`**: lectura pública segura (mismo patrón que `actor_verification_badge()`) — expone `reason_code`/vigencia/estado activo-revocado, nunca `decided_by` ni `revoked_by`.
+- **Backfill de `events.editor_pick`**: administrador determinístico (el más antiguo registrado); falla explícitamente si no existe ninguno. La columna queda legacy, sin nuevas escrituras desde la aplicación.
+
+### Frontend
+
+- **`src/lib/editorial.js`** (nuevo): `listEditorialSelectedEventIds()`, `getEventEditorialSelection()`, `setEventEditorialSelection()` (retirar algo ya no seleccionado es un no-op, no un error), `describeEditorialError()`.
+- **`src/lib/feed.js`**: `pickEditorSelection()` ahora recibe el conjunto de ids seleccionados vía `listEditorialSelectedEventIds()` en vez de leer `event.editor_pick` — mismo comportamiento visible, "Selección del editor" sin ningún cambio para quien usa la app.
+- **`src/pages/admin/AdminEventEditorPage.jsx`**: la casilla "Incluir en Selección del editor" ya no escribe `events.editor_pick` — lee el estado inicial vía `getEventEditorialSelection()` y guarda mediante `setEventEditorialSelection()` como un paso posterior al guardado del evento.
+
+### Verificación realizada
+
+Postgres 16 real (40 migraciones desde cero):
+
+- **Backfill**: los 3 eventos ya marcados con `editor_pick=true` migraron exactamente una vez cada uno, sin duplicados, atribuidos al administrador más antiguo; simulación sin ningún administrador registrado confirmó el fallo explícito de la migración.
+- **`candidatos_editorial()`**: exactamente los 7 candidatos esperados (3 migrados + 1 evento de negocio verificado + 1 evento sin negocio + 2 publicaciones, una de ellas del Actor "Ahorita Editorial") — evento con autor de verificación revocada, evento oculto, evento finalizado, publicación con autor revocado, publicación oculta y la Promoción, todos ausentes tal como se esperaba pese a tener una fila de selección activa.
+- **Rechazos explícitos**: Promoción rechazada al intentar seleccionarla aunque `target_type='publicacion'`; contenido inexistente rechazado; ventana `starts_at`/`ends_at` inválida rechazada por el `check`; negocio intentando autoseleccionarse rechazado por no ser admin.
+- **Reactivación**: ciclo completo revocar → reseleccionar (con un segundo administrador) confirmando `created_at` preservado, `decided_at`/`decided_by` actualizados a la decisión vigente, `revoked_at`/`revoked_by` limpiados.
+- **Geografía**: `geo_status` correcto con coordenadas reales (`confirmada_cercana`, `planificacion_futura` para el evento más lejano en el tiempo, `sin_restriccion` para contenido sin coordenadas propias) y con zona manual.
+- **Sin relleno**: tras revocar todas las selecciones, `candidatos_editorial()` devuelve exactamente cero filas.
+- **Selección vencida**: `ends_at` en el pasado ausente de `candidatos_editorial()`; la misma publicación con ventana vigente, presente.
+- **RLS con roles de bajo privilegio**: lectura cruda de `editorial_selections` denegada a un negocio no-admin, permitida a un admin; escritura directa denegada incluso otorgando `GRANT INSERT/UPDATE` y siendo admin, porque no existe ninguna política que la permita — solo las dos funciones dedicadas pueden escribir.
+- **Defensa en profundidad**: el `check` de pareo `revoked_at`/`revoked_by` rechazó una inserción directa que los violaba, incluso sorteando RLS como superusuario.
+- **Lectura pública**: `editorial_selection_public()` confirmado sin `decided_by` ni `revoked_by` en su proyección.
+- **Reversión ejecutada de verdad** en un escenario limpio: eliminar `editorial_selections` no afectó `events`/`publications`, los 3 eventos con `editor_pick=true` conservaron su valor intacto — documentado honestamente que las selecciones nuevas de Publicaciones (nunca representables en la columna legacy) se perderían al revertir.
+- **Regresión completa** del Bloque 1 y el Bloque 2 sin cambios de comportamiento.
+
+Build y lint limpios. **Verificación visual en navegador (Playwright) no pudo ejecutarse en este entorno**: el proyecto usa una instancia local de Supabase (`http://127.0.0.1:54321`) que requiere Docker con la CLI de Supabase inicializada, y ese stack no estaba disponible/configurado en este entorno de ejecución — se dice esto explícitamente en vez de reclamar una verificación visual que no ocurrió. La verificación de base de datos (Postgres 16 real, RLS con roles de bajo privilegio) fue exhaustiva; el build de producción confirma que el código compila y los tipos de datos encajan, pero no sustituye una prueba de interacción real en navegador.
+
+### Deuda técnica y puntos señalados para revisión
+
+- **Prueba end-to-end contra un proyecto Supabase real desplegado (incluyendo Playwright)** — heredada, sin resolver por el mismo motivo de siempre, agravada en este bloque por la ausencia de una instancia local de Supabase en el entorno de ejecución.
+- **Ninguna deuda nueva de integridad de datos o privacidad.**
+
+### Qué sigue
+
+Bloque 3 completo y verificado. Queda pendiente el cierre formal de este bloque (informe final para revisión y aprobación explícita) antes de avanzar al Compositor del Feed — el único componente restante de la Fase 6.
+
 ---

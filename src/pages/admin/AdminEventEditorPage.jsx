@@ -3,6 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { ArrowLeft, Trash2 } from "lucide-react";
 import { useAuth } from "../../contexts/AuthContext";
 import { createEvent, deleteEvent, getEvent, updateEvent } from "../../lib/events";
+import { getEventEditorialSelection, setEventEditorialSelection } from "../../lib/editorial";
 import { CHANNELS, textStyle, TYPE, COLORS } from "../../styles/theme";
 import { useUnsavedChangesGuard } from "../../hooks/useUnsavedChangesGuard";
 import FeedCard from "../../features/feed/FeedCard";
@@ -45,7 +46,7 @@ const emptyForm = {
   ticket_url: "",
   organizer: "",
   tag: "",
-  editor_pick: false,
+  editorialSelected: false,
   status: "publicado",
   publish_at: "",
   expires_at: "",
@@ -79,7 +80,7 @@ export default function AdminEventEditorPage() {
 
   useEffect(() => {
     if (isNew) return;
-    getEvent(id).then((event) => {
+    Promise.all([getEvent(id), getEventEditorialSelection(id)]).then(([event, editorialSelection]) => {
       const loadedForm = {
         ...emptyForm,
         ...event,
@@ -89,6 +90,7 @@ export default function AdminEventEditorPage() {
         expires_at: toLocalInput(event.expires_at),
         price: event.price ?? "",
         organizer: event.organizer ?? "",
+        editorialSelected: editorialSelection.selected,
       };
       const loadedIsFree = !event.price || Number(event.price) === 0;
       setForm(loadedForm);
@@ -150,13 +152,13 @@ export default function AdminEventEditorPage() {
         ticket_url: form.ticket_url?.trim() || null,
         organizer: form.organizer?.trim() || null,
         tag: form.tag || null,
-        editor_pick: form.editor_pick,
         status: form.status,
         publish_at: form.publish_at ? new Date(form.publish_at).toISOString() : null,
         expires_at: form.expires_at ? new Date(form.expires_at).toISOString() : null,
       };
       if (isNew) {
         const created = await createEvent({ ...payload, created_by: user.id });
+        await setEventEditorialSelection(created.id, form.editorialSelected);
         setSavedSnapshot(snapshotOf(form, isFree));
         setSaveStatus("saved");
         clearTimeout(savedStatusTimeout.current);
@@ -164,6 +166,7 @@ export default function AdminEventEditorPage() {
         navigate(`/admin/eventos/${created.id}`, { replace: true });
       } else {
         await updateEvent(id, payload);
+        await setEventEditorialSelection(id, form.editorialSelected);
         setSavedSnapshot(snapshotOf(form, isFree));
         setSaveStatus("saved");
         clearTimeout(savedStatusTimeout.current);
@@ -337,8 +340,8 @@ export default function AdminEventEditorPage() {
             <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13 }}>
               <input
                 type="checkbox"
-                checked={form.editor_pick}
-                onChange={(e) => set("editor_pick", e.target.checked)}
+                checked={form.editorialSelected}
+                onChange={(e) => set("editorialSelected", e.target.checked)}
               />
               Incluir en "Selección del editor"
             </label>

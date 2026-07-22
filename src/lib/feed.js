@@ -1,6 +1,7 @@
 import { listUpcomingEvents } from "./events";
 import { listPublishedFeedPublications } from "./publications";
 import { listPublishedFeedPromotions } from "./promotions";
+import { listEditorialSelectedEventIds } from "./editorial";
 
 const TAG_LABELS = {
   nuevo: "NUEVO",
@@ -30,14 +31,14 @@ function getCardVariant(event, index) {
 
 // "Selección del editor": no es contenido inventado — es un recorte de los
 // mismos eventos reales del feed. Prioridad de la fuente:
-//   1. Curaduría manual real (events.editor_pick = true, marcado por un
-//      admin desde el panel) — así queda preparada la arquitectura para que
-//      el equipo elija a mano qué aparece aquí, sin que el código decida.
+//   1. Curaduría manual real (Fase 6, Bloque 3: Motor Editorial --
+//      editorial_selections, ver lib/editorial.js -- reemplaza a
+//      events.editor_pick, ya legacy desde la migración 0040).
 //   2. Si no hay al menos 3 marcados a mano, cae al heurístico automático
 //      de antes (nuevo/imperdible, o los próximos eventos).
 // Solo aparece si hay al menos 3 eventos reales elegibles.
-function pickEditorSelection(events) {
-  const curated = events.filter((e) => e.editor_pick);
+function pickEditorSelection(events, selectedEventIds) {
+  const curated = events.filter((e) => selectedEventIds.has(e.id));
   if (curated.length >= 3) return curated.slice(0, 5);
 
   const featured = events.filter((e) => e.tag === "imperdible" || e.tag === "nuevo");
@@ -170,10 +171,11 @@ function mergeFeedSources(...sources) {
 // por afinidad, personalización y contenido patrocinado quedan, a
 // propósito, fuera de esta fase (Fase 6 y Fase 11).
 export async function getFeed({ channel } = {}) {
-  const [events, publications, promotions] = await Promise.all([
+  const [events, publications, promotions, selectedEventIds] = await Promise.all([
     listUpcomingEvents({ channel }),
     listPublishedFeedPublications(),
     listPublishedFeedPromotions(),
+    listEditorialSelectedEventIds().then((ids) => new Set(ids)),
   ]);
 
   const eventItems = events.map(mapEventToFeedItem);
@@ -183,7 +185,7 @@ export async function getFeed({ channel } = {}) {
   const promotionItems = promotions.map(mapPromotionToFeedItem);
   const items = mergeFeedSources(eventItems, publicationItems, promotionItems);
 
-  const selection = pickEditorSelection(events);
+  const selection = pickEditorSelection(events, selectedEventIds);
   if (selection.length >= 3) {
     items.splice(1, 0, {
       id: "editorial-seleccion-del-editor",
