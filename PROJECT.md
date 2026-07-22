@@ -1823,8 +1823,153 @@ Build y lint limpios (sin advertencias nuevas más allá de las ya conocidas). P
 - **Sin moderación de comentarios desde la interfaz de administración**: la base de datos ya permite que un admin haga soft-delete de cualquier comentario (verificado), pero no existe todavía una pantalla dedicada en `/admin` para ejercer esa capacidad — queda disponible para una fase de moderación futura si se decide construirla.
 - **Ninguna deuda nueva de integridad de datos o privacidad** — las cinco correcciones de este bloque se verificaron todas contra Postgres real antes del commit.
 
+### Decisiones adicionales de producto, registradas tras la aprobación del cierre de este bloque
+
+1. **La eliminación de un comentario es definitiva.** El cuerpo de un comentario eliminado nunca podrá recuperarse, ni siquiera mediante herramientas administrativas normales — coherente con el diseño ya implementado y verificado (`protect_comment_soft_delete()` fuerza `body := null` en la única transición de `UPDATE` permitida, y la propia RLS de `UPDATE` exige `deleted_at is null` incluso para un admin, así que ninguna fila ya eliminada vuelve a ser alcanzable por ese camino). Se eleva aquí de detalle de implementación a **decisión permanente de producto**: respeta plenamente la decisión de quien eliminó su propio comentario y el principio de minimización de datos. Si en el futuro existiera alguna excepción legal que exigiera recuperar ese contenido, deberá resolverse mediante un mecanismo completamente distinto y explícitamente aprobado — nunca reinterpretando ni debilitando el soft-delete actual.
+2. **Diferencia semántica permanente entre "Cuenta eliminada" y "Comentario eliminado".** Son dos conceptos distintos que nunca deben tratarse como equivalentes: una cuenta eliminada conserva el contenido del comentario pero pierde la identidad de su autor; un comentario eliminado conserva únicamente la estructura conversacional y elimina definitivamente el contenido. Documentado de forma permanente en `AI_PHILOSOPHY.md` (Principio no negociable 12, y su correspondiente entrada en "Qué nunca debe hacer") para que la futura Guía IA nunca los interprete como el mismo estado.
+
 ### Qué sigue
 
-Cierre formal de la Fase 5B — pendiente de la revisión y aprobación explícita de este informe por el usuario antes de declararlo.
+Cierre formal de la Fase 5B — aprobado. Ver la sección "FASE 5B CERRADA" más abajo.
+
+---
+
+## FASE 5B CERRADA — Interacción social plena (2026-07-22)
+
+Cierre formal de la Fase 5B completa del `MASTERPLAN.md`, aprobado explícitamente tras completar los tres bloques planificados. Primera fase construida enteramente bajo la "METODOLOGÍA PERMANENTE DE TRABAJO" registrada tras la pausa estratégica que adoptó `VISION_MAESTRA.md` como autoridad conceptual máxima del proyecto — cada bloque se precedió de análisis explícito, decisiones de producto aprobadas por separado, y verificación exhaustiva contra Postgres 16 real antes de cualquier commit. Checkpoint de Git: tag `checkpoint-fase5b-interaccion-social`.
+
+### Resumen ejecutivo
+
+La Fase 5B completó la interacción social del ecosistema: generalizó "me gusta"/"guardado" a Eventos y Lugares sobre la misma fuente de verdad que ya usaba el resto del producto (Bloque 1), construyó por primera vez las reacciones "Quiero ir"/"Ya fui" reservadas desde la Fase 1 (Bloque 2), y generalizó los comentarios — antes exclusivos de Evento — a Evento y Publicación, con Promoción deliberadamente excluida (Bloque 3). Los tres bloques comparten un mismo patrón de rigor: cada uno encontró y corrigió defectos reales durante su propia verificación contra Postgres real, nunca detectados por inspección visual del código — dos en el Bloque 1, cinco en el Bloque 3 — y ninguno llegó a un commit sin corregir.
+
+### Objetivo original y resultado final
+
+**Objetivo original** (`MASTERPLAN.md`): generalizar comentarios y guardados a cualquier Publicación, y fijar el catálogo final de reacciones para v1 (Me gusta, Quiero ir, Ya fui).
+
+**Resultado final**: se cumplió el objetivo con una corrección deliberada respecto a la redacción original del plan — **Promoción queda explícitamente excluida de comentarios**, no incluida "igual que un Evento" como decía el texto original de `MASTERPLAN.md` (corregido como parte de este cierre). La razón, aprobada explícitamente durante el análisis del Bloque 3: un beneficio comercial con vigencia no es un espacio de conversación, mismo principio que la Fase 4 ya aplicó para excluir "Quiero ir" y comentarios de Promoción desde su diseño original. Guardados y las tres reacciones se generalizaron exactamente según lo planeado.
+
+### Bloques implementados
+
+1. **Bloque 1 — Cambio de fuente de verdad** (2026-07-21, migración `0032`): "me gusta"/"guardado" de Eventos y Lugares migran de `post_likes`/`saved_events`/`saved_places` a `interactions`, cerrando la deuda dejada pendiente desde el Bloque 4 de la Fase 1. Reconciliación bidireccional (no un backfill puramente aditivo, porque las tablas legacy siguieron recibiendo escrituras reales) — hallazgo que cambió el diseño antes de implementar. Encontró y corrigió un defecto real: el trigger de conteo nuevo necesitaba `security definer` para no quedar bloqueado por la misma RLS que protege `events`, un defecto silencioso heredado del trigger original desde su creación, nunca manifestado porque toda verificación previa se había hecho con rol de servicio o superusuario.
+2. **Bloque 2 — Reacciones "Quiero ir" y "Ya fui"** (2026-07-21, migración `0033`): construye por primera vez las dos reacciones reservadas en `interactions.type` desde la Fase 1 — exclusivas de Eventos, coexistentes sin exclusión mutua, con compuerta temporal (nunca "ya fui" antes de empezar, nunca una nueva activación de "quiero ir" después de finalizar) reforzada en la base de datos, no solo en la interfaz. Semántica documentada explícitamente en `AI_PHILOSOPHY.md` como jerarquía de señales de fuerza creciente (me gusta → quiero ir → ya fui → check-in futuro), con la advertencia explícita de que "ya fui" nunca equivale a un check-in validado.
+3. **Bloque 3 — Comentarios generalizados** (2026-07-22, migración `0034`): generaliza comentarios de Evento a Evento y Publicación, con Promoción explícitamente excluida. Introduce el actor de sistema "Cuenta eliminada" para anonimizar comentarios de cuentas eliminadas sin perder el contenido de terceros (mismo principio de privacidad que la Fase 1, Bloque 5 ya aplicaba a `event_comments`, ahora generalizado), y un índice único parcial que permite múltiples comentarios del mismo actor sobre el mismo contenido sin romper la unicidad de los otros seis tipos de interacción. Encontró y corrigió cinco defectos reales durante su verificación — el bloque con más rigor de detección de todo el proyecto hasta ahora. Cerró con dos decisiones adicionales de producto registradas tras su aprobación: la eliminación de un comentario es definitiva y no reversible ni por herramientas administrativas, y la diferencia semántica entre "Cuenta eliminada" y "Comentario eliminado" queda documentada de forma permanente en `AI_PHILOSOPHY.md`.
+
+### Funcionalidades visibles construidas
+
+- "Me gusta" y "guardado" de Eventos y Lugares funcionan exactamente igual que antes para el usuario, ahora sobre una única fuente de verdad compartida con el resto del ecosistema.
+- Dos chips independientes en `EventSheet` — "Quiero ir" y "Ya fui" — con conteo público en vivo, estado activo/inactivo/ocupado, y una nota breve cuando están deshabilitados por el momento del evento.
+- Cualquier Evento o Publicación admite comentarios con la misma experiencia: lista, formulario con protección contra doble envío, contador de comentarios visibles, y eliminación del propio comentario.
+- Un comentario de una cuenta eliminada conserva su texto pero muestra "Cuenta eliminada" como autor, sin insinuar que el comentario mismo fue eliminado; un comentario eliminado muestra únicamente "Comentario eliminado", sin texto.
+- Nueva vista de detalle de Publicación (`/publicacion/:id`), con el mismo patrón que ya usa Evento — la conversación vive en el detalle, no en el scroll del feed.
+- Promoción conserva me gusta/guardar/compartir exactamente como en la Fase 4, sin ningún cambio — nunca admitió ni admite comentarios ni "quiero ir".
+
+### Arquitectura lograda
+
+- **`interactions` demostró, por tercera vez consecutiva, estar completa desde su diseño original en la Fase 1**: "quiero_ir"/"ya_fui" y "comentario" ya vivían reservados en su catálogo de tipos desde la migración `0015`, y `parent_comment_id` en `interaction_comments` ya estaba previsto en el `MASTERPLAN.md` antes de que existiera la tabla — ninguno de los tres bloques necesitó rediseñar el eje de interacción, solo completarlo.
+- **Unicidad de `interactions` evolucionó de una restricción única simple a un índice único parcial**, el primer cambio real a ese invariante desde su creación en la Fase 1 — necesario específicamente porque "comentario" es el primer tipo de interacción que legítimamente admite más de una fila por actor/objetivo. Los otros seis tipos conservan exactamente la misma garantía de una fila por actor/objetivo que tenían desde el origen.
+- **Patrón de anonimización por actor de sistema, generalizado por primera vez**: "Cuenta eliminada" sigue el mismo patrón estructural que "Guía IA"/"Ahorita Editorial" (Fase 1) — un actor sin `profile_id`/`business_id`, excluido de toda RLS basada en propiedad — pero es el primero de los tres que existe específicamente para *recibir* contenido reasignado en vez de para *crear* contenido propio.
+- **`security definer` como patrón consolidado y verificado activamente, no asumido**: el hallazgo del Bloque 1 (un trigger sin ese atributo queda silenciosamente bloqueado por la RLS que protege la tabla que actualiza) se aplicó preventivamente en el diseño del Bloque 3 (`enforce_comment_rules`, `sync_comments_count`, `protect_comment_soft_delete` lo llevan desde su primera versión) — el aprendizaje de un bloque se volvió disciplina de diseño del siguiente, no solo una corrección puntual.
+- **Orden backfill-antes-que-trigger-de-conteo, aprendido en el Bloque 1 y re-verificado en el Bloque 3**: crear un trigger de conteo antes de que el backfill corra duplica el conteo sobre datos ya correctos — el mismo error se cometió y se corrigió dos veces en la misma fase, confirmando que la disciplina de verificar contra Postgres real (no solo razonar sobre el SQL) es lo que realmente atrapa este tipo de defecto, no la experiencia previa por sí sola.
+- **Soft-delete de dos estados, exigido a nivel de `CHECK` de base de datos, no de disciplina de aplicación**: ningún estado intermedio entre "activo" y "eliminado" es representable en la tabla — el mismo rigor que ya usaba `promotion_status()`/`business_open_status()` (cálculo, no confianza ciega) aplicado aquí a una transición de escritura protegida por trigger.
+- **Componente compartido de comentarios entre dos tipos de contenido**, mismo principio de consolidación ya demostrado con `useShareContent` (Fase 4) y `useActorSocialState` (Fase 3) — una sola implementación, dos superficies, en vez de duplicar lógica casi idéntica.
+
+### Decisiones de producto incorporadas
+
+- Reconciliación bidireccional (no backfill aditivo) para el cambio de fuente de verdad del Bloque 1, tras descubrir que las tablas legacy seguían recibiendo escrituras reales.
+- "Quiero ir"/"Ya fui" exclusivas de Eventos, visibles únicamente en el detalle (nunca en las tarjetas del Feed), con compuerta temporal reforzada en la base de datos.
+- Comentarios generalizados a Evento y Publicación, con Promoción explícitamente excluida — corrección del texto original de `MASTERPLAN.md`.
+- Índice único parcial sobre `interactions`, resolviendo la bifurcación crítica que el propio Product Owner identificó: la restricción única original habría impedido múltiples comentarios del mismo actor y habría bloqueado la anonimización compartida de cuentas eliminadas.
+- Actor de sistema "Cuenta eliminada", que puede agregar comentarios de varias cuentas eliminadas distintas sin que eso implique la misma autoría, y que está estructuralmente excluido de crear cualquier interacción nueva.
+- Soft-delete de dos estados exactos, sin intermedios, con distinción visual permanente entre "autor eliminado" y "comentario eliminado".
+- La eliminación de un comentario es definitiva y no reversible, ni siquiera mediante herramientas administrativas normales — cualquier excepción legal futura requeriría un mecanismo completamente distinto y explícitamente aprobado.
+- La diferencia semántica entre "Cuenta eliminada" y "Comentario eliminado" queda documentada de forma permanente en `AI_PHILOSOPHY.md`, para que la futura Guía IA nunca los trate como equivalentes.
+- Límite de tasa de comentarios (10 segundos entre comentarios, 20 por hora, global por actor) desde el propio Bloque 3 — adelantando parte del alcance de límites de tasa que el `MASTERPLAN.md` reserva formalmente para la Fase 13.
+
+### Relación con `VISION_MAESTRA.md`
+
+La Fase 5B fue la primera fase completa construida enteramente bajo la autoridad de `VISION_MAESTRA.md`, adoptada justo antes de que empezara (ver la sección "VISIÓN MAESTRA ADOPTADA" arriba). El criterio "¿esta decisión fortalece la Visión Maestra?" se aplicó explícitamente en el punto de mayor tensión de la fase: la bifurcación de unicidad del Bloque 3, donde la solución técnicamente más simple (mantener la restricción única sin cambios) habría contradicho directamente el principio de la Visión Maestra de que cada persona puede comentar tantas veces como quiera sobre algo que le importa, y que una cuenta eliminada nunca debe impedir que el contenido de terceros sobreviva. La Visión Maestra no se invocó como una frase decorativa — cambió el diseño real de la migración.
+
+### Cómo la Fase 5B fortalece la Visión Maestra y los pilares del producto
+
+- **Utilidad sobre atención.** Ninguna de las tres reacciones ni los comentarios generalizados introducen ningún mecanismo de retención artificial — "Quiero ir"/"Ya fui" son declaraciones honestas de intención/asistencia, nunca gamificadas; comentarios no tienen "me gusta" anidado, contador de vistas, ni ranking por popularidad.
+- **Centralidad del ciudadano.** El soft-delete de dos estados y la anonimización compartida por "Cuenta eliminada" existen exclusivamente para proteger la decisión de la persona (eliminar su cuenta, eliminar su comentario) por encima de cualquier conveniencia técnica de conservar más datos de los necesarios.
+- **Identidad editorial.** Ninguna interacción de esta fase mezcla contenido patrocinado con señal orgánica — Promoción conserva su misma exclusión de comentarios/"quiero ir" que ya tenía desde la Fase 4, sin excepción ni presión de producto para ampliarla.
+- **La ciudad como organismo.** "Quiero ir"/"Ya fui" son, literalmente, el pulso declarado de la ciudad sobre sus propios eventos — la primera señal de asistencia real (no solo de interés) que el ecosistema registra.
+- **Profundidad de la IA (futura).** Ver la sección de señales nuevas más abajo.
+
+### Problemas encontrados y cómo fueron resueltos (consolidado de los tres bloques)
+
+- **Bloque 1 — Trigger de conteo sin `security definer`**: el trigger nuevo, en su primera versión, no llevaba ese atributo, igual que el trigger original que reemplazaba — verificado con un actor autenticado real (no superusuario), el conteo nunca se movía porque la RLS de `events` bloqueaba la escritura interna. Corregido antes de cualquier commit, con el mismo patrón ya usado en `handle_new_user`.
+- **Bloque 3 — Fuga de `NULL` en el `CHECK` de dos estados**: `char_length(btrim(body))` sobre `body is null` evalúa `NULL`, no `false`, y Postgres acepta un `CHECK` que evalúa `NULL` — permitía un estado intermedio inválido. Corregido con `coalesce`.
+- **Bloque 3 — Backfill frágil por coincidencia de timestamp**: el primer borrador correlacionaba filas nuevas de vuelta a `event_comments` por `(target_id, created_at)`, ambiguo si dos comentarios compartieran el mismo instante exacto. Reescrito como bucle procedural con correspondencia 1:1 garantizada.
+- **Bloque 3 — Doble conteo (4→8) por orden trigger/backfill**: el trigger de conteo se creaba antes del backfill, duplicando la suma sobre un conteo que el trigger legacy (todavía activo) ya había dejado correcto — el mismo error de ordenamiento que el Bloque 1 ya había resuelto una vez, cometido y corregido de nuevo en el Bloque 3, confirmando que solo la verificación empírica (no la experiencia previa por sí sola) atrapa este tipo de defecto de forma confiable.
+- **Bloque 3 — Promoción comentable a nivel de base de datos**: el chequeo de `target_type` no distinguía `subtype`, así que una Promoción publicada pasaba la validación sin ningún rechazo — contradiciendo la decisión aprobada de excluirla. Corregido con un rechazo explícito de `subtype = 'promocion'`.
+- **Bloque 3 — Política de `UPDATE` sin `with check` explícito**: ni el propio dueño ni un admin podían completar su propia eliminación de comentario, porque RLS reutilizaba la misma condición `deleted_at is null` para validar también la fila ya transicionada. Corregido con un `with check` propio.
+
+Los siete defectos anteriores (dos del Bloque 1, cinco del Bloque 3) se encontraron y corrigieron durante la verificación contra Postgres 16 real, antes de cualquier commit — ninguno llegó a producción de código sin corregir.
+
+### Confirmación de qué permaneció intacto
+
+- **Comunidad** (`post_likes` para `status`/`question`) no se tocó en ningún bloque — el Bloque 1 reafirmó explícitamente esa frontera al restringir el `check` de `post_likes.target_type` para Eventos/Lugares, sin afectar en absoluto su uso activo para Comunidad.
+- **Promoción** conserva exactamente el mismo conjunto de interacciones que tenía al cerrar la Fase 4 (me gusta/guardar/compartir, sin "quiero ir" ni comentarios) — verificado explícitamente en el Bloque 3, con un rechazo real a nivel de base de datos, no solo por ausencia de interfaz.
+- **`event_comments`** permanece como respaldo legacy, con todas sus filas históricas intactas, migradas campo por campo hacia el nuevo esquema sin pérdida de un solo comentario — su trigger de conteo legacy queda deshabilitado (no eliminado), reversible durante el periodo de convivencia.
+- **`events.likes_count`/`comments_count`** se comportan de forma idéntica a como lo hacían antes de la fase, para cualquier usuario autenticado real, en cada uno de los tres bloques que los tocó.
+
+### Deudas técnicas pendientes (consolidado, obligatorio documentar antes de producción)
+
+- **Prueba end-to-end contra un proyecto Supabase real desplegado** (Auth+PostgREST+RLS+Storage+Edge Functions+triggers programados) — heredada desde la Fase 1, nunca resuelta en ningún bloque de ninguna fase por falta de Docker/Supabase real en este entorno de desarrollo. Afecta en particular la verificación completa de `process-account-deletions` (Bloque 3).
+- **`post_likes` permanece parcialmente legacy** (Bloque 1) — activa para Comunidad, su retiro definitivo depende de que Comunidad migre a `interactions` en una fase futura, fuera del alcance de la Fase 5B.
+- **`saved_events`/`saved_places`/`event_comments` permanecen como legacy de solo respaldo** — el frontend ya no las usa, pero sus filas no se han retirado; el retiro definitivo requiere su propia migración futura, después de un periodo de convivencia observado.
+- **Sin moderación de comentarios desde la interfaz de administración** (Bloque 3) — la base de datos ya permite que un admin haga soft-delete de cualquier comentario, verificado, pero no existe todavía una pantalla dedicada en `/admin` para ejercerlo.
+- **Todas las deudas técnicas heredadas de las Fases 1-4** siguen sin resolver y sin empeorar (ver secciones "FASE 1/2/3/4 CERRADA" en este mismo documento) — la Fase 5B no las tocó ni las agravó.
+
+### Funcionalidades deliberadamente no construidas
+
+- **Comentarios en Promoción** — límite explícito de producto, reafirmado dos veces (diseño original de la Fase 4, decisión explícita del Bloque 3 de esta fase): un beneficio comercial con vigencia no es un espacio de conversación.
+- **Respuestas anidadas a comentarios** — `parent_comment_id` ya existe en `interaction_comments`, preparado desde su creación, pero deliberadamente sin exponerse en la interfaz todavía.
+- **Ranking, ni cualquier uso de estas señales para recomendación o personalización** — "quiero ir"/"ya fui"/comentarios quedan registrados y documentados para cuando la Fase 6 (Descubrimiento inteligente v2) y la Fase 7 (Guía IA v2) los necesiten, mismo patrón ya usado con `actor_search_index` (Fase 3) y "compartir" (Fase 4).
+- **Moderación de contenido más allá de las reglas de autenticidad ya construidas** (rate limiting, soft-delete, exclusión de Promoción) — reservada para la Fase 13.
+- **Check-in físico validado** — "Ya fui" es una declaración honesta de asistencia, deliberadamente no equivalente a una verificación física; esa capacidad llega recién en la Fase 9.
+
+### Dependencias habilitadas para las fases siguientes
+
+- **El catálogo de `interactions.type` queda formalmente cerrado y completo para v1** (me gusta, quiero ir, ya fui, guardado, seguimiento, compartir, comentario) — la Fase 6 (Descubrimiento inteligente v2) y la Fase 7 (Guía IA v2) heredan un conjunto de señales ya estable, sin necesitar ninguna migración de catálogo adicional.
+- **`interaction_comments.parent_comment_id` ya probado en el esquema real** (aunque sin exponerse) — cualquier futura decisión de habilitar respuestas anidadas no requiere ninguna migración, solo trabajo de interfaz.
+- **El patrón de actor de sistema para anonimización ("Cuenta eliminada") queda disponible como precedente reutilizable** — cualquier futuro tipo de contenido colaborativo que necesite sobrevivir a la eliminación de una cuenta puede seguir el mismo patrón exacto, ya verificado contra Postgres real.
+- **El componente compartido de comentarios (`CommentsSection`) y la ruta de detalle de Publicación (`/publicacion/:id`)** dejan un precedente de superficie de conversación reutilizable para cualquier futuro tipo de contenido (por ejemplo, Historias en la Fase 8).
+- **Límites de tasa básicos ya activos desde este bloque** (10s/20 por hora en comentarios) — la Fase 13 (madurez operativa) hereda un precedente de implementación ya probado en vez de diseñar el mecanismo desde cero.
+
+### Señales nuevas disponibles para la futura Guía IA
+
+- **"Quiero ir"/"Ya fui" como intención y asistencia declaradas**, con fuerza explícitamente distinta de "me gusta" — documentado en `AI_PHILOSOPHY.md` como jerarquía de señales de fuerza creciente, con la advertencia explícita de que "ya fui" nunca equivale a un check-in validado (Fase 9).
+- **Comentarios sobre Evento y Publicación como señal de involucramiento real**, más allá de me gusta/guardar — la primera vez que el ecosistema registra texto libre de un usuario sobre contenido específico, con su propia semántica de privacidad (Cuenta eliminada vs. Comentario eliminado) ya documentada para que la Guía IA nunca la interprete incorrectamente.
+- **"Me gusta"/"guardado" de Eventos y Lugares consolidados sobre una única fuente de verdad** — cualquier análisis futuro de afinidad ya no necesita reconciliar dos sistemas de datos paralelos.
+
+Ninguna de estas señales se usa hoy para ranking, recomendación ni personalización — quedan registradas y documentadas para cuando la Fase 6 y la Fase 7 las necesiten, mismo patrón ya usado en cada fase anterior.
+
+### Criterios que demuestran que la Fase 5B puede considerarse funcionalmente terminada
+
+1. Los tres bloques planificados están completos — cada uno propuesto, implementado, verificado contra Postgres 16 real y aprobado explícitamente por separado.
+2. Los siete defectos reales encontrados durante la propia implementación (dos en el Bloque 1, cinco en el Bloque 3) se detectaron y corrigieron antes de cualquier commit — ninguno llegó a producción de código sin resolver.
+3. `events`/Comunidad/Promoción permanecieron verificablemente intactos en todo lo que la fase no debía tocar — confirmado explícitamente en cada bloque, no asumido.
+4. Build y lint quedaron limpios, sin advertencias nuevas, al cierre de cada bloque.
+5. La reversión se ejecutó de verdad (no solo se razonó) en los tres bloques, confirmando en cada caso que el comportamiento previo se restaura exactamente — con la limitación honestamente documentada de que, para el Bloque 3, esa garantía deja de sostenerse después de que exista uso real (comentarios duplicados reales, comentarios reales de Publicación, reasignaciones reales a "Cuenta eliminada").
+6. Toda deuda técnica pendiente está identificada, nombrada explícitamente y documentada como requisito de pre-producción — ninguna quedó oculta o implícita.
+7. La discrepancia entre el texto original de `MASTERPLAN.md` (Promoción comentable) y la decisión de producto realmente aprobada e implementada (Promoción excluida) se detectó y corrigió como parte de este mismo cierre — el plan maestro no quedó desactualizado silenciosamente.
+8. Las dos decisiones de producto adicionales registradas tras la aprobación del Bloque 3 (permanencia de la eliminación de comentarios, diferencia semántica Cuenta eliminada/Comentario eliminado) quedan documentadas de forma permanente, incluida su incorporación explícita a `AI_PHILOSOPHY.md`.
+
+### Listado de pruebas acumuladas
+
+- Bloque 1: Postgres 16 real (32 migraciones, dos veces), reconciliación bidireccional en ambas direcciones, `events.likes_count` con actor real no superusuario, privacidad de guardado preservada, Comunidad intacta, deduplicación, trigger viejo deshabilitado, reversión ejecutada de verdad.
+- Bloque 2: Postgres 16 real (33 migraciones, dos veces), compuerta temporal de "ya fui"/"quiero ir", exclusividad de Eventos, coexistencia simultánea, conservación de intención histórica, deduplicación, RLS de actor ajeno y de sesión ausente, conteos exactos, reversión completa.
+- Bloque 3: Postgres 16 real (34 migraciones, múltiples veces, recreación total de la base entre cada corrección), doble conteo, migración campo por campo, índice único parcial (6 tipos + comentario), dos cuentas eliminadas reasignadas al mismo actor sin conflicto, límite de tasa, soft-delete de dos estados, RLS por rol completo (propio/ajeno/admin/Promoción/borrador/`target_type` inválido/invitado/actor de sistema), reversión completa en escenario limpio.
+- Build y lint limpios verificados al cierre de cada bloque, sin advertencias nuevas en ningún momento de la fase.
+- Playwright limitado, en los tres bloques, a confirmar ausencia de errores de ejecución — misma limitación de entorno aceptada desde la Fase 1, sin proyecto Supabase real desplegado.
+
+### Commits principales de cada bloque
+
+- `6c61b45` — Fase 5B, Bloque 1: Eventos y Lugares migran a `interactions`.
+- `cd2b500` — Fase 5B, Bloque 2: reacciones "Quiero ir" y "Ya fui" en Eventos.
+- `40bf9e7` — Fase 5B, Bloque 3: comentarios generalizados sobre Evento y Publicación.
 
 ---

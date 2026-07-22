@@ -223,9 +223,11 @@ Lo que ya existe y sobre lo cual se construye todo lo demás: identidad básica 
 
 ---
 
-## Fase 5B — Interacción social plena (comentarios, guardados y reacciones generalizadas)
+## Fase 5B — Interacción social plena (comentarios, guardados y reacciones generalizadas) ✅ CERRADA (2026-07-22)
 
 **Objetivo.** Generalizar comentarios y guardados a cualquier Publicación, y fijar el catálogo final de reacciones para v1, ya aprobado: **Me gusta, Quiero ir, Ya fui** — sin agregar ninguna reacción adicional sin evidencia real de que aporta valor (decisión 3).
+
+**Resultado final (nota de cierre, ver `PROJECT.md`, sección "FASE 5B CERRADA").** Se cumplió el objetivo con una corrección deliberada respecto al texto original de este plan: **Promoción queda explícitamente excluida de comentarios**, no incluida "igual que un Evento" como decía la redacción original de abajo (líneas "Pruebas necesarias"/"Criterio de terminado", nunca actualizadas hasta este cierre). La razón, aprobada explícitamente durante el análisis del Bloque 3: un beneficio comercial con vigencia no es un espacio de conversación — mismo principio ya aplicado en la Fase 4 para excluir "Quiero ir" y "Compartir sin comentarios" de Promoción. Guardados y las tres reacciones sí se generalizaron según lo planeado; comentarios se generalizaron a Evento y Publicación, deliberadamente no a Promoción.
 
 **Problema que resuelve.** Hoy solo los eventos admiten comentarios; con Publicaciones y Promociones ya existiendo (Fase 4), restringir comentarios solo a eventos se siente arbitrario.
 
@@ -245,9 +247,9 @@ Lo que ya existe y sobre lo cual se construye todo lo demás: identidad básica 
 
 **Riesgos.** El abuso (spam de comentarios) crece con la superficie de contenido comentable — límites de tasa básicos deben entrar en esta misma fase, no esperar a la Fase 13.
 
-**Pruebas necesarias.** Comentar una Promoción funciona igual que comentar un Evento. Límite de tasa efectivo. Los conteos desnormalizados se mantienen correctos con los nuevos tipos.
+**Pruebas necesarias.** Comentar un Evento y comentar una Publicación funcionan con la misma experiencia; comentar una Promoción está explícitamente bloqueado, también a nivel de base de datos (corrección respecto a la redacción original de esta línea — ver "Resultado final" arriba). Límite de tasa efectivo. Los conteos desnormalizados se mantienen correctos con los nuevos tipos.
 
-**Criterio de terminado.** Cualquier Publicación admite comentar, guardar y reaccionar (solo con las tres reacciones aprobadas) con la misma experiencia; existen límites de tasa básicos activos.
+**Criterio de terminado.** Evento y Publicación admiten comentar, guardar y reaccionar (solo con las tres reacciones aprobadas) con la misma experiencia; Promoción admite guardar y reaccionar pero nunca comentar; existen límites de tasa básicos activos.
 
 **Aporte a la Guía IA.** Comentarios, guardados y las tres reacciones son la fuente principal de "gustos del usuario" e "historial de interacción" que la Guía IA usa para personalizar (`AI_PHILOSOPHY.md` §11). "Ya fui" en particular es una señal más confiable que "me gusta" porque implica una acción real declarada, no solo una intención — aunque todavía menos confiable que un check-in físico confirmado, que llega recién en la Fase 9.
 
