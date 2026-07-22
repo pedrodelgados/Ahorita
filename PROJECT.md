@@ -2082,3 +2082,65 @@ Build y lint limpios (frontend actualizado: `AffinitySection.jsx` consume `evide
 Bloque 1 completo y verificado, incluidas ambas adendas técnicas. El resto de la Fase 6 (Motor de Garantías, Motor Editorial, Compositor del Feed) permanece pendiente de análisis y aprobación explícita, bloque por bloque, siguiendo la misma metodología.
 
 ---
+
+## Fase 6, Bloque 2 — Motor de Garantías (implementado)
+
+Segundo bloque de la Fase 6, construido tras dos rondas de análisis conceptual y técnico explícitamente aprobadas: análisis conceptual completo (20 puntos, sustentado en `VISION_MAESTRA.md`, `FASE6_FILOSOFIA_DESCUBRIMIENTO.md` y `FASE6_CONTRATO_ARQUITECTONICO.md`), tres precisiones conceptuales adicionales (garantías como oportunidad no obligación; equidad como oportunidad de competir, no visibilidad garantizada; serendipia que debe renovarse), diseño técnico completo, y una adenda técnica resolviendo tres puntos pendientes (rotación determinística de serendipia, responsabilidad exacta de diversidad, propietario de la restricción geográfica) antes de autorizar la implementación. Construye únicamente el Motor de Garantías: produce, por cada carril, un conjunto de **candidatos elegibles** con su razón de explicabilidad — nunca decide el Feed final, nunca ordena, nunca fusiona con afinidad. El Compositor (Bloque 3, todavía sin construir) decidirá composición, deduplicación, interleaving y explicación final.
+
+### Principio permanente incorporado a `FASE6_CONTRATO_ARQUITECTONICO.md`
+
+**La elegibilidad siempre ocurre antes que las garantías.** Primero existe un universo de contenido elegible — público, vigente, de un actor autorizado —, y solo después actúan, sobre ese universo ya elegible, los carriles de novedad, diversidad, equidad y serendipia. Ninguna garantía convierte en elegible un contenido que no lo era; las garantías filtran y limitan cantidad dentro de lo ya elegible, nunca amplían la elegibilidad de base. Este orden es una secuencia arquitectónica fija, no una convención de implementación de este bloque.
+
+### Diseño aprobado
+
+- **Sin estado nuevo persistido.** Igual que `affinity_profile()`, todo se calcula en el momento de leer — ninguna tabla nueva, ningún trigger, ninguna escritura. `interactions` no se toca en absoluto; este bloque ni siquiera la lee directamente, solo el resultado ya agregado de `affinity_profile()` (Bloque 1), y únicamente para excluir de la serendipia las categorías con afinidad fuerte y activa.
+- **Alcance de contenido**: solo Eventos, Publicaciones y Promociones — las únicas "Fuentes de contenido" del Feed según el contrato (los Lugares viven en Explorar, nunca en el Feed). El contenido autorado por el actor de sistema "Ahorita Editorial" queda excluido por completo del universo elegible de este bloque — la Editorial tiene su propio mecanismo de inserción paralelo (Motor Editorial, fuera de este bloque).
+- **Candidatos por carril, no un Feed compuesto.** Cada función devuelve `target_type, target_id, category, zone_id, actor_id, reason` — nunca una posición ni un orden final. El Motor de Garantías puede **limitar cantidad** (cuántos candidatos de una dimensión entrega) pero nunca **decide orden ni posición** — eso es exclusivamente del futuro Compositor.
+- **Garantías como oportunidad, no obligación**: cada carril puede devolver cero candidatos sin relleno artificial — ninguna consulta fuerza un `LIMIT` mínimo.
+- **Equidad como oportunidad de competir, nunca visibilidad garantizada**: el carril de equidad añade un criterio (baja frecuencia de publicación reciente del actor) sobre los mismos filtros base que exige cualquier otro contenido (vigencia, verificación) — nunca los remueve, y nunca depende del tamaño del negocio ni de su volumen histórico total.
+- **Diversidad limita, no compone**: etiqueta todo el contenido elegible por categoría/zona/actor/tipo, con un tope de candidatos por actor para evitar que uno solo domine el conjunto entregado — nunca decide posiciones consecutivas, cuotas finales por categoría/zona/tipo, ni deduplica candidatos que califican para varios carriles a la vez (eso pertenece exclusivamente al Compositor, que sí ve la composición completa).
+- **Serendipia mediante rotación determinística, nunca `random()`**: sembrada por actor + periodo de renovación (día calendario), usando `hashtext()` — reproducible dentro del mismo día, renovada automáticamente al día siguiente, distinta entre personas, sin ninguna memoria de exposición persistida. Excluye únicamente las categorías donde `affinity_profile()` ya muestra `confidence = 'alto'` y `evidence_status = 'activa'` (umbral conservador, deja el resto del espectro disponible).
+- **Restricción geográfica compartida** (`geo_eligible()`), reutilizable por el futuro Compositor: zona elegida manualmente siempre gana (preferencia explícita); sin geolocalización ni zona manual, degrada honestamente sin inferir ubicación desde ninguna otra fuente; eventos de planificación futura (más allá de una ventana cercana) quedan exentos del radio estricto; contenido sin coordenada propia nunca se excluye por una distancia no calculable — nunca se infiere ubicación por IP ni ninguna fuente no consentida.
+
+### `supabase/migrations/0038_fase6_bloque2_motor_garantias.sql` (nuevo)
+
+Seis funciones nuevas, todas `security definer stable`, sin tabla ni trigger:
+
+- **`discoverable_content()`**: universo de contenido elegible — Eventos vigentes (`status='publicado'`, `coalesce(end_at,start_at) >= now()`, ventana de `publish_at`/`expires_at`, mismo criterio que `listUpcomingEvents`), Publicaciones y Promociones (`status='publicado'`/`promotion_status() in (...)`, actor verificado `vigente`/`en_gracia`) — excluye por completo al actor de sistema "Ahorita Editorial".
+- **`geo_eligible(...)`**: restricción geográfica dura compartida, con la fórmula haversine (radio terrestre 6371 km) ya usada en `lib/directions.js`, para que exista una única definición de "distancia" en todo el proyecto.
+- **`candidatos_novedad(...)`**: contenido aparecido en los últimos 7 días.
+- **`candidatos_equidad(...)`**: actores con a lo sumo una publicación/evento elegible adicional en los últimos 30 días.
+- **`candidatos_diversidad(...)`**: todo el contenido elegible etiquetado, con tope de 3 candidatos por actor.
+- **`candidatos_serendipia(check_actor_id, ...)`**: rotación determinística por actor + día calendario, excluyendo categorías con afinidad alta y activa.
+
+### Constantes de calibración
+
+Cuatro ya fijadas en la adenda técnica (ventana de novedad: 7 días; ventana de baja frecuencia de equidad: 30 días; umbral de afinidad que excluye de serendipia: `confidence='alto'` y `evidence_status='activa'`; periodo de renovación de serendipia: 1 día calendario) — más dos adicionales, necesarias para que `geo_eligible()` sea operativa y explícitamente señaladas para revisión: radio de cercanía (5 km) y ventana de exención por planificación futura (3 días).
+
+### Verificación realizada
+
+Postgres 16 real (38 migraciones desde cero, múltiples veces):
+
+- **Elegibilidad de base**: negocio sin verificar excluido por completo de `discoverable_content()`; negocio verificado vigente incluido; evento sin `business_id` (admin) incluido sin exigir verificación; evento vencido o fuera de la ventana de `publish_at`/`expires_at` excluido.
+- **Novedad**: contenido de más de 7 días correctamente excluido; contenido reciente incluido.
+- **Equidad**: actor con una sola publicación reciente calificado; actor con alta frecuencia (5 y 3 publicaciones/eventos en 30 días) correctamente excluido — verificado que la exigencia de vigencia/verificación nunca se relaja para este carril.
+- **Diversidad**: actor con 6 contenidos elegibles correctamente acotado a 3 en el conjunto entregado; actores con menos contenido, sin cambios.
+- **Serendipia**: categoría con afinidad `alto`+`activa` correctamente excluida para esa persona; misma categoría disponible para un llamador anónimo (sin afinidad que excluir); dos lecturas en el mismo día producen exactamente el mismo orden byte a byte; el mismo cálculo de hash con una fecha distinta produce un orden completamente diferente (renovación confirmada); dos semillas de actor distintas sobre el mismo contenido producen órdenes distintos, sin ninguna tabla de historial de por medio.
+- **Geografía**: ubicación autorizada cercana elegible, lejana rechazada; sin ubicación ni zona manual, elegible sin importar distancia (degradación honesta); zona manual gana sobre cualquier coordenada, en ambos sentidos (incluye lo que está en esa zona aunque esté lejos, excluye lo que no está en esa zona aunque esté cerca); contenido sin coordenada propia nunca excluido; evento de planificación futura exento del radio; evento de hoy lejano correctamente rechazado.
+- **Sin relleno artificial**: un carril restringido a una zona sin contenido devuelve exactamente cero filas.
+- **Sin deduplicación prematura**: un ítem que califica para novedad y equidad simultáneamente aparece en ambos conjuntos, sin que ninguno de los dos lo excluya.
+- **Regresión completa del Bloque 1**: cómputo básico, privacidad/RLS, las tres correcciones y `evidence_status` sin ningún cambio de comportamiento tras agregar las seis funciones nuevas.
+
+Build y lint limpios — sin cambios de frontend en este bloque (no existe todavía ningún consumidor visible de estos candidatos; el Compositor, Bloque 3, es quien los usará).
+
+### Deuda técnica y puntos señalados para revisión
+
+- **Radio de cercanía (5 km) y ventana de exención por planificación futura (3 días)**: constantes adicionales introducidas para que `geo_eligible()` fuera operable, distintas de las cuatro explícitamente fijadas en la adenda — señaladas aquí para revisión explícita, no decididas como definitivas.
+- **Prueba end-to-end contra un proyecto Supabase real desplegado** — heredada, sin resolver por el mismo motivo de siempre.
+- **Ninguna deuda nueva de integridad de datos o privacidad.**
+
+### Qué sigue
+
+Bloque 2 completo y verificado. El resto de la Fase 6 (Motor Editorial, Compositor del Feed extendido) permanece pendiente de análisis y aprobación explícita, bloque por bloque, siguiendo la misma metodología.
+
+---

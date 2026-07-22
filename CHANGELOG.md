@@ -2,6 +2,18 @@
 
 Registro de cambios notables de Ahorita (Cuenca Viva). Formato libre, en español, más cercano a un registro de fases de producto que a versiones semánticas — ver `PROJECT.md` para el plan completo y el estado real de la implementación.
 
+## 2026-07-22 — Fase 6, Bloque 2: Motor de Garantías
+
+Segundo bloque de la Fase 6, tras análisis conceptual (20 puntos), tres precisiones conceptuales y diseño técnico con adenda (rotación determinística de serendipia, responsabilidad exacta de diversidad, propietario de la restricción geográfica) explícitamente aprobados. Produce, por carril (novedad, diversidad, equidad, serendipia), un conjunto de candidatos elegibles con su razón de explicabilidad — nunca decide el Feed final. Principio permanente incorporado a `FASE6_CONTRATO_ARQUITECTONICO.md`: la elegibilidad siempre ocurre antes que las garantías.
+
+### Agregado
+
+- `supabase/migrations/0038_fase6_bloque2_motor_garantias.sql`: `discoverable_content()` (universo elegible — Eventos/Publicaciones/Promociones vigentes y verificados, excluye por completo al actor de sistema "Ahorita Editorial"); `geo_eligible()` (restricción geográfica dura compartida, fórmula haversine, zona manual > geolocalización > degradación honesta, exención de planificación futura); `candidatos_novedad()`, `candidatos_equidad()`, `candidatos_diversidad()` (tope de 3 por actor), `candidatos_serendipia()` (rotación determinística por `hashtext(actor + día calendario)`, nunca `random()`, excluye categorías con afinidad alta y activa).
+
+### Verificado
+
+Postgres 16 real (38 migraciones desde cero): elegibilidad de base (verificación, vigencia), novedad (ventana de 7 días), equidad (baja frecuencia de 30 días, sin relajar filtros base), diversidad (tope por actor), serendipia (exclusión por afinidad, estabilidad dentro del mismo día, renovación al día siguiente, rotación distinta entre actores, todo sin ninguna tabla de historial), geografía (autorizada, sin permiso, zona manual, sin coordenada, planificación futura), carril vacío sin relleno artificial, candidato en dos carriles sin deduplicación prematura, regresión completa del Bloque 1 sin cambios. Build y lint limpios (sin cambios de frontend — no existe todavía consumidor de estos candidatos).
+
 ## 2026-07-22 — Fase 6, Bloque 1 (segunda adenda): estado de evidencia
 
 Precisión final antes de la aprobación conceptual del Bloque 1. Sin rediseño — un campo nuevo en la lectura y una reauditoría sin cambios de código.
