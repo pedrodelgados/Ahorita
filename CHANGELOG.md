@@ -2,6 +2,19 @@
 
 Registro de cambios notables de Ahorita (Cuenca Viva). Formato libre, en español, más cercano a un registro de fases de producto que a versiones semánticas — ver `PROJECT.md` para el plan completo y el estado real de la implementación.
 
+## 2026-07-22 — Fase 6, Bloque 1 (segunda adenda): estado de evidencia
+
+Precisión final antes de la aprobación conceptual del Bloque 1. Sin rediseño — un campo nuevo en la lectura y una reauditoría sin cambios de código.
+
+### Agregado
+
+- `supabase/migrations/0037_fase6_bloque1_estado_de_evidencia.sql`: `affinity_profile()` gana `evidence_status` ('activa'/'historica'), calculado a partir del peso decaído sin piso (`decayed_weight > 0`) — distingue una afinidad con evidencia todavía viva de una sostenida únicamente por el piso tras una revocación, sin rastrear qué contribución individual fue revocada. La confianza se degrada un nivel cuando `evidence_status = 'historica'`.
+- `AffinitySection.jsx`: nueva etiqueta "Sin señales activas — antecedente histórico" en lenguaje neutral, nunca una afirmación en presente sobre seguir/guardar/desear asistir.
+
+### Verificado
+
+Postgres 16 real (37 migraciones desde cero): seguir→dejar de seguir→volver a seguir muestra la transición activa→histórica→activa correctamente, con confianza degradada mientras dura el estado histórico; revocación parcial (1 de 3 señales) permanece 'activa'; decaimiento puro sin revocación (365 días) permanece 'activa' — distingue revocación real de mera antigüedad; reauditoría de la contribución multidimensional de seguimiento confirma exactamente una fila por dimensión por acción, sin duplicación, con el ledger completo verificado directamente. Build y lint limpios.
+
 ## 2026-07-22 — Fase 6, Bloque 1 (adenda): resolución indirecta y revocación
 
 Adenda técnica tras auditoría solicitada antes de aprobar definitivamente el Bloque 1. Dos brechas reales encontradas y corregidas hacia adelante (no reabre `0035`).

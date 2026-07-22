@@ -16,6 +16,15 @@ const STATE_LABEL = {
   desconocido: "Marcada como desconocida",
 };
 
+// Fase 6, Bloque 1 (segunda adenda): evidence_status distingue una
+// afinidad con evidencia todavía viva de una sostenida únicamente por el
+// piso tras una revocación -- el texto nunca debe afirmar en presente algo
+// que ya se deshizo (dejar de seguir, quitar un guardado, etc.).
+const EVIDENCE_LABEL = {
+  activa: null,
+  historica: "Sin señales activas — antecedente histórico",
+};
+
 const CORRECTIONS = [
   { id: "atenuar", label: "Reducir influencia" },
   { id: "reiniciar", label: "Restablecer aprendizaje" },
@@ -119,6 +128,7 @@ export default function AffinitySection({ actorId }) {
             ? { label: actorNames[row.followed_actor_id] ?? "Cuenta", color: "#948A80" }
             : channelInfo(row.category);
           const stateLabel = STATE_LABEL[row.correction_state];
+          const evidenceLabel = EVIDENCE_LABEL[row.evidence_status];
           const busy = busyKey === key;
 
           return (
@@ -146,6 +156,7 @@ export default function AffinitySection({ actorId }) {
                 <p style={{ fontSize: 12, color: "#948A80" }}>
                   {CONFIDENCE_LABEL[row.confidence]}
                   {stateLabel ? ` · ${stateLabel}` : ""}
+                  {evidenceLabel ? ` · ${evidenceLabel}` : ""}
                 </p>
               </div>
               <div style={{ position: "relative" }}>
