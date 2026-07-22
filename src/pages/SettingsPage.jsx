@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { ArrowLeft, ShieldCheck } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
+import { useMyActorId } from "../hooks/useMyActorId";
 import { getProfile, updateProfile } from "../lib/profile";
 import { listMySavedPlaces } from "../lib/interactions";
 import { CHANNELS } from "../styles/theme";
@@ -11,6 +12,7 @@ import CategoryChip from "../components/ui/CategoryChip";
 import PlaceCard from "../features/places/PlaceCard";
 import PlaceSheet from "../features/places/PlaceSheet";
 import PushToggle from "../features/notifications/PushToggle";
+import AffinitySection from "../features/settings/AffinitySection";
 
 // Ajustes (Fase 3, Bloque C, Entrega 5): todo lo que antes vivía en
 // ProfilePage y NO es "el perfil en sí" — cuenta, intereses, guardados,
@@ -20,6 +22,7 @@ import PushToggle from "../features/notifications/PushToggle";
 export default function SettingsPage() {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
+  const myActorId = useMyActorId();
 
   const [profile, setProfile] = useState(null);
   const [username, setUsername] = useState("");
@@ -159,6 +162,8 @@ export default function SettingsPage() {
 
           <PushToggle userId={user.id} />
         </Card>
+
+        <AffinitySection actorId={myActorId} />
 
         <h2 style={{ fontSize: 16, marginBottom: 12 }}>Lugares guardados</h2>
         {savedPlaces.length === 0 ? (

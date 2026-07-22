@@ -2,6 +2,31 @@
 
 Registro de cambios notables de Ahorita (Cuenca Viva). Formato libre, en español, más cercano a un registro de fases de producto que a versiones semánticas — ver `PROJECT.md` para el plan completo y el estado real de la implementación.
 
+## 2026-07-22 — Fase 6, Bloque 1: Motor de Afinidad
+
+Primer bloque de la Fase 6 (Descubrimiento inteligente v2). Construye el Motor de Afinidad: produce, para cada persona, una descripción legible y corregible de qué le interesa a partir de `interactions` — nunca decide qué se muestra en ningún Feed. Evidencia como registro append-only (nunca un contador mutable), cálculo de peso/confianza/estado siempre en el momento de leer, decaimiento exponencial con piso (nunca hacia cero), y tres acciones de corrección explícita (atenuar/reiniciar/desconocido), todas implementadas como filas agregadas, nunca como borrado.
+
+### Agregado
+
+- `supabase/migrations/0035_fase6_bloque1_motor_afinidad.sql`: tabla `affinity_contributions` (append-only, RLS habilitado sin ninguna política de lectura); `record_affinity_contribution()` (`security definer`, disparado `after insert on interactions`, resuelve categoría/zona según el tipo de contenido); `apply_affinity_correction()` (`security definer`, las tres correcciones aprobadas); `affinity_profile()` (`security definer stable`, calcula peso decaído con piso, confianza cualitativa y estado de corrección con ventana de vigencia de 30 días).
+- `lib/affinity.js` (nuevo): `getAffinityProfile(actorId)`, `applyAffinityCorrection({category, followedActorId, correction})`.
+- `src/features/settings/AffinitySection.jsx` (nuevo), integrado en `SettingsPage.jsx` (`/ajustes`): única superficie donde una persona ve y corrige su propio perfil de afinidad.
+- `FASE6_FILOSOFIA_DESCUBRIMIENTO.md` y `FASE6_CONTRATO_ARQUITECTONICO.md`: autoridad filosófica y arquitectónica de toda la Fase 6, incluidos cinco principios permanentes del Motor de Afinidad registrados durante este bloque.
+
+### Corregido (encontrado durante la verificación contra Postgres real, antes de cualquier commit)
+
+- Referencia a una constante (`v_reset_recency_days`) usada antes de declararse en `affinity_profile()`.
+- Tipo incompatible en `make_interval(days => ...)` — el parámetro exige `int`, la constante era `numeric` — corregido con un cast explícito.
+- Privacidad: fuga por comparación con `NULL` (mismo patrón ya visto en la Fase 5B, Bloque 3) — `v_owner_profile_id <> auth.uid()` es `NULL` (no `true`) cuando no hay sesión, dejando pasar la lectura a un invitado anónimo. Corregido con `is distinct from`.
+
+### Verificado
+
+Postgres 16 real (35 migraciones desde cero, múltiples veces): cómputo básico (categoría, categoría×zona, actor seguido, exclusión de Promoción y de zona en Eventos), privacidad/RLS completa (ajena, invitado, negocio), las tres acciones de corrección, ventana de vigencia del estado de corrección, decaimiento con piso sobre 365 días simulados, garantía append-only (deshacer no borra la contribución), umbral de refinamiento categoría×zona (2 vs. 3), regresión de comentarios sobre Evento. Build y lint limpios.
+
+### Limitación de entorno
+
+Sin proyecto Supabase real desplegado — misma limitación ya documentada desde la Fase 1; afecta la verificación de `/ajustes` con datos reales autenticados.
+
 ## 2026-07-22 — Fase 5B, Bloque 3: comentarios generalizados (Evento y Publicación)
 
 Generaliza los comentarios (antes exclusivos de Evento, sobre `event_comments`) a Evento y Publicación por igual, sobre `interactions`/`interaction_comments` — Promoción queda deliberadamente excluida. Introduce un actor de sistema "Cuenta eliminada" para anonimizar comentarios de cuentas eliminadas sin perder el contenido de terceros, y un índice único parcial que permite múltiples comentarios del mismo actor sobre el mismo contenido sin romper la unicidad de los otros seis tipos de interacción.

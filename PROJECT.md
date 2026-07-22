@@ -1973,3 +1973,69 @@ Ninguna de estas señales se usa hoy para ranking, recomendación ni personaliza
 - `40bf9e7` — Fase 5B, Bloque 3: comentarios generalizados sobre Evento y Publicación.
 
 ---
+
+## Fase 6, Bloque 1 — Motor de Afinidad (implementado)
+
+Primer bloque de la Fase 6 (Descubrimiento inteligente v2), construido bajo triple autoridad de diseño: `FASE6_FILOSOFIA_DESCUBRIMIENTO.md` (20 principios, congelados), `FASE6_CONTRATO_ARQUITECTONICO.md` (arquitectura conceptual de seis componentes) y un análisis técnico de dos rondas explícitamente aprobado antes de escribir una sola línea de SQL. Construye únicamente el Motor de Afinidad: produce, para cada persona, una descripción legible y corregible de qué le interesa — nunca decide qué se muestra en ningún Feed, responsabilidad que queda fuera de alcance de este bloque (Motor de Garantías y Compositor, todavía sin construir).
+
+### Diseño aprobado
+
+- **Evidencia como registro append-only, nunca como contador mutable.** `affinity_contributions` acumula una fila por interacción relevante; ninguna fila ya escrita se actualiza ni se borra jamás. Decisión tomada explícitamente para evitar la clase de defecto ya sufrida dos veces en este proyecto (el huérfano de `reconcile_follows_to_interactions` en la Fase 3, el doble conteo del Bloque 3 de la Fase 5B), ambos originados en un contador que debía mantenerse sincronizado con inserciones y eliminaciones de otra tabla.
+- **Todo se calcula en el momento de leer.** Peso, confianza y estado de corrección nunca se guardan como valores precalculados — `affinity_profile()` los deriva siempre desde cero a partir del registro de contribuciones.
+- **Jerarquía de fuerza de señal ya establecida, respetada sin modificarla**: `ya_fui`(7) > `seguimiento`(6) > `quiero_ir`(5) > `guardado`(4) > `comentario`(3) > `me_gusta`(2) > `compartir`(1).
+- **Decaimiento exponencial con piso, nunca hacia cero.** Media vida de 90 días; ninguna afinidad puede decaer por debajo del 15% de su fuerza acumulada bruta, por mucho tiempo que pase — la evidencia se debilita, nunca desaparece solo por el paso del tiempo.
+- **Granularidad categoría y categoría×zona**, sin inventar ninguna taxonomía nueva — reutiliza exactamente las categorías libres ya existentes en cada tipo de contenido. El refinamiento por zona exige una concentración mínima (≥3 contribuciones con zona en la misma categoría) antes de mostrarse, para no fabricar precisión donde solo hay una coincidencia aislada.
+- **Tres acciones de corrección explícita**, todas implementadas como filas *agregadas* (nunca como borrado ni mutación): "atenuar" (amortigua permanentemente, sigue decayendo con normalidad), "reiniciar" (limpia la evidencia acumulada mediante una marca de agua — la dimensión desaparece hasta que llegue evidencia nueva), "desconocido" (igual que reiniciar, más una supresión adicional hasta acumular evidencia nueva ≥ umbral 3).
+- **Estado de corrección con ventana de vigencia (30 días), nunca una etiqueta congelada.** Un ajuste identificado durante la propia verificación: sin esta ventana, `correction_state` habría quedado marcado "recién corregido" para siempre, incluso años después — violando el principio ya aprobado de que el perfil es siempre la mejor interpretación disponible, nunca una verdad definitiva.
+- **Privacidad estricta sin excepciones.** El perfil de afinidad es visible únicamente para su propia dueña — ni siquiera un administrador de plataforma tiene acceso. `affinity_contributions` no tiene ninguna política de RLS de lectura: nadie, ni siquiera su propia dueña, puede leerla directamente — solo se accede a través de `affinity_profile()`, que devuelve exclusivamente el resultado ya agregado.
+- **Alcance solo persona.** Un actor de tipo negocio u organizador no acumula afinidad propia en esta fase.
+- **Límite de alcance conocido y aceptado**: Promociones no tienen ningún campo de categoría en su esquema (`promotion_details`, desde la Fase 4) — una interacción sobre una Promoción nunca genera contribución de categoría. Eventos no tienen zona estructurada — una interacción sobre un Evento solo contribuye a nivel de categoría, nunca a categoría+zona.
+- **Deshacer una interacción no borra su contribución histórica.** El registro es append-only por diseño; solo el decaimiento natural o una corrección explícita reducen la influencia futura de una señal ya registrada.
+- **Cinco principios permanentes** incorporados a `FASE6_CONTRATO_ARQUITECTONICO.md` durante el análisis de este bloque: las afinidades describen personas y nunca las clasifican; el perfil es siempre la mejor interpretación disponible, nunca una verdad definitiva; cada afinidad registra su propia última actualización; las afinidades nunca compiten entre sí; el registro append-only existe exclusivamente para preservar la coherencia del aprendizaje del sistema y nunca debe convertirse en cronología visible, historial de actividad ni mecanismo de vigilancia.
+
+### `supabase/migrations/0035_fase6_bloque1_motor_afinidad.sql` (nuevo)
+
+Crea `affinity_contributions` (append-only, RLS habilitado sin ninguna política — deliberadamente sin ninguna vía de lectura directa) con un índice sobre `(actor_id, target_kind, category, followed_actor_id, created_at)`. `record_affinity_contribution()` (`security definer`, disparado `after insert on interactions`) resuelve categoría/zona según el tipo de contenido (evento: solo categoría; lugar: categoría+zona; publicación: categoría propia + zona heredada del negocio autor; actor seguido: dimensión propia; promoción y cualquier otro: sin contribución) y registra la fila con la fuerza correspondiente — nunca modifica `interactions`, que permanece exactamente tan pasivo como antes. `apply_affinity_correction(p_category, p_followed_actor_id, p_correction)` (`security definer`) resuelve siempre el actor propio desde `auth.uid()`, nunca permite corregir el perfil de otra persona. `affinity_profile(check_actor_id)` (`security definer stable`) calcula, para cada dimensión, el peso decaído con piso, la confianza cualitativa (alto/medio/bajo según evidencia bruta acumulada) y el estado de corrección (activo/reiniciado_recientemente/desconocido), respetando la marca de agua de la corrección más reciente y su ventana de vigencia de 30 días.
+
+### Hallazgos encontrados y corregidos durante la verificación (antes de cualquier commit)
+
+Tres defectos reales, ninguno detectado por inspección visual del SQL:
+
+1. **Referencia sin declarar**: la constante `v_reset_recency_days`, introducida para dar vigencia temporal al estado de corrección, se usó en la consulta antes de declararse en el bloque `declare` de `affinity_profile()` — error de compilación detectado en la primera ejecución contra Postgres real.
+2. **Tipo incompatible en `make_interval`**: `make_interval(days => v_reset_recency_days)` fallaba porque el parámetro nombrado `days` exige `int`, y la constante se había declarado `numeric` (como las demás constantes de calibración de la función) — corregido con un cast explícito (`v_reset_recency_days::int`).
+3. **Privacidad: fuga por comparación con `NULL`** — el mismo patrón de defecto ya encontrado y corregido en la Fase 5B, Bloque 3, reaparecido aquí: la guarda `if v_owner_profile_id is null or v_owner_profile_id <> auth.uid() then return; end if;` produce SQL `NULL` (no `true`) cuando `auth.uid()` es `NULL` (por ejemplo, el rol `anon` sin sesión), y `if NULL then` se comporta como `false` en PL/pgSQL — dejando pasar la lectura sin sesión. Un invitado anónimo podía leer el perfil de afinidad de cualquier persona. Corregido reemplazando la guarda completa por `if v_owner_profile_id is distinct from auth.uid() then return; end if;`.
+
+### Capa de datos (`lib/affinity.js`, nuevo)
+
+`getAffinityProfile(actorId)` y `applyAffinityCorrection({category, followedActorId, correction})` — envuelven únicamente las dos funciones `security definer`; nunca consultan `affinity_contributions` directamente, porque esa tabla no expone ninguna vía de lectura.
+
+### Frontend
+
+`AffinitySection.jsx` (nuevo, `src/features/settings/`), integrado en `SettingsPage.jsx` (`/ajustes`) vía `useMyActorId()`: única superficie donde una persona ve y corrige su propio perfil de afinidad. Muestra cada dimensión de categoría (con el color/etiqueta ya existente de `CHANNELS`) o actor seguido (nombre resuelto vía `getPublicActorProfile`), junto con su nivel de confianza cualitativo y, cuando aplica, su estado de corrección reciente — nunca el peso numérico crudo, que no es información significativa para la persona. Cada fila expone un menú con las tres acciones de corrección aprobadas. Filas refinadas por categoría+zona se excluyen deliberadamente de esta vista — son insumo para el futuro Compositor del Feed, no información adicional que la persona necesite gestionar por separado.
+
+### Verificación realizada
+
+Postgres 16 real, las 35 migraciones aplicadas en orden contra una base limpia (reconstruida por completo entre cada corrección):
+
+- **Cómputo básico**: categoría, categoría×zona (refinado) y actor seguido calculados correctamente sobre un escenario sembrado con 8 interacciones de distinto tipo; Promoción confirmada sin generar ninguna contribución; Evento confirmado sin generar ninguna contribución de zona.
+- **Privacidad/RLS**: otra persona no puede leer el perfil ajeno (0 filas); nadie, ni siquiera la propia dueña, puede leer `affinity_contributions` directamente; un invitado sin sesión (`anon`) no puede leer ningún perfil — incluida la corrección del hallazgo 3, reverificada tras limpiar explícitamente el estado de sesión simulada entre sub-pruebas; un actor de tipo negocio no puede generar contribución propia, y de hecho no puede ni insertar la interacción (bloqueado por la RLS ya existente de `interactions`).
+- **Tres acciones de corrección**: "atenuar" reduce el peso sin eliminar la dimensión; "reiniciar" hace desaparecer la dimensión hasta que llega una señal nueva, que entonces se muestra con su propio valor, no con el histórico; "desconocido" desaparece y permanece oculta ante una señal nueva débil (bajo el umbral), y reaparece correctamente al acumular evidencia nueva suficiente (≥3).
+- **Ventana de vigencia del estado de corrección**: confirmado que `correction_state` muestra "reiniciado_recientemente" mientras la corrección es reciente, y revierte a "activo" una vez que la marca de agua supera los 30 días de antigüedad (verificado retrasando artificialmente la fecha de la corrección).
+- **Decaimiento y piso**: una contribución de fuerza 7 retrasada artificialmente 365 días decae exactamente hasta su piso (1.05 = 0.15 × 7), nunca por debajo.
+- **Garantía append-only**: eliminar la interacción original (dejar de seguir a un actor) no elimina su contribución histórica ya registrada — confirmado con conteo antes y después.
+- **Umbral de refinamiento categoría×zona**: exactamente 2 contribuciones con zona no activan el refinamiento; la tercera sí, apareciendo entonces la fila refinada junto a la de categoría simple, sin reemplazarla.
+- **Regresión**: un comentario sobre un Evento sigue creando su fila en `interaction_comments` con normalidad y genera correctamente su propia contribución de afinidad — el nuevo trigger, adjunto a `interactions`, no interfiere con ningún flujo ya existente.
+
+Build y lint limpios (sin advertencias nuevas más allá de las ya conocidas). Playwright limitado a confirmar ausencia de errores de ejecución en la carga de la aplicación — misma limitación de entorno aceptada desde la Fase 1 (sin proyecto Supabase real desplegado, no es posible verificar en este entorno la interfaz autenticada real de `/ajustes` mostrando datos reales).
+
+### Deuda técnica detectada
+
+- **Prueba end-to-end contra un proyecto Supabase real desplegado** — heredada, sin resolver por el mismo motivo de siempre.
+- **Los parámetros de calibración** (media vida de 90 días, piso del 15%, umbral de confianza, umbral de refinamiento ≥3, umbral de "desconocido" ≥3, ventana de vigencia de 30 días) son constantes documentadas explícitamente como ajustables, no como arquitectura — cualquier ajuste futuro no debería requerir rediseño, solo recalibración.
+- **Ninguna deuda nueva de integridad de datos o privacidad** — las tres correcciones de este bloque se verificaron todas contra Postgres real antes del commit.
+
+### Qué sigue
+
+Bloque 1 completo y verificado. El resto de la Fase 6 (Motor de Garantías, Motor Editorial, Compositor del Feed) permanece pendiente de análisis y aprobación explícita, bloque por bloque, siguiendo la misma metodología.
+
+---
