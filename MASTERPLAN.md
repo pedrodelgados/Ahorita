@@ -259,6 +259,8 @@ Lo que ya existe y sobre lo cual se construye todo lo demás: identidad básica 
 
 ## Fase 6 — Descubrimiento inteligente v2 (feed híbrido, recomendaciones, búsqueda)
 
+**Autoridad filosófica de esta fase: `FASE6_FILOSOFIA_DESCUBRIMIENTO.md`** (aprobado 2026-07-22, previo a cualquier diseño técnico). Define qué debe significar "descubrir" en Ahorita — veinte principios permanentes (entre ellos: la fuerza de una señal depende de cuánto compromiso costó producirla; ningún negocio monopoliza por volumen; la Editorial nunca compite con el algoritmo; serendipia y dimensión emocional como formas legítimas de descubrimiento; la ciudad siempre debe ser más grande que el algoritmo) que cualquier decisión técnica de esta fase debe respetar. El contrato arquitectónico propio de esta fase (mismo espíritu que `FASE4_CONTRATO_ARQUITECTONICO.md` tuvo para la Fase 4) se escribirá después, rindiendo cuentas a ese documento.
+
 **Objetivo.** Evolucionar el feed de "solo proximidad temporal" al modelo híbrido de puntuación (afinidad + peso editorial + peso de promoción acotado + decaimiento de frescura), e introducir el motor de recomendaciones compartido con la Guía IA. **El techo máximo de contenido patrocinado —15% aproximado del contenido mostrado, configurable únicamente por el administrador principal y con registro de auditoría de cualquier cambio— se define en el diseño de la fórmula en esta misma fase** (decisión 4), aunque el contenido patrocinado real todavía no exista (llega en la Fase 11). Definirlo aquí, sin presión comercial todavía activa, es precisamente el punto: que el límite no se decida bajo presión de ingresos futuros.
 
 **Problema que resuelve.** El feed actual no distingue interés personal ni aprende de nada.
