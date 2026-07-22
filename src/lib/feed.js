@@ -155,6 +155,95 @@ function mapPromotionToFeedItem(promo) {
   };
 }
 
+// Fase 6, Bloque 4: el Compositor del Feed. Sustituye el orden puramente
+// cronológico de mergeFeedSources por la composición determinista de
+// compose_feed() (seis entradas, cupos proporcionales, anti-monopolio,
+// paginación por clave de identidad) -- reutiliza sin cambios las mismas
+// funciones de obtención y de mapeo a tarjeta ya usadas por getFeed(), para
+// que ningún tipo de contenido ni variante visual se pierda en la
+// transición. getFeed() se conserva intacta como camino de reversión --
+// ver PROJECT.md, Bloque 4, sección de reversión.
+export async function getComposedFeed({
+  channel,
+  actorId,
+  afterTargetType,
+  afterTargetId,
+  pageSize = 20,
+} = {}) {
+  const { data: composed, error } = await supabase.rpc("compose_feed", {
+    p_actor_id: actorId ?? null,
+    p_lat: null,
+    p_lng: null,
+    p_manual_zone_id: null,
+    p_channel: channel ?? null,
+    p_after_target_type: afterTargetType ?? null,
+    p_after_target_id: afterTargetId ?? null,
+    p_page_size: pageSize,
+  });
+  if (error) throw error;
+
+  const [events, publications, promotions] = await Promise.all([
+    listUpcomingEvents({ channel }),
+    listPublishedFeedPublications(),
+    listPublishedFeedPromotions(),
+  ]);
+
+  const eventsById = new Map(events.map((e) => [e.id, e]));
+  const publicationsById = new Map((channel ? publications.filter((p) => p.category === channel) : publications).map((p) => [p.id, p]));
+  const promotionsById = new Map(promotions.map((p) => [p.id, p]));
+
+  const items = [];
+  composed.forEach((row, index) => {
+    let item = null;
+    if (row.target_type === "event") {
+      const event = eventsById.get(row.target_id);
+      if (event) item = mapEventToFeedItem(event, index);
+    } else if (row.target_type === "publicacion") {
+      const pub = publicationsById.get(row.target_id);
+      if (pub) item = mapPublicationToFeedItem(pub);
+    } else if (row.target_type === "promocion") {
+      const promo = promotionsById.get(row.target_id);
+      if (promo) item = mapPromotionToFeedItem(promo);
+    }
+    // Contenido que compose_feed() ya consideró elegible pero que dejó de
+    // estarlo entre esa lectura y esta (p. ej. venció justo ahora): se omite
+    // honestamente, nunca se rellena con un item inventado.
+    if (item) {
+      items.push({ ...item, reason: row.reason, owningCarril: row.owning_carril, geoStatus: row.geo_status });
+    }
+  });
+
+  const last = composed[composed.length - 1];
+
+  // La "Selección del editor" es una superficie de presentación separada
+  // (un carrusel curado, no un carril del Compositor) -- coexiste con los
+  // ítems editoriales que ya aparecen intercalados en items[] arriba, sin
+  // conflicto, porque ninguna de las dos escribe nada (ver PROJECT.md,
+  // Bloque 4, sección de Editorial). Solo se calcula en la primera página.
+  let editorialShelf = null;
+  if (!afterTargetId) {
+    const selectedEventIds = await listEditorialSelectedEventIds().then((ids) => new Set(ids));
+    const selection = pickEditorSelection(events, selectedEventIds);
+    if (selection.length >= 3) {
+      editorialShelf = selection.map((e) => ({
+        id: e.id,
+        eventId: e.id,
+        title: e.title,
+        location: e.location_name || e.business?.name,
+        image: e.image_url,
+        category: e.category,
+      }));
+    }
+  }
+
+  return {
+    items,
+    editorialShelf,
+    nextCursor: last ? { targetType: last.target_type, targetId: last.target_id } : null,
+    hasMore: composed.length === pageSize,
+  };
+}
+
 function mergeFeedSources(...sources) {
   const now = Date.now();
   return sources

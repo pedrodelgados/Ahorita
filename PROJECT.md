@@ -2218,3 +2218,61 @@ Build y lint limpios. **Verificación visual en navegador (Playwright) no pudo e
 Bloque 3 completo y verificado. Queda pendiente el cierre formal de este bloque (informe final para revisión y aprobación explícita) antes de avanzar al Compositor del Feed — el único componente restante de la Fase 6.
 
 ---
+
+## Fase 6, Bloque 4 — Compositor del Feed (implementado)
+
+Cierra la Fase 6: último componente. Construido tras un diseño técnico de 25 puntos y una revisión adicional de 7 puntos (proporción de Afinidad, anti-monopolio transversal, propiedad completa de Editorial, estabilidad por bloques horarios, proporciones relativas en vez de una cantidad fija, disciplina de rendimiento, y el nuevo principio "el Compositor nunca intenta ser inteligente") — los cuatro principios de esa revisión quedaron registrados en `FASE6_CONTRATO_ARQUITECTONICO.md` antes de autorizar la implementación.
+
+### Piezas nuevas
+
+- **`discovery_calibration()` extendida** (no una función nueva — principio ya fijado desde el Bloque 3): agrega las seis proporciones del Compositor (afinidad 35%, novedad 15%, diversidad 20%, equidad 10%, serendipia 10%, editorial 10% — calibración inicial, ajustable por migración futura) y las constantes de anti-monopolio/estabilidad (ventana de 10, topes por actor/categoría/zona/tipo, brecha editorial mínima de 3, bloque de estabilidad de 4 horas).
+- **`candidatos_editorial()` extendida** (Bloque 3): agrega `zone_id` a su proyección (ya tenía `category`/`actor_id` desde el Bloque 3) — el Compositor los necesita para deduplicar y aplicar anti-monopolio, sin tocar ninguna regla de elegibilidad ya verificada.
+- **`candidatos_afinidad()` (nueva)**: la pieza que le faltaba a Afinidad — hasta ahora solo existía `affinity_profile()` (una descripción, Bloque 1), nunca un generador de candidatos. Lee `discoverable_content()` (mismo universo que Garantías, excluye a Editorial) cruzado contra `affinity_profile()` por categoría o por actor seguido, con confianza `medio`/`alto` y `evidence_status='activa'`. Sin `check_actor_id` (invitado): cero candidatos, nunca personalización fabricada. Aplica ya aquí el tope de candidatos por actor (mismo mecanismo de Diversidad) para que un único actor con mucho contenido afín no sature por sí solo el cupo de Afinidad.
+- **`compose_feed_item` (tipo compuesto) y `compose_feed()` (el Compositor)**: fusiona las seis entradas, deduplica, ordena mediante colas justas ponderadas (weighted fair queuing — la posición k-ésima de un carril con peso W recibe la clave `k/W`; ordenar por esa clave produce un entrelazado proporcional determinista, sin ninguna fórmula de puntuación), aplica anti-monopolio en una pasada lineal, y pagina por clave de identidad (`target_type`, `target_id`) — nunca `OFFSET`.
+
+### Deduplicación y propiedad
+
+Editorial reclama siempre por completo (cupo, propiedad y explicación) cuando un ítem también califica para otra entrada. Entre las cinco entradas restantes, la propiedad no sigue una lista fija de prioridad: decide primero la **escasez** (el carril con menos candidatos totales se queda con el ítem compartido, para que un carril abundante — p. ej. Novedad tras una ráfaga de contenido — nunca pueda, por su propio volumen, hacer desaparecer de la composición a un carril escaso con candidatos reales) y, entre carriles igual de escasos, el desempate final es la misma rotación determinística ya usada en Serendipia (hash por semilla+carril+ítem), nunca una preferencia fija que sistemáticamente favorezca siempre al mismo carril.
+
+**Hallazgo real corregido durante la verificación**: la primera versión usaba una lista de prioridad fija (Editorial > Afinidad > Novedad > Equidad > Serendipia > Diversidad) para resolver la propiedad de ítems compartidos. Contra datos sembrados donde Novedad y Diversidad/Serendipia comparten casi el mismo universo (contenido recién publicado), esa lista dejaba a Diversidad y Serendipia con **cero** ítems propios pese a tener candidatos reales — una violación directa del principio recién registrado ("la ausencia real de candidatos es válida; la desaparición causada por la propia composición no lo es"). Corregido hacia el mecanismo de escasez + hash descrito arriba, verificado con datos de concentración de actor variable hasta confirmar que ambos carriles reciben propiedad real y proporcional.
+
+### Anti-monopolio
+
+Ventana deslizante (actor/categoría/zona/tipo) más la regla dura de no-consecutivos-del-mismo-actor y la brecha mínima entre piezas Editoriales. Lo que viola se difiere, nunca se descarta. **Hallazgo real corregido**: la primera versión de la segunda pasada (colocación de diferidos) los insertaba en su orden original fijo, lo que podía repetir la misma violación entre dos diferidos consecutivos del mismo actor. Corregido: en cada paso se busca, entre TODOS los diferidos restantes, el primero que ya no viole la regla contra lo último colocado — solo si ninguno la evita se acepta el primero como último recurso documentado. Verificado con datos de concentración de actor extrema (un solo actor con 6 de ~45 ítems del universo) que el número de aceptaciones de último recurso baja a cero conforme la concentración de actor se acerca a un dato realista, confirmando que el mecanismo no es la causa — es la escasez de diversidad de actor en el dato sintético.
+
+### Rendimiento
+
+Medido con `EXPLAIN ANALYZE` contra un conjunto sintético de 210 eventos y 69 negocios (no el puñado de filas usado para verificar reglas funcionales). **Cuello de botella real encontrado y corregido**: la comprobación de anti-monopolio usaba `(select count(*) from unnest(ring_actor) x where x = ...)` — una subconsulta correlacionada por cada una de cuatro reglas, por cada ítem — costando 663 ms para una página de 20. Reemplazado por `cardinality(array_positions(ring_actor, ...))` (una función nativa de array, sin subconsulta) — el mismo cálculo baja a 115 ms, una mejora de ~5.8×. Verificado que la corrección no cambió ningún resultado (dedup y anti-monopolio re-verificados idénticos). Cuello de botella conocido y **conscientemente diferido** (no corregido ahora): `discoverable_content()` se evalúa de forma independiente dentro de cada una de las cinco funciones `candidatos_*` que la consumen (Afinidad, Novedad, Diversidad, Equidad, Serendipia) en vez de una sola vez compartida — aceptable a 115 ms para el volumen real de una sola ciudad; revisitar solo si se mide como un problema real a mayor escala, nunca por anticipado.
+
+### Verificación realizada
+
+Postgres 16 real (41 migraciones desde cero, reconstruido varias veces durante la depuración):
+
+- Deduplicación sin duplicados verificada hasta con 300 ítems en la composición.
+- Propiedad por escasez + desempate por hash verificada con datos de concentración de actor variable (ver hallazgo arriba).
+- Editorial reclama por completo un ítem que también calificaba para Novedad y Serendipia — confirmado con `internal_carriles`.
+- Filtro de canal: solo devuelve ítems de la categoría pedida.
+- Paginación: cursor por `(target_type, target_id)` verificado sin solapamiento entre página 1 y página 2.
+- Anti-monopolio: cero violaciones de adyacencia con distribución de actor realista; aceptaciones de último recurso documentadas y explicadas con datos de concentración extrema (ver hallazgo arriba).
+- RLS con roles de bajo privilegio: `candidatos_afinidad()`, `candidatos_editorial()` y `compose_feed()` verificados con `authenticated` (negocio, no admin) y con `anon` — ambos funcionan (son de lectura pública/agregada, sin exponer nada privado); `affinity_profile()` para un actor de tipo `negocio` devuelve cero filas (sin concepto de afinidad propia, ya establecido desde el Bloque 1).
+- **Reversión ejecutada de verdad, con un hallazgo real**: revertir el Bloque 4 no es solo borrar `compose_feed()`/`candidatos_afinidad()`/el tipo nuevo — `discovery_calibration()` y `candidatos_editorial()` fueron **extendidas en el mismo lugar**, no creadas de nuevo, así que revertir de verdad exige devolverlas a su forma exacta de Bloque 2/3 (confirmado: sin esa restauración, `candidatos_novedad()` y el resto de Bloque 2 quedan rotos). Con la restauración correcta, `candidatos_novedad()`/`candidatos_editorial()`/`events`/`editorial_selections` quedaron exactamente como antes, sin ninguna pérdida de datos.
+- Regresión completa de los Bloques 1, 2 y 3 sin cambios de comportamiento.
+
+Build y lint limpios. **Verificación visual en navegador (Playwright) no pudo ejecutarse en este entorno**, por el mismo motivo ya declarado en el Bloque 3 (sin instancia local de Supabase disponible) — se dice explícitamente, no se reclama una prueba que no ocurrió.
+
+### Frontend
+
+- **`src/lib/feed.js`**: nueva `getComposedFeed({ channel, actorId, afterTargetType, afterTargetId, pageSize })` — llama a `compose_feed()`, reutiliza sin cambios las mismas funciones de obtención (`listUpcomingEvents`, `listPublishedFeedPublications`, `listPublishedFeedPromotions`) y de mapeo a tarjeta ya usadas por `getFeed()`, y calcula también la "Selección del editor" (superficie separada, coexiste sin conflicto con los ítems editoriales que ya aparecen intercalados). `getFeed()` se conserva intacta, sin usarse ya en `FeedPage`, como camino de reversión de un paso.
+- **`src/pages/FeedPage.jsx`**: cambia de `getFeed` a `getComposedFeed`; agrega paginación con un botón "Cargar más" (cambio mínimo de interfaz, sin scroll infinito ni rediseño); muestra la razón de composición como un subtítulo breve sobre cada tarjeta; "Selección del editor" se conserva en la misma posición relativa (después del primer ítem) que tenía antes.
+
+### Deuda técnica y puntos señalados para revisión
+
+- **Prueba end-to-end contra un proyecto Supabase real desplegado (incluyendo Playwright)** — heredada, sin resolver por el mismo motivo de siempre.
+- **`discoverable_content()` evaluado de forma independiente por cinco funciones dentro de una misma composición** — conscientemente diferido, ver sección de Rendimiento arriba.
+- **Ninguna deuda nueva de integridad de datos o privacidad.**
+
+### Qué sigue
+
+Bloque 4 completo y verificado — con él, los seis componentes de la Fase 6 (Fuentes de contenido, Registro de señales, Motor de Afinidad, Motor de Garantías, Motor Editorial, Compositor del Feed) están implementados. Queda pendiente el informe final de este bloque para tu revisión y aprobación explícita, y con ella, el cierre formal de toda la Fase 6.
+
+---

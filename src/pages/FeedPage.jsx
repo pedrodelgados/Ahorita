@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { Bell, CalendarX2, Search } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
-import { getFeed } from "../lib/feed";
+import { getComposedFeed } from "../lib/feed";
 import { getProfile } from "../lib/profile";
 import { listMyLikedEventIds, toggleEventInteraction } from "../lib/interactions";
 import { withViewTransition } from "../lib/viewTransition";
@@ -23,8 +23,12 @@ export default function FeedPage() {
   const { user, isGuest, isAuthenticated } = useAuth();
   const [channel, setChannel] = useState(null);
   const [items, setItems] = useState([]);
+  const [editorialShelf, setEditorialShelf] = useState(null);
   const [likeState, setLikeState] = useState({});
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [cursor, setCursor] = useState(null);
+  const [hasMore, setHasMore] = useState(false);
   const [selectedEventId, setSelectedEventId] = useState(null);
   const [profile, setProfile] = useState(null);
   const [dismissedPrompt, setDismissedPrompt] = useState(false);
@@ -39,19 +43,41 @@ export default function FeedPage() {
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
-    getFeed({ channel }).then(async (feedItems) => {
+    getComposedFeed({ channel, actorId: user?.id }).then(async (page) => {
       if (cancelled) return;
-      setItems(feedItems);
-      await loadLikeState(feedItems);
+      setItems(page.items);
+      setEditorialShelf(page.editorialShelf);
+      setCursor(page.nextCursor);
+      setHasMore(page.hasMore);
+      await loadLikeState(page.items);
       if (!cancelled) setLoading(false);
     });
     return () => {
       cancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [channel]);
+  }, [channel, user?.id]);
 
-  async function loadLikeState(feedItems) {
+  async function loadMore() {
+    if (!cursor || loadingMore) return;
+    setLoadingMore(true);
+    try {
+      const page = await getComposedFeed({
+        channel,
+        actorId: user?.id,
+        afterTargetType: cursor.targetType,
+        afterTargetId: cursor.targetId,
+      });
+      setItems((prev) => [...prev, ...page.items]);
+      setCursor(page.nextCursor);
+      setHasMore(page.hasMore);
+      await loadLikeState(page.items, /* append */ true);
+    } finally {
+      setLoadingMore(false);
+    }
+  }
+
+  async function loadLikeState(feedItems, append = false) {
     const state = {};
     for (const item of feedItems) {
       state[item.id] = { liked: false, count: item.likesCount ?? 0 };
@@ -65,7 +91,7 @@ export default function FeedPage() {
       }
     }
 
-    setLikeState(state);
+    setLikeState((prev) => (append ? { ...prev, ...state } : state));
   }
 
   async function toggleLike(item) {
@@ -143,39 +169,78 @@ export default function FeedPage() {
             description="No hay eventos próximos en esta categoría por ahora. Prueba con otra o vuelve pronto."
           />
         )}
-        {/* item.kind/item.type despachan entre un bloque editorial, una
-            Publicación (Fase 4, Bloque 2) y una tarjeta de evento normal —
-            el sistema queda listo para más tipos de fuente más adelante. */}
-        {items.map((item) => {
-          if (item.kind === "editorial-shelf") {
-            return (
+        {/* item.type despacha entre Publicación (Fase 4, Bloque 2),
+            Promoción (Fase 4, Bloque 3) y una tarjeta de evento normal.
+            La razón de composición (Fase 6, Bloque 4) se muestra como un
+            subtítulo breve, honesto, nunca "porque el algoritmo lo decidió".
+            "Selección del editor" es una superficie separada (mismo
+            contenido, distinto carrusel) que se conserva en la misma
+            posición relativa que tenía antes del Compositor -- justo
+            después del primer ítem. */}
+        {items.map((item, index) => (
+          <div key={item.id}>
+            {index === 1 && editorialShelf && (
               <EditorialShelf
-                key={item.id}
-                title={item.title}
-                subtitle={item.subtitle}
-                items={item.items}
+                title="Selección del editor"
+                subtitle="Curado por el equipo"
+                items={editorialShelf}
                 onOpenItem={(id) => withViewTransition(() => setSelectedEventId(id))}
               />
-            );
-          }
-          if (item.type === "publicacion") {
-            return <PublicationFeedCard key={item.id} item={item} />;
-          }
-          if (item.type === "promocion") {
-            return <PromotionFeedCard key={item.id} item={item} />;
-          }
-          return (
-            <FeedCard
-              key={item.id}
-              item={item}
-              liked={likeState[item.id]?.liked ?? false}
-              likeCount={likeState[item.id]?.count ?? 0}
-              isOpen={selectedEventId === item.eventId}
-              onToggleLike={() => toggleLike(item)}
-              onOpenEvent={(id) => withViewTransition(() => setSelectedEventId(id))}
-            />
-          );
-        })}
+            )}
+            {item.reason && (
+              <p
+                style={textStyle(TYPE.bodySmall, {
+                  color: COLORS.inkSoft,
+                  margin: "0 4px 4px",
+                  fontSize: 12,
+                })}
+              >
+                {item.reason}
+              </p>
+            )}
+            {item.type === "publicacion" ? (
+              <PublicationFeedCard item={item} />
+            ) : item.type === "promocion" ? (
+              <PromotionFeedCard item={item} />
+            ) : (
+              <FeedCard
+                item={item}
+                liked={likeState[item.id]?.liked ?? false}
+                likeCount={likeState[item.id]?.count ?? 0}
+                isOpen={selectedEventId === item.eventId}
+                onToggleLike={() => toggleLike(item)}
+                onOpenEvent={(id) => withViewTransition(() => setSelectedEventId(id))}
+              />
+            )}
+          </div>
+        ))}
+        {items.length === 1 && editorialShelf && (
+          <EditorialShelf
+            title="Selección del editor"
+            subtitle="Curado por el equipo"
+            items={editorialShelf}
+            onOpenItem={(id) => withViewTransition(() => setSelectedEventId(id))}
+          />
+        )}
+
+        {!loading && hasMore && (
+          <button
+            onClick={loadMore}
+            disabled={loadingMore}
+            style={{
+              display: "block",
+              width: "100%",
+              padding: "12px",
+              margin: "8px 0",
+              background: "none",
+              border: "1px solid rgba(43, 38, 34, 0.15)",
+              borderRadius: "var(--radius-sm)",
+              ...textStyle(TYPE.bodySmall, { color: COLORS.inkSoft, margin: 0 }),
+            }}
+          >
+            {loadingMore ? "Cargando…" : "Cargar más"}
+          </button>
+        )}
       </main>
 
       <EventSheet

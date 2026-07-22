@@ -2,6 +2,30 @@
 
 Registro de cambios notables de Ahorita (Cuenca Viva). Formato libre, en español, más cercano a un registro de fases de producto que a versiones semánticas — ver `PROJECT.md` para el plan completo y el estado real de la implementación.
 
+## 2026-07-22 — Fase 6, Bloque 4: Compositor del Feed
+
+Último componente de la Fase 6. Fusiona las seis entradas (Afinidad, Novedad, Diversidad, Equidad, Serendipia, Editorial) en una composición determinista, deduplicada, con anti-monopolio y paginación por clave de identidad. Componente puro: no aprende, no escribe, no modifica afinidades ni decisiones editoriales.
+
+### Agregado
+
+- `supabase/migrations/0041_fase6_bloque4_compositor_feed.sql`: `discovery_calibration()` extendida con las proporciones y constantes del Compositor; `candidatos_editorial()` extendida con `zone_id`; `candidatos_afinidad()` (nueva, la pieza que le faltaba a Afinidad); tipo `compose_feed_item` y función `compose_feed()` (entrelazado por colas justas ponderadas, anti-monopolio en una pasada, paginación por cursor).
+- `src/lib/feed.js`: `getComposedFeed()` — reutiliza sin cambios las funciones de obtención y mapeo existentes.
+
+### Cambiado
+
+- `src/pages/FeedPage.jsx`: usa `getComposedFeed` en vez de `getFeed`; agrega paginación ("Cargar más") y la razón de composición como subtítulo. `getFeed()` se conserva intacta como camino de reversión.
+
+### Corregido durante la verificación
+
+- Propiedad de ítems compartidos entre carriles: una prioridad fija dejaba a Diversidad/Serendipia en cero pese a tener candidatos reales cuando su universo coincidía con el de Novedad — reemplazada por escasez primero (menos candidatos totales gana) y desempate por rotación determinística.
+- Segunda pasada de anti-monopolio: colocaba diferidos en orden fijo, repitiendo violaciones entre sí — reemplazada por una búsqueda del primer diferido no violatorio en cada paso.
+- Rendimiento: comprobaciones de ventana con `unnest()+count()` correlacionado (663 ms/página) reemplazadas por `array_positions()+cardinality()` nativo (115 ms/página, ~5.8×), verificado con `EXPLAIN ANALYZE` contra 210 eventos/69 negocios.
+
+### Verificado
+
+- Postgres 16 real, RLS con roles de bajo privilegio (`authenticated` no-admin y `anon`), deduplicación, anti-monopolio, paginación, filtro de canal, y reversión ejecutada de verdad (con el hallazgo de que `discovery_calibration()`/`candidatos_editorial()` deben restaurarse a su forma previa, no solo eliminarse, por ser extensiones en el mismo lugar). Regresión completa de Bloques 1-3.
+- Build y lint limpios. Playwright no ejecutado por la misma limitación de entorno ya declarada en el Bloque 3 (sin instancia local de Supabase).
+
 ## 2026-07-22 — Fase 6, Bloque 3: Motor Editorial
 
 Tercer bloque de la Fase 6 (ver `FASE6_CONTRATO_ARQUITECTONICO.md`). Decide qué contenido curado por el equipo está seleccionado y produce el universo completo de candidatos editoriales elegibles — nunca decide cantidad, posición ni interleaving (responsabilidad del futuro Compositor). Nuevo principio permanente incorporado al contrato: "Editorial nunca existe para corregir al algoritmo; existe para aportar criterio humano allí donde el algoritmo, por naturaleza, nunca puede sustituirlo."
