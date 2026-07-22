@@ -2,6 +2,24 @@
 
 Registro de cambios notables de Ahorita (Cuenca Viva). Formato libre, en español, más cercano a un registro de fases de producto que a versiones semánticas — ver `PROJECT.md` para el plan completo y el estado real de la implementación.
 
+## 2026-07-22 — Fase 6, Bloque 1 (adenda): resolución indirecta y revocación
+
+Adenda técnica tras auditoría solicitada antes de aprobar definitivamente el Bloque 1. Dos brechas reales encontradas y corregidas hacia adelante (no reabre `0035`).
+
+### Agregado
+
+- `supabase/migrations/0036_fase6_bloque1_resolucion_indirecta_y_revocacion.sql`: `public.resolve_affinity_category_zone()` (resolución compartida categoría/zona, usada por inserción y revocación); `public.record_affinity_revocation()` (`after delete on interactions`) — registra una fila de compensación append-only cuando se elimina una interacción alternable, sin borrar ni mutar la contribución original.
+
+### Corregido
+
+- **Resolución indirecta por autor**: Promoción (nunca tuvo categoría propia) y Publicación sin categoría propia ahora heredan categoría/zona del negocio autor; seguir un negocio ahora también aporta a su categoría/zona (además de `actor_seguido`); Evento ahora resuelve su zona vía `business_id` cuando el organizador es un negocio conocido. Ninguna ruta nueva infiere zona desde coordenadas.
+- **Evidencia histórica vs. señal activa**: deshacer una interacción alternable ahora hace caer el peso calculado hacia el piso de inmediato (vía una fila de compensación negativa), en vez de conservar indefinidamente el valor pleno de una señal ya revocada — sin borrar el hecho histórico de que la señal existió.
+- **Defecto real encontrado durante el análisis, antes de escribir código**: el trigger de revocación habría violado la clave foránea `affinity_contributions.actor_id` durante la eliminación en cascada de una cuenta (el actor padre ya es invisible dentro de la misma transacción) — prevenido con una guarda explícita, verificada eliminando una cuenta real con ledger existente.
+
+### Verificado
+
+Postgres 16 real (36 migraciones desde cero): me gusta en Promoción, publicación/comentario sin regresión, evento con y sin zona confiable, seguir negocio con doble contribución, revocación de me_gusta/guardado/seguimiento/quiero_ir cayendo exactamente al piso, soft-delete de comentario sin generar revocación, cascada de eliminación de cuenta sin error de clave foránea, imposibilidad estructural de reconstruir el objeto guardado (sin columna `target_id`), regresión de decaimiento y umbral de refinamiento. Build y lint limpios.
+
 ## 2026-07-22 — Fase 6, Bloque 1: Motor de Afinidad
 
 Primer bloque de la Fase 6 (Descubrimiento inteligente v2). Construye el Motor de Afinidad: produce, para cada persona, una descripción legible y corregible de qué le interesa a partir de `interactions` — nunca decide qué se muestra en ningún Feed. Evidencia como registro append-only (nunca un contador mutable), cálculo de peso/confianza/estado siempre en el momento de leer, decaimiento exponencial con piso (nunca hacia cero), y tres acciones de corrección explícita (atenuar/reiniciar/desconocido), todas implementadas como filas agregadas, nunca como borrado.
