@@ -2135,12 +2135,28 @@ Build y lint limpios — sin cambios de frontend en este bloque (no existe todav
 
 ### Deuda técnica y puntos señalados para revisión
 
-- **Radio de cercanía (5 km) y ventana de exención por planificación futura (3 días)**: constantes adicionales introducidas para que `geo_eligible()` fuera operable, distintas de las cuatro explícitamente fijadas en la adenda — señaladas aquí para revisión explícita, no decididas como definitivas.
+- ~~Radio de cercanía (5 km) y ventana de exención por planificación futura (3 días)~~ — **resuelto**, ver adenda técnica abajo.
 - **Prueba end-to-end contra un proyecto Supabase real desplegado** — heredada, sin resolver por el mismo motivo de siempre.
 - **Ninguna deuda nueva de integridad de datos o privacidad.**
 
+### Adenda técnica — revisión de las dos constantes geográficas (`supabase/migrations/0039_fase6_bloque2_calibracion_geografica.sql`)
+
+Antes de cerrar definitivamente el bloque, se auditaron las dos constantes señaladas explícitamente en el informe final. La auditoría concluyó que ambas tenían una brecha real; se corrigieron hacia adelante (no se reabrió `0038`).
+
+**Hallazgo 1 — radio único de 5 km.** No resistía el análisis: 5 km ya cubre gran parte del área urbana inmediata de Cuenca, debilitando el propósito de "cercanía para ahorita" (`VISION_MAESTRA.md` §7), y penalizaba injustamente contenido de naturaleza/rutas por su tamaño de radio, no por su categoría. Se reemplaza por **dos radios según la temporalidad del contenido, nunca según su categoría**: radio inmediato (3 km) para Promociones y Publicaciones siempre, y para Eventos dentro de la ventana cercana; radio de planificación (15 km) exclusivamente para Eventos cuyo inicio supera el umbral de antelación — nunca Promociones ni Publicaciones, que no tienen la naturaleza de "ocurre una vez, en un momento específico por venir" (esto ocurre estructuralmente, porque `p_event_start_at` es `NULL` para esos dos subtipos en `discoverable_content()`, no por una validación adicional).
+
+**Hallazgo 2 — exención total de radio para planificación futura.** Podía anular por completo la restricción de cercanía, exactamente el riesgo señalado. Se reemplaza por el radio ampliado de planificación (15 km) — nunca una exención completa. El umbral de 3 días se conserva: combinado con el radio ampliado, ya resuelve que un evento con 4-5 días de antelación no quede excluido injustificadamente, sin necesidad de anular la cercanía.
+
+**Hallazgo 3 — `geo_eligible()` solo devolvía un booleano.** Descartaba la razón por la que un contenido pasaba la restricción. El futuro Compositor necesitará distinguir "cercanía confirmada" de "sin ninguna restricción evaluable" para nunca mostrar "está cerca de ti" sobre contenido cuya proximidad nunca se verificó — hoy ningún carril de este bloque genera esa razón (sus explicaciones son fijas y no geográficas), pero la distinción debe existir para cuando el Compositor la necesite. Se reemplaza el booleano por un estado textual (`zona_manual` / `confirmada_cercana` / `planificacion_futura` / `sin_restriccion` / `NULL` para no elegible), expuesto también como nueva columna `geo_status` en las cuatro funciones `candidatos_*`.
+
+**Hallazgo 4 — auditoría.** Las constantes de este bloque estaban repetidas como literales dentro de cada función. Se centralizan **todas** (no solo las dos geográficas) en `public.discovery_calibration()`, única fuente de verdad — cualquier ajuste futuro es una migración nueva, auditable por el mismo historial de git que ya gobierna cada constante del Bloque 1.
+
+**Valores revisados**: radio inmediato 3 km (antes: radio único de 5 km); radio de planificación 15 km (antes: exención total); umbral de planificación 3 días (sin cambio, pero ahora selecciona un radio en vez de eximir por completo).
+
+**Verificación exhaustiva realizada, Postgres 16 real (39 migraciones desde cero):** las diez combinaciones exactas pedidas — promoción dentro/fuera del radio inmediato, evento hoy dentro/fuera del radio, evento dentro de 3 días fuera del radio inmediato (correctamente excluido, no aplica todavía el radio de planificación), evento después de 3 días dentro del radio de planificación (`planificacion_futura`) y más allá de 15 km (excluido incluso con el radio ampliado), zona manual ignorando coordenadas en ambos sentidos, contenido con zona pero sin coordenadas (`sin_restriccion`, nunca excluido ni etiquetado como cercano), contenido sin ninguna ubicación estructurada, ausencia de permiso de ubicación, y confirmación estructural de que ningún parámetro de IP existe en la función. Verificado además end-to-end a través de `candidatos_novedad()` con coordenadas reales (cercana incluye con `confirmada_cercana`, lejana excluye). Regresión completa del Bloque 1 y de los cuatro carriles (novedad, equidad, diversidad, serendipia) sin cambios de comportamiento tras el refactor de calibración centralizada. Build y lint limpios (sin cambios de frontend).
+
 ### Qué sigue
 
-Bloque 2 completo y verificado. El resto de la Fase 6 (Motor Editorial, Compositor del Feed extendido) permanece pendiente de análisis y aprobación explícita, bloque por bloque, siguiendo la misma metodología.
+Bloque 2 completo y verificado, incluida la adenda de calibración geográfica. El resto de la Fase 6 (Motor Editorial, Compositor del Feed extendido) permanece pendiente de análisis y aprobación explícita, bloque por bloque, siguiendo la misma metodología.
 
 ---

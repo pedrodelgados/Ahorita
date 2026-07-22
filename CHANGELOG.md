@@ -2,6 +2,24 @@
 
 Registro de cambios notables de Ahorita (Cuenca Viva). Formato libre, en español, más cercano a un registro de fases de producto que a versiones semánticas — ver `PROJECT.md` para el plan completo y el estado real de la implementación.
 
+## 2026-07-22 — Fase 6, Bloque 2 (adenda): calibración geográfica
+
+Revisión de las dos constantes geográficas señaladas en el informe final del bloque, antes de su cierre definitivo.
+
+### Agregado
+
+- `supabase/migrations/0039_fase6_bloque2_calibracion_geografica.sql`: `discovery_calibration()` (única fuente de verdad para todas las constantes del bloque, no solo las geográficas); `geo_eligible()` ahora devuelve un estado (`zona_manual`/`confirmada_cercana`/`planificacion_futura`/`sin_restriccion`/`NULL`) en vez de un booleano; nueva columna `geo_status` en las cuatro funciones `candidatos_*`.
+
+### Corregido
+
+- Radio único de 5 km reemplazado por dos radios según temporalidad: 3 km (inmediato, Promociones/Publicaciones siempre, Eventos cercanos en el tiempo) y 15 km (planificación, exclusivamente Eventos futuros más allá de 3 días).
+- Exención total de radio para planificación futura reemplazada por el radio ampliado (15 km) — nunca elimina la restricción por completo.
+- Constantes ya no repetidas como literales en cada función — centralizadas en `discovery_calibration()`.
+
+### Verificado
+
+Postgres 16 real (39 migraciones desde cero): las diez combinaciones geográficas pedidas (promoción/evento dentro y fuera de cada radio, zona manual, sin coordenadas, sin ubicación, sin IP), verificación end-to-end con coordenadas reales a través de `candidatos_novedad()`, regresión completa del Bloque 1 y de los cuatro carriles sin cambios de comportamiento. Build y lint limpios.
+
 ## 2026-07-22 — Fase 6, Bloque 2: Motor de Garantías
 
 Segundo bloque de la Fase 6, tras análisis conceptual (20 puntos), tres precisiones conceptuales y diseño técnico con adenda (rotación determinística de serendipia, responsabilidad exacta de diversidad, propietario de la restricción geográfica) explícitamente aprobados. Produce, por carril (novedad, diversidad, equidad, serendipia), un conjunto de candidatos elegibles con su razón de explicabilidad — nunca decide el Feed final. Principio permanente incorporado a `FASE6_CONTRATO_ARQUITECTONICO.md`: la elegibilidad siempre ocurre antes que las garantías.
