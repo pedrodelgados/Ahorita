@@ -2407,3 +2407,33 @@ Con la Fase 6 oficialmente cerrada, y antes de iniciar cualquier trabajo técnic
 **Confirmación explícita.** Ningún código, migración, funcionalidad ni comportamiento de la aplicación fue modificado durante este proceso — el trabajo fue exclusivamente filosófico y documental, tal como se autorizó. El contrato arquitectónico técnico de la Fase 7 permanece sin iniciarse.
 
 ---
+
+## FASE 7 — CONTRATO ARQUITECTÓNICO ADOPTADO (2026-07-23)
+
+Con `FASE7_FILOSOFIA_GUIA_IA.md` ya adoptada, se construyó `FASE7_CONTRATO_ARQUITECTONICO.md` — la arquitectura conceptual que traduce sus veintitrés principios en componentes, responsabilidades y límites verificables, sin sesiones, tablas, funciones, RPC, prompts ni proveedor de tecnología de inteligencia artificial, siguiendo exactamente el mismo espíritu que `FASE6_CONTRATO_ARQUITECTONICO.md` tuvo para la Fase 6.
+
+**Encargo explícito del Product Owner para esta ronda**: diseñar una arquitectura que sobreviva al proveedor tecnológico — que permanezca válida sin importar qué modelo o mecanismo concreto de inteligencia artificial use la aplicación dentro de cinco años.
+
+**Cuatro componentes conceptuales nuevos**, más lo heredado sin cambios (Motor de Afinidad de la Fase 6, comportamiento ya definido en `AI_PHILOSOPHY.md`, Actor de sistema "Guía IA" de la Fase 1, línea base de privacidad de la Fase 1):
+
+1. **Memoria de Sesión** — pasiva, retiene el contexto temporal de una conversación, nunca interpreta ni decide.
+2. **Conocimiento Permanente de la Persona, no-afinidad** — hechos estables declarados con consentimiento explícito.
+3. **El Razonador** — sintetiza afinidad, memoria, conocimiento permanente y contexto del ecosistema en una decisión de qué responder y por qué; consulta, nunca reconstruye.
+4. **La Expresión** — traduce esa decisión en lenguaje natural, con la personalidad ya definida en `AI_PHILOSOPHY.md`; nunca decide contenido, nunca ve datos personales crudos.
+
+**Proceso de dos rondas.** Un primer borrador estableció los cuatro componentes, la cadena de responsabilidad de un solo sentido, las fronteras entre memoria/afinidad/razonamiento, y una primera versión de la agnosticidad tecnológica y del mapeo tentativo de bloques. Una segunda ronda de revisión crítica resolvió cuatro precisiones antes de la aprobación final:
+
+1. **La agnosticidad tecnológica se extiende también a El Razonador, no solo a La Expresión.** El borrador original distinguía mal: solo La Expresión se describía como reemplazable. Corregido — ambos componentes separan, de la misma forma, su lógica y garantías permanentes (reglas, responsabilidades, entradas, forma de la salida) de la tecnología reemplazable que las ejecuta.
+2. **La Memoria de Sesión queda definida por responsabilidad, nunca por representación técnica.** No presupone mensajes literales, contexto estructurado, síntesis temporal o una combinación — esa elección pertenece al diseño técnico. Lo permanente es que sea verificable, corregible, no acumule indefinidamente y conserve solo lo necesario para la continuidad.
+3. **El consentimiento explícito es condición necesaria, pero nunca suficiente, para el Conocimiento Permanente.** Se incorporó una segunda capa de la misma regla de pureza: la plataforma conserva su propia responsabilidad de minimización, finalidad, proporcionalidad y seguridad, y existen categorías de información sensible que no deberían persistir permanentemente sin importar el consentimiento dado — sin definir aquí esas categorías ni su mecanismo técnico.
+4. **El mapeo tentativo de bloques se reordenó por completo** para que ninguna garantía de corrección o borrado aparezca como una capa tardía. Hallazgo real de la revisión: construir el Conocimiento Permanente antes de que exista su propio mecanismo de corrección/borrado dejaría, temporalmente, datos permanentes sin la garantía que los justifica; y construir la conexión con la Afinidad antes de separar Razonador de Expresión arriesgaba construir primero un componente mezclado para separarlo después. Orden final: (1) separación Razonador/Expresión desde el origen, (2) Memoria de Sesión con su propia corrección incluida, (3) Conocimiento Permanente con su propia puerta de consentimiento y minimización incluidas, (4) conexión con el Motor de Afinidad, (5) experiencia unificada de transparencia/corrección/borrado — consolidación de garantías ya nacidas en los bloques 2 y 3, no su origen.
+
+**Verificación de consistencia realizada** antes del registro final: se releyeron `VISION_MAESTRA.md`, `FASE7_FILOSOFIA_GUIA_IA.md`, `AI_PHILOSOPHY.md` y `MASTERPLAN.md` completos, y se confirmaron las referencias cruzadas del propio contrato (números de sección de la filosofía citados en cada regla, principios no negociables y decisiones de `AI_PHILOSOPHY.md`/`MASTERPLAN.md` citados) contra el texto real de esos documentos — ninguna quedó rota ni desactualizada tras las cuatro correcciones.
+
+**Cómo debe utilizarse en el futuro.** El análisis técnico de cada bloque —empezando por la separación Razonador/Expresión— debe rendirle cuentas a este contrato, exactamente como el Motor de Afinidad le rindió cuentas a `FASE6_CONTRATO_ARQUITECTONICO.md`. Si algo durante ese diseño exige contradecir un principio ya registrado aquí, el trabajo se detiene y se presenta como una nueva bifurcación — nunca se decide en silencio.
+
+**Referencias documentales actualizadas.** `MASTERPLAN.md`, sección Fase 7: agregada la referencia a `FASE7_CONTRATO_ARQUITECTONICO.md` como contrato arquitectónico de la fase (mismo patrón que la Fase 6), y actualizados "Módulos que incluye" para nombrar los cuatro componentes conceptuales en vez de la redacción genérica original.
+
+**Confirmación explícita.** Ningún código, migración, tabla, función, RPC, prompt ni elección de proveedor o modelo de inteligencia artificial fue definido durante este proceso — el trabajo fue exclusivamente de arquitectura conceptual, tal como se autorizó. El análisis técnico del Bloque 1 (Separación Razonador/Expresión) todavía no ha comenzado.
+
+---

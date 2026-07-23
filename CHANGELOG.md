@@ -2,6 +2,19 @@
 
 Registro de cambios notables de Ahorita (Cuenca Viva). Formato libre, en español, más cercano a un registro de fases de producto que a versiones semánticas — ver `PROJECT.md` para el plan completo y el estado real de la implementación.
 
+## 2026-07-23 — Fase 7: contrato arquitectónico conceptual adoptado
+
+Con la filosofía de la Guía IA ya adoptada, se construyó `FASE7_CONTRATO_ARQUITECTONICO.md` — arquitectura conceptual sin sesiones, tablas, funciones, RPC, prompts ni proveedor de tecnología de inteligencia artificial, siguiendo el mismo espíritu que `FASE6_CONTRATO_ARQUITECTONICO.md` tuvo para la Fase 6. Encargo explícito: una arquitectura que sobreviva al proveedor tecnológico. Dos rondas de revisión, la segunda resolviendo cuatro precisiones antes de la aprobación final. Ningún código, migración ni diseño técnico — trabajo exclusivamente de arquitectura conceptual.
+
+### Agregado
+
+- `FASE7_CONTRATO_ARQUITECTONICO.md` (nuevo): cuatro componentes conceptuales — Memoria de Sesión (pasiva), Conocimiento Permanente no-afinidad (consentimiento explícito como condición necesaria, nunca suficiente), El Razonador (consulta la Afinidad, nunca la reconstruye) y La Expresión (nunca decide contenido, solo estilo) —, ambos, Razonador y Expresión, deliberadamente agnósticos de tecnología: separan su lógica y garantías permanentes de la tecnología reemplazable que las ejecuta. Cadena de responsabilidad de un solo sentido, fronteras explícitas entre memoria/afinidad/razonamiento, explicabilidad extendida a "por qué recuerdo esto de ti", y un mapeo tentativo de cinco bloques reordenado para que la separación Razonador/Expresión exista desde el origen y para que memoria y conocimiento permanente nazcan con sus propias garantías de corrección y borrado, nunca como una capa tardía.
+
+### Cambiado
+
+- `MASTERPLAN.md`, sección Fase 7: agregada la referencia a `FASE7_CONTRATO_ARQUITECTONICO.md` como contrato arquitectónico de la fase; "Módulos que incluye" actualizado para nombrar los cuatro componentes conceptuales.
+- `PROJECT.md`: nueva sección "FASE 7 — CONTRATO ARQUITECTÓNICO ADOPTADO (2026-07-23)" con el proceso de dos rondas, las cuatro precisiones incorporadas y la verificación de consistencia realizada.
+
 ## 2026-07-23 — Fase 7: filosofía de la Guía IA adoptada
 
 Con la Fase 6 cerrada, análisis previo de la siguiente fase natural del proyecto (sin código ni diseño de solución) seguido de la construcción de `FASE7_FILOSOFIA_GUIA_IA.md` — autoridad filosófica permanente de la Guía IA para la Fase 7, subordinada a `VISION_MAESTRA.md` y construida consolidando `AI_PHILOSOPHY.md`, no reemplazándolo. Tres rondas de refinamiento crítico, cada punto propuesto evaluado por separado antes de aceptarlo. Ningún código, migración ni diseño técnico — trabajo exclusivamente filosófico.
