@@ -2380,7 +2380,7 @@ Verificado tras aplicar las cinco correcciones: Postgres 16 real (42 migraciones
 - `7a8441a` — Bloque 4: Compositor del Feed (migración `0041`), frontend, documentación.
 - `0c7bf87` — cierre formal de la Fase 6 (esta sección, `MASTERPLAN.md`, `ARCHITECTURE.md`, `ROADMAP.md`, `CHANGELOG.md`).
 - `789e9b2` — documentar honestamente el rechazo del push del tag de checkpoint.
-- Esta misma ronda de correcciones de la auditoría final (hallazgos 1-5 de arriba): migración `0042`, `src/lib/feed.js`, `FASE6_CONTRATO_ARQUITECTONICO.md`, esta sección.
+- `6a92c56` — auditoría final de liberación: resolución de los cinco hallazgos de arriba (migración `0042`, `src/lib/feed.js`, `FASE6_CONTRATO_ARQUITECTONICO.md`, esta sección).
 
 ### Estado final
 
