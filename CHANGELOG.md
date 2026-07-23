@@ -2,6 +2,24 @@
 
 Registro de cambios notables de Ahorita (Cuenca Viva). Formato libre, en español, más cercano a un registro de fases de producto que a versiones semánticas — ver `PROJECT.md` para el plan completo y el estado real de la implementación.
 
+## 2026-07-23 — FASE 6 CERRADA: Descubrimiento inteligente v2
+
+Cierre formal de la Fase 6 completa, tras una auditoría explícita de siete puntos (código y migraciones, coherencia documental, código, pureza arquitectónica, principios permanentes, rendimiento, deuda técnica consolidada) presentada antes de escribir cualquier corrección — misma metodología ya usada para el cierre de la Fase 4 y la Fase 5B. Ningún código nuevo; solo auditoría y documentación.
+
+### Auditoría (hallazgo presentado y resuelto con autorización explícita)
+
+- `MASTERPLAN.md` (sección Fase 6) y `ARCHITECTURE.md` (§21) todavía describían el plan original de "feed híbrido de puntuación" (tablas `affinity_scores`/`feed_config`) que quedó completamente reemplazado, antes de implementarse, por `FASE6_FILOSOFIA_DESCUBRIMIENTO.md`/`FASE6_CONTRATO_ARQUITECTONICO.md`. Ninguna otra inconsistencia documental, de código, de arquitectura o de principios permanentes sobrevivió la auditoría.
+
+### Corregido
+
+- `MASTERPLAN.md`: sección "Fase 6" reescrita para describir la arquitectura real de seis componentes (Motor de Afinidad, Motor de Garantías, Motor Editorial, Compositor del Feed), con nota explícita de corrección.
+- `ARCHITECTURE.md`: §21 "Algoritmo del feed" reescrita, retirando la recomendación de fórmula híbrida ya superada, con nota explícita de corrección.
+
+### Agregado
+
+- `PROJECT.md`: nueva sección "FASE 6 CERRADA — Descubrimiento inteligente v2 (2026-07-23)" — resumen ejecutivo de los cuatro bloques, objetivo original vs. resultado final, arquitectura lograda, decisiones de producto, ocho problemas encontrados y corregidos (consolidado), verificaciones realizadas, deuda técnica consolidada en tres categorías (heredada/propia/futura), qué habilita para la Fase 7, y commits principales.
+- `ROADMAP.md`: Fase 6 agregada a "Fases completas" (ítem 13) y marcada ✅ en el resumen de fases futuras; nuevo bullet de deuda técnica de Fase 6.
+
 ## 2026-07-22 — Fase 6, Bloque 4: Compositor del Feed
 
 Último componente de la Fase 6. Fusiona las seis entradas (Afinidad, Novedad, Diversidad, Equidad, Serendipia, Editorial) en una composición determinista, deduplicada, con anti-monopolio y paginación por clave de identidad. Componente puro: no aprende, no escribe, no modifica afinidades ni decisiones editoriales.

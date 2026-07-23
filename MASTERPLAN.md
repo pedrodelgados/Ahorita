@@ -257,39 +257,41 @@ Lo que ya existe y sobre lo cual se construye todo lo demás: identidad básica 
 
 ---
 
-## Fase 6 — Descubrimiento inteligente v2 (feed híbrido, recomendaciones, búsqueda)
+## Fase 6 — Descubrimiento inteligente v2 (Motor de Afinidad, Motor de Garantías, Motor Editorial, Compositor del Feed) ✅ CERRADA (2026-07-23)
+
+**Nota de corrección (2026-07-23, cierre formal de la fase):** esta sección describía originalmente un "modelo híbrido de puntuación" de una sola fórmula (afinidad + peso editorial + peso de promoción + decaimiento de frescura) sobre tablas `affinity_scores`/`feed_config`. Ese plan quedó completamente reemplazado, antes de escribirse una sola línea de código, por `FASE6_FILOSOFIA_DESCUBRIMIENTO.md` y `FASE6_CONTRATO_ARQUITECTONICO.md` — ninguna de esas dos tablas llegó a existir. El texto de abajo ya describe lo realmente construido; ver esos dos documentos para la autoridad filosófica y arquitectónica completa, y `PROJECT.md` (sección "FASE 6 CERRADA") para el detalle técnico bloque por bloque.
 
 **Autoridad filosófica de esta fase: `FASE6_FILOSOFIA_DESCUBRIMIENTO.md`** (aprobado 2026-07-22, previo a cualquier diseño técnico). Define qué debe significar "descubrir" en Ahorita — veinte principios permanentes (entre ellos: la fuerza de una señal depende de cuánto compromiso costó producirla; ningún negocio monopoliza por volumen; la Editorial nunca compite con el algoritmo; serendipia y dimensión emocional como formas legítimas de descubrimiento; la ciudad siempre debe ser más grande que el algoritmo) que cualquier decisión técnica de esta fase debe respetar.
 
-**Contrato arquitectónico conceptual de esta fase: `FASE6_CONTRATO_ARQUITECTONICO.md`** (aprobado 2026-07-22, mismo espíritu que `FASE4_CONTRATO_ARQUITECTONICO.md` tuvo para la Fase 4, pero todavía sin tablas ni migraciones). Traduce los veinte principios de la filosofía en seis componentes conceptuales (Motor de Afinidad, Motor de Garantías, Motor Editorial, Compositor del Feed, Gobernanza de contenido patrocinado, y los límites frente a Búsqueda y Guía IA), sus responsabilidades, y qué es determinístico frente a qué es adaptativo. El análisis técnico de cada bloque (empezando por el Motor de Afinidad) debe rendirle cuentas a ese contrato.
+**Contrato arquitectónico conceptual de esta fase: `FASE6_CONTRATO_ARQUITECTONICO.md`** (aprobado 2026-07-22, mismo espíritu que `FASE4_CONTRATO_ARQUITECTONICO.md` tuvo para la Fase 4). Traduce los veinte principios de la filosofía en seis componentes conceptuales (Motor de Afinidad, Motor de Garantías, Motor Editorial, Compositor del Feed, Gobernanza de contenido patrocinado, y los límites frente a Búsqueda y Guía IA), sus responsabilidades, y qué es determinístico frente a qué es adaptativo.
 
-**Objetivo.** Evolucionar el feed de "solo proximidad temporal" al modelo híbrido de puntuación (afinidad + peso editorial + peso de promoción acotado + decaimiento de frescura), e introducir el motor de recomendaciones compartido con la Guía IA. **El techo máximo de contenido patrocinado —15% aproximado del contenido mostrado, configurable únicamente por el administrador principal y con registro de auditoría de cualquier cambio— se define en el diseño de la fórmula en esta misma fase** (decisión 4), aunque el contenido patrocinado real todavía no exista (llega en la Fase 11). Definirlo aquí, sin presión comercial todavía activa, es precisamente el punto: que el límite no se decida bajo presión de ingresos futuros.
+**Objetivo (resultado final).** Evolucionar el feed de "solo proximidad temporal" a una composición de seis entradas co-iguales — **nunca una sola fórmula de puntuación**: Motor de Afinidad (candidatos por interés real, sin NLP ni embeddings), Motor de Garantías (novedad, diversidad, equidad, serendipia — cuatro carriles que nunca llegan a cero), Motor Editorial (criterio humano, reclama por completo el contenido que le corresponde) y el Compositor del Feed (integra proporciones relativas mediante Weighted Fair Queuing, con anti-monopolio transversal y sin intentar "ser inteligente" por sí mismo). **El techo máximo de contenido patrocinado** —15% aproximado, configurable únicamente por el administrador principal y con registro de auditoría— sigue reservado como mecanismo a construir cuando exista contenido patrocinado real (Fase 11); hoy no gobierna nada porque no hay nada que gobernar todavía.
 
-**Problema que resuelve.** El feed actual no distingue interés personal ni aprende de nada.
+**Problema que resuelve.** El feed actual no distinguía interés personal ni aprendía de nada.
 
-**Módulos que incluye.** Algoritmo del feed híbrido, con el parámetro de techo de promoción (15% aproximado) ya construido como configuración auditable. Sistema de recomendaciones. Búsqueda mejorada (búsqueda por texto simple, independiente de este motor, ya disponible desde antes; búsqueda por intención delegada a la Guía IA en la Fase 7).
+**Módulos que incluye.** Motor de Afinidad (Bloque 1, migraciones 0035-0037). Motor de Garantías (Bloque 2, migraciones 0038-0039). Motor Editorial (Bloque 3, migración 0040). Compositor del Feed (Bloque 4, migración 0041). Búsqueda mejorada (búsqueda por texto simple, independiente de este motor, ya disponible desde antes; búsqueda por intención delegada a la Guía IA en la Fase 7 — sin cambios en esta fase).
 
-**De qué depende.** Fase 4, Fase 5B (señales de interacción reales que alimentar al algoritmo). Se beneficia también de la Fase 5A si ya está lista (seguir negocios como señal de afinidad), aunque no depende estrictamente de ella.
+**De qué depende.** Fase 4, Fase 5B (señales de interacción reales que alimentan el Motor de Afinidad).
 
-**Qué bloquea hasta completarse.** Fase 7 (la Guía IA v2 reutiliza este motor), Fase 11 (contenido promocionado necesita que este algoritmo ya tenga el lugar y el techo ya definidos).
+**Qué bloquea hasta completarse.** Fase 7 (la Guía IA v2 reutiliza el Motor de Afinidad como "cerebro de preferencias"), Fase 11 (contenido promocionado necesita que el Compositor y su techo de gobernanza ya existan).
 
-**Tablas nuevas.** `affinity_scores`. `feed_config` (parámetro del techo de promoción, quién lo modificó y cuándo — tabla de auditoría del propio parámetro, exigida por la decisión 4).
+**Tablas nuevas.** `affinity_contributions` (Bloque 1 — registro append-only de evidencia de afinidad). `editorial_selections` (Bloque 3 — selección editorial con autoría y motivo, reemplaza a `events.editor_pick`, ya legacy). El Compositor del Feed (Bloque 4) no agrega tablas nuevas — extiende `discovery_calibration()` y `candidatos_editorial()` ya existentes, y agrega las funciones `candidatos_afinidad()` y `compose_feed()`.
 
-**Entidades nuevas.** Perfil de afinidad, Configuración auditable del feed.
+**Entidades nuevas.** Perfil de afinidad (`affinity_profile()`, legible y corregible por la propia persona). Candidatos por carril (`candidatos_afinidad`, `candidatos_novedad`, `candidatos_diversidad`, `candidatos_equidad`, `candidatos_serendipia`, `candidatos_editorial`). Composición final del feed (`compose_feed()`).
 
-**APIs externas necesarias.** Ninguna obligatoria.
+**APIs externas necesarias.** Ninguna.
 
-**Migraciones que requerirá.** Creación de `affinity_scores` y `feed_config`, esta última poblada desde el inicio con el techo de 15% aprobado y restringida a modificación solo por el rol de administrador principal (no por Editor/Curador, ver `MASTERPLAN.md` Fase 2 — separación de roles).
+**Migraciones que requirió.** `0035`-`0037` (Motor de Afinidad y su ciclo de vida de evidencia), `0038`-`0039` (Motor de Garantías y calibración geográfica), `0040` (Motor Editorial), `0041` (Compositor del Feed).
 
-**Riesgos.** El riesgo ya señalado: que cualquier peso de promoción futura termine superando a la relevancia real. Mitigado precisamente por definir el techo ahora, con registro de auditoría, en vez de dejarlo como un número mágico sin trazabilidad.
+**Riesgos (ya verificados durante la implementación).** Que un carril abundante monopolice candidatos compartidos por volumen — mitigado con ownership por escasez y desempate por hash determinístico (ver "hallazgo real corregido" en `PROJECT.md`). Que el costo del Compositor no escale — verificado con `EXPLAIN ANALYZE` contra un dataset sintético mayor al funcional (663ms → 115ms tras optimizar el anti-monopolio).
 
-**Pruebas necesarias.** Comparación A/B interna (cronológico puro vs. híbrido). Verificación de que el perfil de afinidad mostrado al usuario coincide con lo que el algoritmo usa. **Prueba específica del techo:** el contenido patrocinado nunca supera el 15% configurado incluso en escenarios simulados de alto volumen de contenido pagado; un cambio al parámetro por parte de alguien que no es administrador principal se rechaza; un cambio válido queda registrado con quién y cuándo.
+**Pruebas realizadas.** Verificación funcional de cada bloque contra Postgres real. Pruebas adversariales de concentración de actor y empates exactos de conteo para el anti-monopolio y el ownership del Compositor. `EXPLAIN ANALYZE` objetivo contra 210 eventos / 69 negocios. Verificación de reversión (rollback) de los cuatro bloques, incluyendo el caso especial de restaurar `discovery_calibration()`/`candidatos_editorial()` a su forma exacta previa al Bloque 4.
 
-**Criterio de terminado.** El feed prioriza contenido relevante por afinidad además de proximidad temporal; el usuario puede ver y corregir su perfil de afinidad; el techo de promoción del 15% ya existe como parámetro auditable, aunque todavía en cero contenido patrocinado real.
+**Criterio de terminado.** El feed compone seis entradas co-iguales con proporciones relativas y explicación visible por ítem; el usuario puede ver y corregir su perfil de afinidad (`AffinitySection.jsx`); el techo de promoción del 15% permanece definido en el contrato arquitectónico como mecanismo reservado, en cero contenido patrocinado real, a la espera de la Fase 11.
 
-**Aporte a la Guía IA.** El perfil de afinidad legible y el motor de recomendaciones construidos aquí son, literalmente, el "cerebro de preferencias" que la Guía IA hereda en la Fase 7 en vez de construir uno propio por separado — sin esto, la IA v2 no tendría con qué personalizar sus respuestas más allá del contexto puntual de cada pregunta.
+**Aporte a la Guía IA.** El Motor de Afinidad construido aquí (perfil de afinidad legible, sin NLP, con jerarquía explícita de fuerza de señal) es, literalmente, el "cerebro de preferencias" que la Guía IA hereda en la Fase 7 en vez de construir uno propio por separado.
 
-**Decisiones ya aprobadas aplicadas aquí:** 4. No requiere aprobación adicional — el techo y su gobernanza ya están cerrados.
+**Decisiones ya aprobadas aplicadas aquí:** 4 (techo de contenido patrocinado, reservado para la Fase 11). No requiere aprobación adicional.
 
 ---
 

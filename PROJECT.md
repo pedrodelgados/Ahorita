@@ -2276,3 +2276,91 @@ Build y lint limpios. **Verificación visual en navegador (Playwright) no pudo e
 Bloque 4 completo y verificado — con él, los seis componentes de la Fase 6 (Fuentes de contenido, Registro de señales, Motor de Afinidad, Motor de Garantías, Motor Editorial, Compositor del Feed) están implementados. Queda pendiente el informe final de este bloque para tu revisión y aprobación explícita, y con ella, el cierre formal de toda la Fase 6.
 
 ---
+
+## FASE 6 CERRADA — Descubrimiento inteligente v2 (2026-07-23)
+
+Cierre formal de la Fase 6 completa del `MASTERPLAN.md`, tras una auditoría explícita de siete puntos (código y migraciones, coherencia documental, código, pureza arquitectónica, principios permanentes, rendimiento, deuda técnica consolidada) presentada al Product Owner antes de escribir una sola corrección, siguiendo la misma metodología de cierre ya aplicada a la Fase 4 y la Fase 5B. Checkpoint de Git: tag `checkpoint-fase6-descubrimiento-inteligente`.
+
+### Resumen ejecutivo
+
+La Fase 6 reemplazó el feed "solo proximidad temporal" por una composición de seis entradas co-iguales — nunca una fórmula de puntuación — construida en cuatro bloques, cada uno propuesto, implementado y verificado contra Postgres 16 real por separado: el **Motor de Afinidad** (Bloque 1), que describe a cada persona sin clasificarla nunca, con corrección explícita y privacidad estricta sin excepciones; el **Motor de Garantías** (Bloque 2), que asegura que novedad, diversidad, equidad y serendipia nunca lleguen a cero, actuando junto a la afinidad, nunca como corrección posterior; el **Motor Editorial** (Bloque 3), que reemplaza el booleano `editor_pick` por un mecanismo con autoría, motivo y ciclo de vida, sin competir jamás con el cálculo algorítmico; y el **Compositor del Feed** (Bloque 4), que integra las seis entradas mediante colas justas ponderadas (weighted fair queuing), con anti-monopolio transversal y deduplicación por escasez, sin intentar "ser inteligente" por sí mismo. Toda la fase se construyó bajo triple autoridad documental — `FASE6_FILOSOFIA_DESCUBRIMIENTO.md` (veinte principios filosóficos, previos a cualquier diseño técnico), `FASE6_CONTRATO_ARQUITECTONICO.md` (arquitectura de seis componentes, con quince principios permanentes incorporados durante la propia implementación) y `VISION_MAESTRA.md` — y encontró y corrigió, durante su propia verificación contra Postgres real, ocho defectos reales no detectados por inspección visual del código.
+
+### Objetivo original y resultado final
+
+**Objetivo original** (`MASTERPLAN.md`, texto previo a esta fase): un modelo híbrido de puntuación (afinidad + peso editorial + peso de promoción + decaimiento de frescura) sobre tablas `affinity_scores`/`feed_config`.
+
+**Resultado final**: ese plan quedó completamente reemplazado, antes de escribirse una sola línea de código, por `FASE6_FILOSOFIA_DESCUBRIMIENTO.md` y `FASE6_CONTRATO_ARQUITECTONICO.md` — ninguna de esas dos tablas llegó a existir. Lo construido es deliberadamente distinto de una fórmula: seis entradas co-iguales sin ranking combinado, proporciones siempre relativas (nunca una cantidad fija de posiciones), anti-monopolio reutilizado transversalmente en vez de reglas distintas por carril, y Editorial con propiedad completa y explícita en vez de un peso más dentro del cálculo. `MASTERPLAN.md` (sección Fase 6) y `ARCHITECTURE.md` (§21) quedaron corregidos como parte de este mismo cierre, exactamente igual que ya ocurrió con la sección de Promoción-comentable de `MASTERPLAN.md` durante el cierre de la Fase 5B — el plan maestro no queda desactualizado silenciosamente.
+
+### Bloques implementados
+
+1. **Bloque 1 — Motor de Afinidad** (migraciones `0035`-`0037`): perfil de afinidad legible y corregible por la propia persona, jerarquía de fuerza de señal, decaimiento exponencial con piso, tres acciones de corrección explícita, privacidad estricta sin excepciones. Dos adendas técnicas (resolución indirecta por autor + revocación, y precisión de evidencia activa/histórica) resolvieron brechas encontradas en auditoría posterior, antes del cierre del bloque.
+2. **Bloque 2 — Motor de Garantías** (migraciones `0038`-`0039`): cuatro carriles (novedad, equidad, diversidad, serendipia) que producen candidatos elegibles sin decidir nunca el orden final. Una adenda técnica corrigió el radio geográfico único (reemplazado por radio inmediato + radio de planificación) y expuso `geo_status` para explicabilidad futura.
+3. **Bloque 3 — Motor Editorial** (migración `0040`): reemplaza `events.editor_pick` (legacy desde este bloque) por `editorial_selections`, con autoría, motivo, ventana de vigencia y revocación — exclusivamente escribible por `is_admin()`.
+4. **Bloque 4 — Compositor del Feed** (migración `0041`): fusiona las seis entradas mediante weighted fair queuing, con deduplicación por escasez + hash determinístico, anti-monopolio transversal en una pasada lineal, y paginación por clave de identidad.
+
+### Arquitectura lograda
+
+- **Seis componentes conceptuales con responsabilidad única, sin superposición**: Fuentes de contenido, Registro de señales (pasivo), Motor de Afinidad (describe, nunca decide), Motor de Garantías (protege, nunca personaliza), Motor Editorial (criterio humano, nunca compite), Compositor del Feed (integra, nunca interpreta).
+- **Elegibilidad antes que garantías, garantías antes que composición** — secuencia arquitectónica fija verificada en cada bloque: ninguna garantía amplía el universo elegible de base; el Compositor nunca recibe nada que no haya pasado ya por elegibilidad.
+- **Quince principios permanentes incorporados a `FASE6_CONTRATO_ARQUITECTONICO.md`** durante la implementación (cinco del Motor de Afinidad, uno de elegibilidad-antes-que-garantías, uno del Motor Editorial, uno de determinismo/adaptabilidad, cuatro del Compositor, más los ya vigentes de pureza de componentes) — todos re-verificados en esta auditoría de cierre contra el código real, ninguno quedó violado por la implementación.
+- **Sin fórmula de puntuación en ningún punto del sistema**: ni el Motor de Afinidad, ni el Motor de Garantías, ni el Compositor combinan señales en un único número — cada componente produce candidatos o composición explicable, nunca un score opaco.
+- **`security definer set search_path = public` como patrón consolidado** en las 20 funciones nuevas de la fase, sin ninguna excepción.
+- **Weighted fair queuing** (técnica de scheduling de redes, reutilizada aquí) como mecanismo de interleaving proporcional determinista — elegido específicamente porque no requiere redistribución iterativa y no permite que la abundancia de un carril desplace la cuota justa de otro.
+
+### Decisiones de producto incorporadas
+
+- Reducción de la proporción inicial de Afinidad del 40% al 35%, con el 5% liberado reasignado específicamente a Diversidad (nunca repartido arbitrariamente).
+- Anti-monopolio transversal: mismo mecanismo (tope de candidatos por actor) reutilizado dentro de cada carril, nunca una regla nueva inventada por carril.
+- Editorial reclama por completo el contenido que le corresponde — cupo, propiedad y explicación — cuando compite con cualquier otra entrada.
+- Estabilidad por bloques horarios (4 horas, configurable) en vez de estabilidad diaria completa.
+- Proporciones siempre relativas al universo elegible real de cada solicitud, nunca una cantidad fija de posiciones — cualquier número de referencia es pedagógico, nunca parte del algoritmo.
+- Verificación de rendimiento obligatoria con `EXPLAIN ANALYZE` contra un dataset sintético mayor al funcional, como parte del criterio de cierre del Compositor.
+- "El Compositor nunca intenta ser inteligente" incorporado como principio permanente — la inteligencia, la protección estructural y el criterio humano pertenecen exclusivamente a Afinidad, Garantías y Editorial respectivamente.
+
+### Problemas encontrados y corregidos (consolidado de los cuatro bloques)
+
+1. **Bloque 1 — referencia sin declarar y tipo incompatible** en `affinity_profile()`, detectados en la primera ejecución contra Postgres real.
+2. **Bloque 1 — fuga de privacidad por comparación con `NULL`**: mismo patrón de defecto ya visto en la Fase 5B, reaparecido aquí — corregido con `is distinct from`.
+3. **Bloque 1 (adenda) — cascada de eliminación de cuenta rompía la inserción de compensación de afinidad**: prevenido con una guarda explícita si el actor propietario ya no existe.
+4. **Bloque 2 (adenda) — radio geográfico único insuficiente y exención total de riesgo**: reemplazado por radio inmediato + radio de planificación, nunca una exención completa.
+5. **Bloque 4 — bug de ownership por prioridad fija**: una lista de prioridad fija dejaba a carriles escasos (Diversidad, Serendipia) con cero ítems propios pese a tener candidatos reales, violando el principio recién registrado — corregido con escasez + hash determinístico.
+6. **Bloque 4 — clustering en la segunda pasada de anti-monopolio**: los diferidos se reinsertaban en su orden original, repitiendo violaciones — corregido con búsqueda activa entre todos los diferidos restantes.
+7. **Bloque 4 — campo `zone_id` nunca proyectado**: ninguna CTE lo seleccionaba pese a que la lógica de anti-monopolio ya lo referenciaba — corregido extendiendo `candidatos_editorial()` por segunda vez.
+8. **Bloque 4 — cuello de botella de rendimiento medido**: subconsultas correlacionadas de anti-monopolio (663ms) reemplazadas por `array_positions` nativo (115ms, ~5.8×), verificado sin cambio de resultados.
+
+Los ocho defectos se encontraron y corrigieron durante la verificación contra Postgres real, antes de cualquier commit — ninguno llegó a producción de código sin corregir.
+
+### Verificaciones realizadas (consolidado)
+
+Postgres 16 real en cada bloque (35 a 41 migraciones, reconstruida entre cada corrección): cómputo de afinidad y sus tres correcciones; privacidad/RLS con actor propio/ajeno/invitado/negocio; los cuatro carriles de Garantías con y sin restricción geográfica; backfill de `editor_pick`, rechazos explícitos y reactivación del Motor Editorial; deduplicación, propiedad por escasez, anti-monopolio y paginación del Compositor con datos de concentración de actor variable; `EXPLAIN ANALYZE` objetivo contra 210 eventos/69 negocios; reversión ejecutada de verdad en los cuatro bloques, incluyendo el caso especial de restaurar `discovery_calibration()`/`candidatos_editorial()` a su forma exacta previa al Bloque 4; regresión completa de cada bloque anterior tras cada cambio.
+
+Build y lint limpios en los cuatro bloques. **Verificación visual en navegador (Playwright) no pudo ejecutarse en este entorno** desde el Bloque 3 en adelante: el proyecto usa Supabase local (`http://127.0.0.1:54321`), que requiere Docker con la CLI de Supabase inicializada (`supabase init`) — Docker llegó a iniciar en este entorno durante el Bloque 4, pero el repositorio nunca tuvo `supabase/config.toml`, y bootstrapear un stack completo solo para esta verificación se consideró fuera de proporción para el bloque. Se documenta explícitamente en vez de reclamar una prueba que no ocurrió.
+
+### Deuda técnica consolidada de toda la Fase 6
+
+**Deuda heredada (de Fases 1-5B, sin cambios, ver secciones de cierre anteriores en este mismo documento):** prueba end-to-end contra un proyecto Supabase real desplegado; `post_likes`/`saved_events`/`saved_places`/`follows` legacy de solo respaldo; sin interfaz de gestión de `actor_managers`; sin limpieza de archivos huérfanos en Storage; `replaceBusinessHours` no atómico; sin moderación de comentarios desde `/admin`.
+
+**Deuda propia de la Fase 6:** `events.editor_pick` permanece en el esquema como fuente histórica del backfill, sin nuevas escrituras (documentado en la migración `0040`); `discoverable_content()` se evalúa de forma independiente dentro de cada una de las cinco funciones `candidatos_*` que la consumen, en vez de una sola vez compartida (aceptable al volumen actual, conscientemente diferido); sin verificación Playwright real en ningún bloque desde el Bloque 3, por ausencia de Supabase local inicializado en este entorno; el mecanismo de aceptación de "último recurso" del anti-monopolio del Compositor puede activarse bajo concentración extrema de un solo actor (verificado como comportamiento correcto y documentado, no un defecto).
+
+**Deuda futura (optimizaciones que solo se justifican con crecimiento real, nunca implementadas por anticipado):** caché compartida de `discoverable_content()` entre los cinco carriles que la consumen, si el volumen de contenido de la ciudad crece significativamente; índices sobre `affinity_contributions(actor_id, category)` y `editorial_selections(target_id)` si el volumen de contribuciones/selecciones lo justifica; la Gobernanza de Contenido Patrocinado (techo del 15%) permanece construida vacía de contenido real, a la espera de la Fase 11.
+
+### Qué habilita para la Fase 7
+
+- **El Motor de Afinidad es, literalmente, el "cerebro de preferencias" que la Guía IA v2 hereda** — perfil legible, sin NLP ni embeddings, con jerarquía explícita de fuerza de señal — en vez de construir uno propio por separado.
+- **El patrón de seis componentes co-iguales sin fórmula de puntuación** queda como precedente arquitectónico reutilizable para cualquier futuro mecanismo de recomendación del ecosistema.
+- **`compose_feed()` y su paginación por clave de identidad** quedan disponibles como el único punto de salida del sistema hacia el Feed — cualquier fase futura que necesite mostrar contenido personalizado ya tiene un contrato de composición probado al que puede rendir cuentas, en vez de construir uno nuevo desde cero.
+- **La Gobernanza de Contenido Patrocinado** ya tiene su lugar reservado en el contrato arquitectónico — la Fase 11 hereda el principio ya cerrado (techo del 15%, auditable, nunca superado por relevancia pagada) sin tener que definirlo bajo presión comercial futura.
+
+### Commits principales de la fase
+
+- Bloque 1 (Motor de Afinidad) y sus dos adendas técnicas.
+- Bloque 2 (Motor de Garantías) y su adenda de calibración geográfica.
+- Bloque 3 (Motor Editorial).
+- `963f3df` — correcciones y principios permanentes del Bloque 4 incorporados a `FASE6_CONTRATO_ARQUITECTONICO.md` antes de implementar.
+- `7a8441a` — Bloque 4 (Compositor del Feed): migración `0041`, frontend, documentación.
+
+### Estado final
+
+**FASE 6 CERRADA.** Los seis componentes conceptuales (Fuentes de contenido, Registro de señales, Motor de Afinidad, Motor de Garantías, Motor Editorial, Compositor del Feed) están implementados, verificados contra Postgres 16 real, y documentados. La auditoría de cierre (código, coherencia documental, pureza arquitectónica, principios permanentes, rendimiento, deuda técnica) no encontró ninguna decisión arquitectónica abierta, ningún TODO oculto, ningún componente a medio implementar. La única inconsistencia real encontrada — `MASTERPLAN.md` y `ARCHITECTURE.md` describiendo el plan original ya reemplazado — se corrigió como parte de este mismo cierre, con autorización explícita del Product Owner. **No lista para producción** hasta validar la deuda técnica heredada contra un proyecto Supabase real desplegado, igual que el resto del proyecto.
+
+---
