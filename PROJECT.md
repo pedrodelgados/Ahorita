@@ -2279,7 +2279,7 @@ Bloque 4 completo y verificado — con él, los seis componentes de la Fase 6 (F
 
 ## FASE 6 CERRADA — Descubrimiento inteligente v2 (2026-07-23)
 
-Cierre formal de la Fase 6 completa del `MASTERPLAN.md`, tras una auditoría explícita de siete puntos (código y migraciones, coherencia documental, código, pureza arquitectónica, principios permanentes, rendimiento, deuda técnica consolidada) presentada al Product Owner antes de escribir una sola corrección, siguiendo la misma metodología de cierre ya aplicada a la Fase 4 y la Fase 5B. Checkpoint de Git: tag `checkpoint-fase6-descubrimiento-inteligente`.
+Cierre formal de la Fase 6 completa del `MASTERPLAN.md`, tras una auditoría explícita de siete puntos (código y migraciones, coherencia documental, código, pureza arquitectónica, principios permanentes, rendimiento, deuda técnica consolidada) presentada al Product Owner antes de escribir una sola corrección, siguiendo la misma metodología de cierre ya aplicada a la Fase 4 y la Fase 5B. Checkpoint de Git: tag `checkpoint-fase6-descubrimiento-inteligente`, creado localmente; el `git push` del tag fue rechazado por el remoto con `403` en este entorno — la misma restricción que, verificado ahora explícitamente, ya afectaba en silencio a los seis tags de checkpoint anteriores (ninguno de `checkpoint-admin-eventos-lugares` a `checkpoint-fase5b-interaccion-social` existe tampoco en `origin`, según `git ls-remote --tags`). Se documenta aquí honestamente en vez de asumir que el tag quedó respaldado remotamente: el historial de commits en la rama remota es, en este entorno, el único registro de checkpoint verificablemente sincronizado.
 
 ### Resumen ejecutivo
 
