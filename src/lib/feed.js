@@ -11,6 +11,24 @@ const TAG_LABELS = {
   promocion: "PROMOCIÓN",
 };
 
+// Fase 6, Bloque 3 (ver PROJECT.md): candidatos_editorial() devuelve a propósito
+// el reason_code técnico, nunca una frase ya construida ("permitiendo varias
+// redacciones por código sin multiplicar el catálogo") -- la capa de
+// presentación que las traduce es esta, no la base de datos. Corrección de la
+// auditoría final de cierre de la Fase 6: antes de esto, el código crudo
+// (p. ej. "seleccionado_equipo") llegaba sin traducir hasta la pantalla.
+const EDITORIAL_REASON_LABELS = {
+  seleccionado_equipo: "Seleccionado por el equipo editorial de Ahorita.",
+  informacion_util: "Información útil que el equipo quiso destacar.",
+  relevante_fecha: "Relevante para esta fecha, según el equipo editorial.",
+  historia_ciudad: "Parte de la historia de la ciudad, según el equipo editorial.",
+};
+
+function resolveComposedReason(row) {
+  if (row.owning_carril !== "editorial") return row.reason;
+  return EDITORIAL_REASON_LABELS[row.reason] ?? EDITORIAL_REASON_LABELS.seleccionado_equipo;
+}
+
 // Ritmo editorial del feed: no todas las publicaciones tienen la misma
 // jerarquía visual (ver PROJECT.md, "Rediseño visual premium"). La variante
 // se deriva siempre de datos reales — posición en el orden ya definido por
@@ -209,7 +227,12 @@ export async function getComposedFeed({
     // estarlo entre esa lectura y esta (p. ej. venció justo ahora): se omite
     // honestamente, nunca se rellena con un item inventado.
     if (item) {
-      items.push({ ...item, reason: row.reason, owningCarril: row.owning_carril, geoStatus: row.geo_status });
+      items.push({
+        ...item,
+        reason: resolveComposedReason(row),
+        owningCarril: row.owning_carril,
+        geoStatus: row.geo_status,
+      });
     }
   });
 

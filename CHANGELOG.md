@@ -2,6 +2,23 @@
 
 Registro de cambios notables de Ahorita (Cuenca Viva). Formato libre, en español, más cercano a un registro de fases de producto que a versiones semánticas — ver `PROJECT.md` para el plan completo y el estado real de la implementación.
 
+## 2026-07-23 — Auditoría final de liberación de la Fase 6: cinco hallazgos resueltos
+
+Segunda auditoría de cierre, deliberadamente más crítica que la primera (actuando como auditor externo, sin asumir que algo estaba correcto solo por haberse implementado antes). Encontró cinco hallazgos reales — uno crítico, cuatro importantes — todos resueltos en la misma ronda, sin abrir ningún frente de trabajo nuevo ni tocar la arquitectura de seis componentes ya aprobada.
+
+### Corregido
+
+- **(Crítico)** `reason_code` de Editorial llegaba crudo (p. ej. `seleccionado_equipo`) hasta la pantalla del usuario, sin ninguna traducción — `src/lib/feed.js`: nueva `EDITORIAL_REASON_LABELS`/`resolveComposedReason()`, la capa de presentación que el propio diseño del Bloque 3 ya anticipaba pero nunca se había construido. Sin cambios en la base de datos.
+- **(Importante)** Contradicción interna en `FASE6_CONTRATO_ARQUITECTONICO.md` entre "aumentar el peso de cercanía" y el principio de que la cercanía nunca es señal de puntuación — sección "Cómo evolucionará el sistema..." reescrita para describir la degradación honesta y emergente que el sistema realmente implementa. Corrección puramente documental.
+- **(Importante)** Riesgo de división por cero en `compose_feed()` si una futura recalibración dejara algún peso en 0 — `supabase/migrations/0042_fase6_cierre_correccion_division_cero.sql`, guarda `greatest(peso, 0.0001)` sobre el divisor. Mismo resultado bit a bit para cualquier calibración ya vigente.
+- **(Importante)** Lista de "Commits principales de la fase" en `PROJECT.md` con formato inconsistente (hashes reales solo para el Bloque 4) — corregida con los hashes reales de los quince commits de la fase.
+- **(Importante)** Afirmación cuantitativa no verificada ("quince principios permanentes incorporados") en el resumen ejecutivo de `PROJECT.md` — retirada la cifra específica.
+
+### Verificado
+
+- Postgres 16 real (42 migraciones desde cero): `compose_feed()` produce exactamente la misma composición/orden/deduplicación que antes de la migración `0042`; un ítem editorial de prueba muestra ahora una frase legible en vez del código crudo; regresión completa de los cuatro bloques.
+- Build y lint limpios. Relectura completa de `MASTERPLAN.md`, `ARCHITECTURE.md`, `ROADMAP.md` y `FASE6_CONTRATO_ARQUITECTONICO.md` para confirmar que ninguna referencia cruzada quedó rota.
+
 ## 2026-07-23 — FASE 6 CERRADA: Descubrimiento inteligente v2
 
 Cierre formal de la Fase 6 completa, tras una auditoría explícita de siete puntos (código y migraciones, coherencia documental, código, pureza arquitectónica, principios permanentes, rendimiento, deuda técnica consolidada) presentada antes de escribir cualquier corrección — misma metodología ya usada para el cierre de la Fase 4 y la Fase 5B. Ningún código nuevo; solo auditoría y documentación.
