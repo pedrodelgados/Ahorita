@@ -1,6 +1,13 @@
 import { useEffect, useRef, useState } from "react";
 import { Send, Sparkles, Trash2 } from "lucide-react";
-import { askGuide, getConversationStatus, importGuestConversation, deleteActiveConversation } from "../../lib/aiGuide";
+import {
+  askGuide,
+  getConversationStatus,
+  importGuestConversation,
+  deleteActiveConversation,
+  savePermanentFact,
+  getPermanentKnowledgeCatalog,
+} from "../../lib/aiGuide";
 import { useAuth } from "../../contexts/AuthContext";
 import { COLORS } from "../../styles/theme";
 
@@ -17,9 +24,25 @@ export default function GuideChat({ placeId, placeholder, suggestions = [] }) {
   const [loading, setLoading] = useState(false);
   const [statusNote, setStatusNote] = useState(null);
   const [guestConsent, setGuestConsent] = useState(false);
+  const [candidate, setCandidate] = useState(null);
+  const [candidateStep, setCandidateStep] = useState("inicial");
+  const [catalog, setCatalog] = useState([]);
 
   const previousUserId = useRef(user?.id ?? null);
   const hydratedRef = useRef(false);
+
+  // Fase 7, Bloque 3 (Conocimiento Permanente no-afinidad): el catálogo dice
+  // qué categorías exigen un segundo paso de confirmación reforzada antes de
+  // guardar un candidato que propuso El Razonador. Dato de referencia
+  // público, se lee una sola vez -- nunca depende de si hay sesión.
+  useEffect(() => {
+    getPermanentKnowledgeCatalog()
+      .then(setCatalog)
+      .catch(() => {
+        // Degradación honesta: sin catálogo, se trata cualquier candidato
+        // como si exigiera confirmación reforzada (la opción más prudente).
+      });
+  }, []);
 
   // Al abrir el chat como persona ya autenticada: recuperar la única
   // conversación activa, si sigue vigente. Nunca se dispara para un
@@ -81,6 +104,13 @@ export default function GuideChat({ placeId, placeholder, suggestions = [] }) {
       } else {
         setStatusNote(null);
       }
+
+      // Fase 7, Bloque 3: El Razonador solo PROPONE -- nunca escribe nada.
+      // Solo se muestra si hay sesión (un invitado no tiene dónde guardarlo).
+      if (user && data.permanentKnowledgeCandidate) {
+        setCandidate(data.permanentKnowledgeCandidate);
+        setCandidateStep("inicial");
+      }
     } catch {
       setMessages([
         ...next,
@@ -119,6 +149,44 @@ export default function GuideChat({ placeId, placeholder, suggestions = [] }) {
         // borrado remoto no se presenta como un error bloqueante.
       }
     }
+  }
+
+  function requiresReinforcedConfirmation(category) {
+    const entry = catalog.find((c) => c.category === category);
+    // Sin catálogo disponible: se asume el caso más prudente.
+    return entry ? entry.requires_reinforced_confirmation : true;
+  }
+
+  function requestSaveCandidate() {
+    if (!candidate) return;
+    if (requiresReinforcedConfirmation(candidate.category)) {
+      setCandidateStep("reforzada");
+    } else {
+      confirmSaveCandidate(false);
+    }
+  }
+
+  async function confirmSaveCandidate(reinforcedConfirmationShown) {
+    if (!candidate) return;
+    const toSave = candidate;
+    setCandidate(null);
+    setCandidateStep("inicial");
+    try {
+      await savePermanentFact({
+        category: toSave.category,
+        subtype: toSave.subtype,
+        value: toSave.suggestedValue,
+        reinforcedConfirmationShown,
+      });
+    } catch {
+      // Degradación honesta: un fallo al guardar no interrumpe la
+      // conversación -- simplemente el dato no quedó guardado.
+    }
+  }
+
+  function declineCandidate() {
+    setCandidate(null);
+    setCandidateStep("inicial");
   }
 
   return (
@@ -165,6 +233,87 @@ export default function GuideChat({ placeId, placeholder, suggestions = [] }) {
               No, gracias
             </button>
           </div>
+        </div>
+      )}
+
+      {candidate && (
+        <div
+          style={{
+            border: `1px solid ${COLORS.aiAccent}`,
+            borderRadius: 12,
+            padding: "10px 14px",
+            marginBottom: 14,
+            fontSize: 13,
+          }}
+        >
+          {candidateStep === "inicial" ? (
+            <>
+              <p style={{ marginBottom: 8 }}>
+                {candidate.reason} ¿Quieres que recuerde esto: "{candidate.suggestedValue}"?
+              </p>
+              <div style={{ display: "flex", gap: 8 }}>
+                <button
+                  onClick={requestSaveCandidate}
+                  style={{
+                    background: COLORS.aiAccent,
+                    color: "#FFFFFF",
+                    border: "none",
+                    borderRadius: "var(--radius-full)",
+                    padding: "6px 14px",
+                    fontSize: 13,
+                  }}
+                >
+                  Guardar
+                </button>
+                <button
+                  onClick={declineCandidate}
+                  style={{
+                    background: "transparent",
+                    border: "1px solid rgba(43, 38, 34, 0.15)",
+                    borderRadius: "var(--radius-full)",
+                    padding: "6px 14px",
+                    fontSize: 13,
+                  }}
+                >
+                  No, gracias
+                </button>
+              </div>
+            </>
+          ) : (
+            <>
+              <p style={{ marginBottom: 8 }}>
+                Esto es un dato sensible. ¿Confirmas que quieres que la Guía IA lo recuerde de forma permanente: "
+                {candidate.suggestedValue}"?
+              </p>
+              <div style={{ display: "flex", gap: 8 }}>
+                <button
+                  onClick={() => confirmSaveCandidate(true)}
+                  style={{
+                    background: COLORS.aiAccent,
+                    color: "#FFFFFF",
+                    border: "none",
+                    borderRadius: "var(--radius-full)",
+                    padding: "6px 14px",
+                    fontSize: 13,
+                  }}
+                >
+                  Sí, confirmar
+                </button>
+                <button
+                  onClick={declineCandidate}
+                  style={{
+                    background: "transparent",
+                    border: "1px solid rgba(43, 38, 34, 0.15)",
+                    borderRadius: "var(--radius-full)",
+                    padding: "6px 14px",
+                    fontSize: 13,
+                  }}
+                >
+                  Cancelar
+                </button>
+              </div>
+            </>
+          )}
         </div>
       )}
 

@@ -65,6 +65,8 @@ Deno.serve(async (req) => {
       dataRequests,
       aiActiveConversation,
       aiConversationTurns,
+      permanentKnowledgeFacts,
+      permanentKnowledgeAuditLog,
     ] = await Promise.all([
       db.from("profiles").select("*").eq("id", userId).maybeSingle(),
       db.from("businesses").select("*").eq("owner_id", userId),
@@ -93,6 +95,21 @@ Deno.serve(async (req) => {
         .select("turn_role, content, retracted_at, created_at")
         .eq("owner_id", userId)
         .order("created_at"),
+      // Fase 7, Bloque 3 (Conocimiento Permanente no-afinidad): nace
+      // exportable desde el origen -- solo lo legítimo de mostrarle a la
+      // propia persona (nunca columnas internas). El registro de
+      // trazabilidad nunca incluyó el valor, así que exportarlo tal cual es
+      // seguro (mismas columnas que expone pk_get_audit_summary()).
+      db
+        .from("permanent_knowledge_facts")
+        .select("category, subtype, value, consented_at, confirmed_at")
+        .eq("owner_id", userId)
+        .order("category"),
+      db
+        .from("permanent_knowledge_audit_log")
+        .select("operation, category, subtype, occurred_at")
+        .eq("owner_id", userId)
+        .order("occurred_at"),
     ]);
 
     const firstError = [
@@ -112,6 +129,8 @@ Deno.serve(async (req) => {
       dataRequests,
       aiActiveConversation,
       aiConversationTurns,
+      permanentKnowledgeFacts,
+      permanentKnowledgeAuditLog,
     ].find((r) => r.error)?.error;
     if (firstError) throw firstError;
 
@@ -133,6 +152,8 @@ Deno.serve(async (req) => {
       data_requests: dataRequests.data,
       ai_guide_active_conversation: aiActiveConversation.data,
       ai_guide_conversation_turns: aiConversationTurns.data,
+      ai_guide_permanent_knowledge: permanentKnowledgeFacts.data,
+      ai_guide_permanent_knowledge_history: permanentKnowledgeAuditLog.data,
     });
   } catch (error) {
     console.error(error);

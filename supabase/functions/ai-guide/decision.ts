@@ -1,12 +1,13 @@
-// Ahorita — Guía IA, Fase 7 Bloque 1 + Bloque 2: El Razonador.
+// Ahorita — Guía IA, Fase 7 Bloque 1 + Bloque 2 + Bloque 3: El Razonador.
 //
 // Responsabilidad única (FASE7_CONTRATO_ARQUITECTONICO.md, componente 3):
-// sintetizar el contexto real y el contexto conversacional vigente en una
-// decisión de qué responder y por qué. Consulta, nunca reconstruye,
-// ninguna fuente de verdad ya existente. No tiene memoria propia -- todo lo
-// que "sabe" proviene del contexto permitido (context.ts) y de la Memoria
-// de Sesión (memory.ts), sin Conocimiento Permanente ni Motor de Afinidad
-// todavía (Bloques 3-4).
+// sintetizar el contexto real, el contexto conversacional vigente y los
+// hechos de Conocimiento Permanente ya confirmados en una decisión de qué
+// responder y por qué. Consulta, nunca reconstruye, ninguna fuente de
+// verdad ya existente. No tiene memoria propia -- todo lo que "sabe"
+// proviene del contexto permitido (context.ts), la Memoria de Sesión
+// (memory.ts) y el Conocimiento Permanente (permanentKnowledge.ts), sin
+// Motor de Afinidad todavía (Bloque 4).
 //
 // Agnosticismo reforzado en el Bloque 2 (ajuste explícito del Product
 // Owner antes de aprobar la implementación): este archivo nunca habla de
@@ -19,6 +20,12 @@
 // necesita (hoy, Claude) es un detalle interno de este archivo, nunca
 // parte de su contrato de entrada.
 //
+// Bloque 3 (precisión explícita del Product Owner antes de aprobar la
+// implementación): El Razonador PROPONE un candidato de Conocimiento
+// Permanente -- nunca lo crea, nunca lo guarda, nunca lo llama "hecho".
+// Solo una acción explícita de interfaz, posterior y separada de esta
+// síntesis, puede convertir un candidato en un hecho permanente.
+//
 // La tecnología que ejecuta esta síntesis (hoy, Claude vía la Edge
 // Function ya construida desde la Fase 1) es deliberadamente reemplazable
 // -- lo permanente es el contrato de esta decisión (abajo) y las reglas
@@ -27,6 +34,7 @@
 import Anthropic from "npm:@anthropic-ai/sdk@0.71.0";
 import type { GuideContext } from "./context.ts";
 import type { ConversationalContext } from "./memory.ts";
+import type { PermanentFact } from "./permanentKnowledge.ts";
 
 const anthropic = new Anthropic({ apiKey: Deno.env.get("ANTHROPIC_API_KEY") });
 
@@ -196,7 +204,66 @@ function describeConversationalContext(conversationalContext: ConversationalCont
   return `Esta conversación comenzó hace aproximadamente ${elapsedMinutes} minuto(s). Usa este dato para juzgar si algo dicho al principio (una restricción de tiempo, de lugar, de compañía) puede haber perdido vigencia -- la Memoria de Sesión solo retiene lo dicho, nunca decide por sí sola qué sigue aplicando.`;
 }
 
-function buildReasonerSystemPrompt(context: GuideContext, conversationalContext: ConversationalContext): string {
+// Candidato de Conocimiento Permanente (Bloque 3) -- catálogo cerrado y
+// estable, sincronizado por convención con
+// 0044_fase7_bloque3_conocimiento_permanente.sql (una categoría nunca
+// cambia de significado una vez creada; un cambio conceptual futuro exige
+// una categoría nueva vía migración, nunca reinterpretar una existente).
+export const PERMANENT_KNOWLEDGE_CATEGORIES = [
+  "idioma_preferido",
+  "preferencia_estilo_respuesta",
+  "restriccion_alimentaria",
+  "necesidad_movilidad",
+  "necesidad_accesibilidad",
+  "dato_financiero_declarado",
+] as const;
+export type PermanentKnowledgeCategory = (typeof PERMANENT_KNOWLEDGE_CATEGORIES)[number];
+
+// El Razonador PROPONE un candidato -- nunca un hecho. Solo se convierte en
+// un hecho permanente tras una acción explícita de interfaz, separada de
+// esta síntesis (ver permanentKnowledge.ts). Esta salida nunca escribe nada
+// por sí misma.
+export type PermanentKnowledgeCandidate = {
+  category: PermanentKnowledgeCategory;
+  subtype: string;
+  suggestedValue: string;
+  reason: string;
+};
+
+function isPermanentKnowledgeCategory(value: unknown): value is PermanentKnowledgeCategory {
+  return typeof value === "string" && (PERMANENT_KNOWLEDGE_CATEGORIES as readonly string[]).includes(value);
+}
+
+// Mismo criterio que validateMemoryInstruction: nunca se intenta adivinar o
+// completar un candidato malformado -- se descarta (null), equivalente a
+// "sin candidato en este turno".
+export function validatePermanentKnowledgeCandidate(value: unknown): PermanentKnowledgeCandidate | null {
+  if (value === null || value === undefined) return null;
+  if (typeof value !== "object") return null;
+  const v = value as Record<string, unknown>;
+  if (!isPermanentKnowledgeCategory(v.category)) return null;
+  if (typeof v.subtype !== "string" || v.subtype.length === 0) return null;
+  if (typeof v.suggestedValue !== "string" || v.suggestedValue.length === 0) return null;
+  if (typeof v.reason !== "string" || v.reason.length === 0) return null;
+  return { category: v.category, subtype: v.subtype, suggestedValue: v.suggestedValue, reason: v.reason };
+}
+
+function describePermanentFacts(facts: PermanentFact[]): string {
+  if (facts.length === 0) {
+    return "No existe todavía ningún Conocimiento Permanente confirmado sobre esta persona.";
+  }
+  const lines = facts.map(
+    (f) =>
+      `- ${f.category}${f.subtype !== "general" ? ` (${f.subtype})` : ""}: "${f.value}" -- confirmado el ${f.confirmedAt}, sensibilidad ${f.sensitivityLevel}${f.reconfirmationRelevant ? ", puede haber cambiado con el tiempo" : ""}.`
+  );
+  return `Conocimiento Permanente ya confirmado sobre esta persona (hechos vigentes, nunca afinidad, nunca contexto temporal):\n${lines.join("\n")}`;
+}
+
+function buildReasonerSystemPrompt(
+  context: GuideContext,
+  conversationalContext: ConversationalContext,
+  permanentFacts: PermanentFact[]
+): string {
   // Reglas traducidas directamente de AI_PHILOSOPHY.md (principios no
   // negociables 1-11, §9 jerarquía de priorización) y de
   // FASE7_CONTRATO_ARQUITECTONICO.md / FASE7_FILOSOFIA_GUIA_IA.md -- este
@@ -217,7 +284,8 @@ Debes responder EXCLUSIVAMENTE con un objeto JSON, sin texto adicional antes ni 
     "actions": [ { "type": "abrir_ficha"|"iniciar_navegacion"|"guardar"|"compartir", "targetType": "event"|"publicacion"|"place", "targetId": string, "label": string }, ... ],
     "noAnswer": boolean
   },
-  "memoryInstruction": null | { "action": "retract", "scope": "ultimo_turno_persona" | "todo_lo_anterior" }
+  "memoryInstruction": null | { "action": "retract", "scope": "ultimo_turno_persona" | "todo_lo_anterior" },
+  "permanentKnowledgeCandidate": null | { "category": "idioma_preferido"|"preferencia_estilo_respuesta"|"restriccion_alimentaria"|"necesidad_movilidad"|"necesidad_accesibilidad"|"dato_financiero_declarado", "subtype": string, "suggestedValue": string, "reason": string }
 }
 
 Reglas no negociables sobre "decision" (nunca las rompas):
@@ -233,7 +301,15 @@ Reglas no negociables sobre "decision" (nunca las rompas):
 Reglas no negociables sobre "memoryInstruction" (Memoria de Sesión, Bloque 2):
 - Si la persona pide explícitamente olvidar algo dicho antes en esta conversación ("olvida lo anterior", "no dije eso", "borra eso"), responde con "memoryInstruction": { "action": "retract", "scope": "..." }. Usa "ultimo_turno_persona" si se refiere solo a lo último que dijo; usa "todo_lo_anterior" si pide olvidar todo el hilo hasta ahora. Nunca discutas ni intentes demostrar que el registro anterior era correcto -- acepta la corrección de inmediato, sin objetar.
 - Una corrección normal ("somos cuatro, no dos", "cambié de plan") NUNCA activa "memoryInstruction" -- no es una retractación, es un dato nuevo que ya prevalece por sí solo al leer el hilo completo en orden. "memoryInstruction" debe ser "null" en cualquier otro caso.
-- Si no hay contexto conversacional previo (primera vez que la persona escribe), "memoryInstruction" siempre debe ser "null".`;
+- Si no hay contexto conversacional previo (primera vez que la persona escribe), "memoryInstruction" siempre debe ser "null".
+
+Reglas no negociables sobre "permanentKnowledgeCandidate" (Conocimiento Permanente no-afinidad, Bloque 3):
+- TÚ NUNCA GUARDAS NI CREAS UN HECHO. Como mucho, propones un CANDIDATO pendiente de que la persona lo confirme en un paso de interfaz separado -- "permanentKnowledgeCandidate" nunca es, por sí mismo, un dato ya guardado.
+- Solo puedes proponer una categoría que ya exista en la lista cerrada de arriba -- nunca inventes una categoría nueva ni reinterpretes el significado de una existente.
+- Para categorías de sensibilidad baja o media ("idioma_preferido", "preferencia_estilo_respuesta", "restriccion_alimentaria", "necesidad_movilidad"), solo propones un candidato si se cumplen TODAS estas condiciones: (1) el dato ya fue expresado explícitamente por la persona, nunca inferido; (2) tiene una utilidad clara y concreta entre conversaciones futuras; (3) existe un momento conversacional natural para mencionarlo, nunca forzado; (4) la conversación no es urgente ni sensible en este turno; (5) la sugerencia no puede interrumpir ni desplazar la respuesta principal; (6) no se rechazó ya una sugerencia equivalente en esta misma conversación; (7) no la repites si ya la propusiste antes en este mismo hilo; (8) la finalidad puede explicarse de forma simple. Si falta una sola, "permanentKnowledgeCandidate" debe ser "null".
+- Para categorías reforzadas ("necesidad_accesibilidad", "dato_financiero_declarado"), un criterio todavía más estricto: NUNCA propongas espontáneamente solo porque el dato sería útil. Solo puedes proponer un candidato si la propia persona ya expresó, en sus palabras, que quiere que esto se recuerde en el futuro, o preguntó explícitamente cómo evitar repetirlo.
+- Nunca propongas una categoría o un valor que ya coincide exactamente con un hecho ya confirmado (ver el Conocimiento Permanente ya existente abajo) -- si ya está guardado con el mismo valor, no hay nada que proponer.
+- "permanentKnowledgeCandidate" debe ser "null" en cualquier otro caso, incluida cualquier duda razonable.`;
 
   const contextBlock =
     context.type === "place"
@@ -241,8 +317,9 @@ Reglas no negociables sobre "memoryInstruction" (Memoria de Sesión, Bloque 2):
       : `Contexto real disponible (vista general de la ciudad): ${JSON.stringify(context)}`;
 
   const conversationalBlock = describeConversationalContext(conversationalContext);
+  const permanentFactsBlock = describePermanentFacts(permanentFacts);
 
-  return `${rules}\n\n${contextBlock}\n\n${conversationalBlock}`;
+  return `${rules}\n\n${contextBlock}\n\n${conversationalBlock}\n\n${permanentFactsBlock}`;
 }
 
 // Traducción interna, privada de este archivo: el "contexto conversacional
@@ -260,20 +337,23 @@ function toProviderMessages(conversationalContext: ConversationalContext): Array
 export type ReasonerOutput = {
   decision: Decision;
   memoryInstruction: MemoryInstruction | null;
+  permanentKnowledgeCandidate: PermanentKnowledgeCandidate | null;
 };
 
-// Produce la decisión (+ una eventual instrucción de memoria) o null si la
-// respuesta del modelo no cumplió el contrato -- nunca intenta reparar ni
-// completar una decisión incompleta.
+// Produce la decisión (+ una eventual instrucción de memoria y/o un
+// candidato de Conocimiento Permanente) o null si la respuesta del modelo
+// no cumplió el contrato -- nunca intenta reparar ni completar una decisión
+// incompleta.
 export async function decide(
   context: GuideContext,
-  conversationalContext: ConversationalContext
+  conversationalContext: ConversationalContext,
+  permanentFacts: PermanentFact[]
 ): Promise<ReasonerOutput | null> {
   const response = await anthropic.messages.create({
     model: "claude-sonnet-5",
     max_tokens: 1000,
     thinking: { type: "disabled" },
-    system: buildReasonerSystemPrompt(context, conversationalContext),
+    system: buildReasonerSystemPrompt(context, conversationalContext, permanentFacts),
     messages: toProviderMessages(conversationalContext),
   });
 
@@ -292,11 +372,13 @@ export async function decide(
   const decision = validateDecision(envelope.decision);
   if (!decision) return null;
 
-  // Un "memoryInstruction" inválido nunca invalida una decisión por lo
-  // demás correcta -- simplemente se descarta (equivalente a "null"), la
-  // misma disciplina de "no adivinar, no reparar" aplicada aquí a un campo
-  // secundario en vez de al contrato completo.
+  // Un "memoryInstruction" o un "permanentKnowledgeCandidate" inválidos
+  // nunca invalidan una decisión por lo demás correcta -- simplemente se
+  // descartan (equivalente a "null"), la misma disciplina de "no adivinar,
+  // no reparar" aplicada aquí a campos secundarios en vez de al contrato
+  // completo.
   const memoryInstruction = validateMemoryInstruction(envelope.memoryInstruction);
+  const permanentKnowledgeCandidate = validatePermanentKnowledgeCandidate(envelope.permanentKnowledgeCandidate);
 
-  return { decision, memoryInstruction };
+  return { decision, memoryInstruction, permanentKnowledgeCandidate };
 }

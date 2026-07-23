@@ -2,6 +2,29 @@
 
 Registro de cambios notables de Ahorita (Cuenca Viva). Formato libre, en español, más cercano a un registro de fases de producto que a versiones semánticas — ver `PROJECT.md` para el plan completo y el estado real de la implementación.
 
+## 2026-07-23 — Fase 7, Bloque 3: Conocimiento Permanente de la Persona, no-afinidad
+
+Tercer bloque técnico de la Fase 7. Guarda datos estables y explícitamente confirmados sobre una persona (idioma, estilo de respuesta, restricción alimentaria, movilidad, accesibilidad, dato financiero declarado), distintos de la Memoria de Sesión, el historial autorizado, la Afinidad y los datos de cuenta. El Razonador solo **propone un candidato** — nunca crea un "hecho": la interfaz confirma, y únicamente la acción explícita de la persona produce la escritura. Cinco bifurcaciones conceptuales y cuatro precisiones técnicas resueltas por el Product Owner antes de autorizar la implementación.
+
+### Agregado
+- `supabase/migrations/0044_fase7_bloque3_conocimiento_permanente.sql` (nuevo): `permanent_knowledge_categories` (catálogo cerrado y semánticamente estable para siempre, seis categorías iniciales, `treatment_policy` reservado sin uso funcional), `permanent_knowledge_facts` (sin ninguna política de RLS) y `permanent_knowledge_audit_log` (tabla de trazabilidad dedicada, resolución de un hallazgo arquitectónico — ver más abajo — sin ninguna política de RLS, nunca el valor). Cinco funciones `security definer` (`pk_get_facts`, `pk_save_fact`, `pk_delete_fact`, `pk_delete_all_facts`, `pk_get_audit_summary`), identidad siempre desde `auth.uid()`.
+- `supabase/functions/ai-guide/permanentKnowledge.ts` (nuevo): lectura para El Razonador con degradación honesta a vacío; escrituras exclusivas de acciones explícitas de interfaz.
+- `src/features/settings/PermanentKnowledgeSection.jsx` (nuevo): transparencia y corrección de los hechos vigentes + historial de auditoría (solo operación/categoría/fecha, nunca el valor), mismo estilo que `AffinitySection.jsx`.
+
+### Cambiado
+- `supabase/functions/ai-guide/decision.ts`: `PermanentKnowledgeCandidate` como tercera salida del envoltorio del Razonador, con la misma disciplina de validación que `Decision`/`MemoryInstruction`; ocho condiciones conservadoras para categorías normales y regla más estricta (debe originarse en palabras ya expresadas por la persona) para categorías reforzadas.
+- `supabase/functions/ai-guide/index.ts`: nuevas acciones explícitas (`save_permanent_fact`, `delete_permanent_fact`, `delete_all_permanent_facts`, `get_permanent_knowledge`), ninguna alcanzable desde el flujo conversacional normal.
+- `supabase/functions/export-user-data/index.ts`: hechos vigentes y resumen de auditoría nacen exportables.
+- `src/lib/aiGuide.js` / `src/features/ai/GuideChat.jsx`: banner de candidato con confirmación reforzada para categorías sensibles; `src/pages/SettingsPage.jsx` integra la nueva sección de transparencia.
+
+### Hallazgo arquitectónico (encontrado y resuelto durante la auditoría previa)
+- El diseño aprobado planteaba reutilizar `consent_records` para la trazabilidad de este bloque; la auditoría encontró que esa tabla tiene, desde la Fase 1, RLS con lectura administrativa directa — en contradicción con el principio recién aprobado de ausencia total de acceso administrativo, ya que incluso el nombre de una categoría revela información sensible por sí solo. El Product Owner confirmó construir una tabla de trazabilidad dedicada y sin RLS (Opción B, doce garantías explícitas). `consent_records` permanece completamente intocada.
+
+### Verificado
+- Postgres 16 real: guardado/corrección en el mismo lugar, las tres vías de rechazo (categoría/subtipo/confirmación reforzada), borrado físico individual y total, aislamiento estricto (dos personas, anónimo, administrador) confirmado también con consultas directas a la tabla cruda, rechazo de inserción directa, cascada de eliminación de cuenta, migración reversible confirmando que `consent_records` queda intocada.
+- Verificación de tipos equivalente a `deno check` vía `tsc --strict` (shim corregido tras confirmar el comportamiento real de `.rpc()` instalando el paquete real): cero errores nuevos.
+- Validación de `validatePermanentKnowledgeCandidate()` (9 casos) y regresión de `validateDecision()`/`validateMemoryInstruction()` sin cambios de comportamiento. Build y lint del frontend limpios.
+
 ## 2026-07-23 — Fase 7, Bloque 2: Memoria de Sesión
 
 Segundo bloque técnico de la Fase 7. Da continuidad a la única conversación activa de cada persona autenticada, sin importar la superficie desde la que la continúe (contexto/`placeId` siguen siendo entradas del turno, nunca identidad de la conversación). Invitados sin cambios de fondo: sin persistencia server-side. Ocho bifurcaciones conceptuales y cuatro ajustes técnicos resueltos por el Product Owner antes de autorizar la implementación.
