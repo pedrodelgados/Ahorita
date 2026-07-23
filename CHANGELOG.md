@@ -2,6 +2,29 @@
 
 Registro de cambios notables de Ahorita (Cuenca Viva). Formato libre, en español, más cercano a un registro de fases de producto que a versiones semánticas — ver `PROJECT.md` para el plan completo y el estado real de la implementación.
 
+## 2026-07-23 — Fase 7, Bloque 1: separación Razonador/Expresión
+
+Primer bloque técnico de la Fase 7, siguiendo la metodología específica de esta fase (análisis conceptual → escenarios de conversación → diseño técnico → implementación → verificación → documentación). Reestructura la Edge Function `ai-guide` de un único prompt monolítico a un pipeline de dos pasos con frontera de datos explícita: Contexto → El Razonador → Decisión estructurada e inmutable → La Expresión → Respuesta final. Además corrige un defecto real preexistente, descubierto durante la auditoría previa a este bloque, no una funcionalidad nueva.
+
+### Agregado
+- `supabase/functions/ai-guide/context.ts` (nuevo): construye el contexto permitido (lugar o ciudad); no interpreta ni decide.
+- `supabase/functions/ai-guide/decision.ts` (nuevo): El Razonador — produce y valida (`validateDecision()`) una `Decision` estructurada (`dominantMode`, `supportingModes`, `content`, `narrative`, `reason`, `resolutionRoute`, `priorityTrace`, `actions`, `noAnswer`), sin intentar nunca reparar un campo ausente.
+- `supabase/functions/ai-guide/expression.ts` (nuevo): La Expresión — traduce una `Decision` ya tomada en lenguaje natural; solo importa el tipo `Decision`, sin ninguna vía de código hacia el contexto crudo.
+
+### Corregido
+- **`buildCityContext()` consultaba `editorial_posts`**, tabla eliminada desde la migración `0010_events.sql`, muy anterior a la Fase 6 — cualquier pregunta a la Guía IA sin `placeId` (el camino de Inicio y Explorar, la mayoría del uso real) fallaba con un error de Postgres. Reemplazada por la RPC oficial `candidatos_editorial()` (Fase 6), la misma ya usada por `src/lib/editorial.js` — sin inventar una interpretación nueva de elegibilidad editorial.
+
+### Cambiado
+- `supabase/functions/ai-guide/index.ts`: reescrita para orquestar el pipeline de dos pasos, con decisión y respuesta de seguridad fijas si El Razonador o La Expresión fallan. Respuesta `{reply, actions}` — aditiva, `src/lib/aiGuide.js`/`GuideChat.jsx`/`GuideCapsule.jsx` sin cambios.
+
+### Verificado
+- Postgres 16 real: ocho escenarios editoriales exigidos (cero contenido, selección vigente, vencida, oculta, evento finalizado, autor con verificación revocada, contenido de Ahorita Editorial con y sin selección) — todos correctos.
+- `validateDecision()`: 15 casos sintéticos (3 válidos, 12 inválidos), transpilados con esbuild y ejecutados en Node ante la ausencia de `deno` en este entorno — los 15 se comportaron como se esperaba.
+- Separación estructural Razonador/Expresión confirmada por inspección del grafo de importaciones.
+- Verificación de tipos equivalente a `deno check` vía `tsc --strict` contra un shim fiel a `@supabase/supabase-js`/`@anthropic-ai/sdk`: cero errores nuevos.
+- Build y lint limpios (sin cobertura de `supabase/functions/`, limitación ya conocida).
+- **Limitación documentada honestamente**: sin `ANTHROPIC_API_KEY` configurada para la Edge Function ni `deno` instalado en este entorno, no fue posible medir la latencia/costo real de las dos llamadas encadenadas al proveedor de IA — pendiente contra un proyecto Supabase real desplegado.
+
 ## 2026-07-23 — Fase 7: contrato arquitectónico conceptual adoptado
 
 Con la filosofía de la Guía IA ya adoptada, se construyó `FASE7_CONTRATO_ARQUITECTONICO.md` — arquitectura conceptual sin sesiones, tablas, funciones, RPC, prompts ni proveedor de tecnología de inteligencia artificial, siguiendo el mismo espíritu que `FASE6_CONTRATO_ARQUITECTONICO.md` tuvo para la Fase 6. Encargo explícito: una arquitectura que sobreviva al proveedor tecnológico. Dos rondas de revisión, la segunda resolviendo cuatro precisiones antes de la aprobación final. Ningún código, migración ni diseño técnico — trabajo exclusivamente de arquitectura conceptual.
