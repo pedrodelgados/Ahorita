@@ -2,6 +2,28 @@
 
 Registro de cambios notables de Ahorita (Cuenca Viva). Formato libre, en español, más cercano a un registro de fases de producto que a versiones semánticas — ver `PROJECT.md` para el plan completo y el estado real de la implementación.
 
+## 2026-07-23 — Fase 7, Bloque 2: Memoria de Sesión
+
+Segundo bloque técnico de la Fase 7. Da continuidad a la única conversación activa de cada persona autenticada, sin importar la superficie desde la que la continúe (contexto/`placeId` siguen siendo entradas del turno, nunca identidad de la conversación). Invitados sin cambios de fondo: sin persistencia server-side. Ocho bifurcaciones conceptuales y cuatro ajustes técnicos resueltos por el Product Owner antes de autorizar la implementación.
+
+### Agregado
+- `supabase/migrations/0043_fase7_bloque2_memoria_sesion.sql` (nuevo): `ai_active_conversations` (fila única por persona) y `ai_conversation_turns` (append-only, retracciones marcadas nunca borradas), sin ninguna política de RLS — acceso exclusivo mediante seis funciones `security definer` que derivan la identidad siempre de `auth.uid()`. Expiración on-read (2 horas, configurable, calibración inicial), reinicio honesto sin recuperar conversaciones cerradas, escritura atómica del intercambio persona+guía+retractación.
+- `supabase/functions/ai-guide/memory.ts` (nuevo): la Memoria de Sesión — identidad desde el propio token de quien llama, "contexto conversacional vigente" como único contrato hacia El Razonador, degradación honesta ante cualquier fallo de lectura/escritura.
+- `src/features/ai/GuideChat.jsx`: hidratación de la conversación activa al abrir el chat, señal no técnica de conversación nueva/expirada, consentimiento explícito para asociar una conversación de invitado a una cuenta nueva, borrado explícito desde la interfaz.
+
+### Cambiado
+- `supabase/functions/ai-guide/decision.ts`: `decide()` consume el `ConversationalContext` genérico en vez de "mensajes" (agnosticismo reforzado — la representación interna es exclusiva de la Memoria de Sesión); nuevo `MemoryInstruction` (retractación explícita) como salida secundaria, validado con la misma disciplina que `Decision`, sin alterar su contrato.
+- `supabase/functions/ai-guide/index.ts`: orquesta identidad → Memoria de Sesión → contexto → Razonador → Expresión → persistencia; nuevas acciones administrativas (`delete_conversation`, `import_guest_conversation`, `get_conversation`).
+- `supabase/functions/export-user-data/index.ts`: la conversación activa nace exportable.
+- `src/lib/aiGuide.js`: contrato de petición actualizado (`text` + turno nuevo para autenticados, `guestHistory` solo para invitados).
+
+### Verificado
+- Postgres 16 real: aislamiento estricto entre personas y frente a un administrador, expiración simulada con purga on-read, retracción (ambos alcances) preservando trazabilidad y excluida de lectura, escritura atómica (contenido vacío rechazado sin turno a medias), importación de conversación de invitado en orden, borrado explícito, cascada de eliminación de cuenta, migración reversible y reaplicable.
+- Degradación de memoria (lectura y escritura) probada de forma aislada: nunca bloquea el turno ni finge continuidad.
+- Regresión de `validateDecision()` (15/15) + validación del nuevo envoltorio `{decision, memoryInstruction}` (6 casos nuevos).
+- Verificación de tipos equivalente a `deno check` vía `tsc --strict`: cero errores nuevos. Build y lint limpios.
+- **Limitación documentada**: sin marcas de tiempo reales por turno en el camino de invitado (no registradas nunca por `GuideChat.jsx`); sin comportamiento en vivo del modelo medible en este entorno (mismas limitaciones de `deno`/`ANTHROPIC_API_KEY` ya documentadas en el Bloque 1).
+
 ## 2026-07-23 — Fase 7, Bloque 1: separación Razonador/Expresión
 
 Primer bloque técnico de la Fase 7, siguiendo la metodología específica de esta fase (análisis conceptual → escenarios de conversación → diseño técnico → implementación → verificación → documentación). Reestructura la Edge Function `ai-guide` de un único prompt monolítico a un pipeline de dos pasos con frontera de datos explícita: Contexto → El Razonador → Decisión estructurada e inmutable → La Expresión → Respuesta final. Además corrige un defecto real preexistente, descubierto durante la auditoría previa a este bloque, no una funcionalidad nueva.

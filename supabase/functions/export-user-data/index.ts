@@ -63,6 +63,8 @@ Deno.serve(async (req) => {
       postLikes,
       consentRecords,
       dataRequests,
+      aiActiveConversation,
+      aiConversationTurns,
     ] = await Promise.all([
       db.from("profiles").select("*").eq("id", userId).maybeSingle(),
       db.from("businesses").select("*").eq("owner_id", userId),
@@ -78,6 +80,19 @@ Deno.serve(async (req) => {
       db.from("post_likes").select("target_type, target_id, created_at").eq("user_id", userId),
       db.from("consent_records").select("*").eq("user_id", userId).order("created_at"),
       db.from("data_requests").select("*").eq("user_id", userId).order("requested_at"),
+      // Fase 7, Bloque 2 (Memoria de Sesión): nace exportable desde el
+      // origen. Solo la conversación activa -- este bloque no construye
+      // ningún historial de conversaciones ya cerradas.
+      db
+        .from("ai_active_conversations")
+        .select("status, started_at, last_activity_at")
+        .eq("owner_id", userId)
+        .maybeSingle(),
+      db
+        .from("ai_conversation_turns")
+        .select("turn_role, content, retracted_at, created_at")
+        .eq("owner_id", userId)
+        .order("created_at"),
     ]);
 
     const firstError = [
@@ -95,6 +110,8 @@ Deno.serve(async (req) => {
       postLikes,
       consentRecords,
       dataRequests,
+      aiActiveConversation,
+      aiConversationTurns,
     ].find((r) => r.error)?.error;
     if (firstError) throw firstError;
 
@@ -114,6 +131,8 @@ Deno.serve(async (req) => {
       post_likes: postLikes.data,
       consent_records: consentRecords.data,
       data_requests: dataRequests.data,
+      ai_guide_active_conversation: aiActiveConversation.data,
+      ai_guide_conversation_turns: aiConversationTurns.data,
     });
   } catch (error) {
     console.error(error);
