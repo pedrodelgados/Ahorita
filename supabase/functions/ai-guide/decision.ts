@@ -26,6 +26,18 @@
 // Solo una acción explícita de interfaz, posterior y separada de esta
 // síntesis, puede convertir un candidato en un hecho permanente.
 //
+// Corrección aplicada tras la auditoría final del Bloque 3 (hallazgo 1): las
+// reglas de abajo que piden no repetir un candidato ya propuesto o ya
+// rechazado en el mismo hilo dependían de una señal que nunca existía --
+// "permanentKnowledgeCandidate" nunca formaba parte de los turnos que
+// persiste la Memoria de Sesión (solo el texto hablado, `reply`, se
+// persiste). Sin memoria paralela ni estados nuevos: ahora que La Expresión
+// (expression.ts) menciona el candidato dentro de la propia respuesta
+// cuando corresponde, esa mención queda naturalmente registrada como parte
+// del turno ya existente -- la próxima vez que El Razonador reciba el hilo
+// completo, puede reconocer su propia mención anterior directamente en la
+// conversación, sin ningún mecanismo adicional.
+//
 // La tecnología que ejecuta esta síntesis (hoy, Claude vía la Edge
 // Function ya construida desde la Fase 1) es deliberadamente reemplazable
 // -- lo permanente es el contrato de esta decisión (abajo) y las reglas
@@ -306,7 +318,7 @@ Reglas no negociables sobre "memoryInstruction" (Memoria de Sesión, Bloque 2):
 Reglas no negociables sobre "permanentKnowledgeCandidate" (Conocimiento Permanente no-afinidad, Bloque 3):
 - TÚ NUNCA GUARDAS NI CREAS UN HECHO. Como mucho, propones un CANDIDATO pendiente de que la persona lo confirme en un paso de interfaz separado -- "permanentKnowledgeCandidate" nunca es, por sí mismo, un dato ya guardado.
 - Solo puedes proponer una categoría que ya exista en la lista cerrada de arriba -- nunca inventes una categoría nueva ni reinterpretes el significado de una existente.
-- Para categorías de sensibilidad baja o media ("idioma_preferido", "preferencia_estilo_respuesta", "restriccion_alimentaria", "necesidad_movilidad"), solo propones un candidato si se cumplen TODAS estas condiciones: (1) el dato ya fue expresado explícitamente por la persona, nunca inferido; (2) tiene una utilidad clara y concreta entre conversaciones futuras; (3) existe un momento conversacional natural para mencionarlo, nunca forzado; (4) la conversación no es urgente ni sensible en este turno; (5) la sugerencia no puede interrumpir ni desplazar la respuesta principal; (6) no se rechazó ya una sugerencia equivalente en esta misma conversación; (7) no la repites si ya la propusiste antes en este mismo hilo; (8) la finalidad puede explicarse de forma simple. Si falta una sola, "permanentKnowledgeCandidate" debe ser "null".
+- Para categorías de sensibilidad baja o media ("idioma_preferido", "preferencia_estilo_respuesta", "restriccion_alimentaria", "necesidad_movilidad"), solo propones un candidato si se cumplen TODAS estas condiciones: (1) el dato ya fue expresado explícitamente por la persona, nunca inferido; (2) tiene una utilidad clara y concreta entre conversaciones futuras; (3) existe un momento conversacional natural para mencionarlo, nunca forzado; (4) la conversación no es urgente ni sensible en este turno; (5) la sugerencia no puede interrumpir ni desplazar la respuesta principal; (6) no se rechazó ya una sugerencia equivalente en esta misma conversación; (7) no la repites si ya la propusiste antes en este mismo hilo -- revisa el hilo de la conversación de arriba: si tu propia respuesta anterior ya menciona esta misma sugerencia, no la vuelvas a proponer; (8) la finalidad puede explicarse de forma simple. Si falta una sola, "permanentKnowledgeCandidate" debe ser "null".
 - Para categorías reforzadas ("necesidad_accesibilidad", "dato_financiero_declarado"), un criterio todavía más estricto: NUNCA propongas espontáneamente solo porque el dato sería útil. Solo puedes proponer un candidato si la propia persona ya expresó, en sus palabras, que quiere que esto se recuerde en el futuro, o preguntó explícitamente cómo evitar repetirlo.
 - Nunca propongas una categoría o un valor que ya coincide exactamente con un hecho ya confirmado (ver el Conocimiento Permanente ya existente abajo) -- si ya está guardado con el mismo valor, no hay nada que proponer.
 - "permanentKnowledgeCandidate" debe ser "null" en cualquier otro caso, incluida cualquier duda razonable.`;

@@ -225,9 +225,14 @@ Deno.serve(async (req) => {
     }
 
     // --- La Expresión ---
+    // Recibe también el candidato de Conocimiento Permanente (si lo hay):
+    // desde la corrección del hallazgo 2 de la auditoría final del Bloque 3,
+    // es La Expresión -- nunca El Razonador ni la interfaz -- quien decide
+    // cómo comunicárselo a la persona, igual que con el resto de la
+    // decisión.
     let reply: string;
     try {
-      reply = await express(decision);
+      reply = await express(decision, permanentKnowledgeCandidate);
       if (!reply) throw new Error("La Expresión devolvió una respuesta vacía.");
     } catch (expressionError) {
       console.error("La Expresión falló:", expressionError);

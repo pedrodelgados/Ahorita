@@ -107,6 +107,9 @@ export default function GuideChat({ placeId, placeholder, suggestions = [] }) {
 
       // Fase 7, Bloque 3: El Razonador solo PROPONE -- nunca escribe nada.
       // Solo se muestra si hay sesión (un invitado no tiene dónde guardarlo).
+      // La invitación en sí ya la dijo La Expresión dentro de `data.reply`
+      // (corrección del hallazgo 2 de la auditoría final) -- esta tarjeta
+      // solo ofrece la confirmación explícita, nunca repite el porqué.
       if (user && data.permanentKnowledgeCandidate) {
         setCandidate(data.permanentKnowledgeCandidate);
         setCandidateStep("inicial");
@@ -249,7 +252,7 @@ export default function GuideChat({ placeId, placeholder, suggestions = [] }) {
           {candidateStep === "inicial" ? (
             <>
               <p style={{ marginBottom: 8 }}>
-                {candidate.reason} ¿Quieres que recuerde esto: "{candidate.suggestedValue}"?
+                ¿Quieres que recuerde esto: "{candidate.suggestedValue}"?
               </p>
               <div style={{ display: "flex", gap: 8 }}>
                 <button

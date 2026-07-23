@@ -2,6 +2,21 @@
 
 Registro de cambios notables de Ahorita (Cuenca Viva). Formato libre, en español, más cercano a un registro de fases de producto que a versiones semánticas — ver `PROJECT.md` para el plan completo y el estado real de la implementación.
 
+## 2026-07-23 — Fase 7, Bloque 3: auditoría final y correcciones
+
+Auditoría final del Bloque 3 (exclusivamente sobre la implementación ya terminada, sin funcionalidades ni ideas nuevas), mismo rigor que el cierre de la Fase 6. Sin hallazgos en RLS, aislamiento, `consent_records`, consentimiento explícito, degradación segura ni exportación. Cuatro hallazgos: dos corregidos, dos documentados como limitación conocida por decisión del Product Owner.
+
+### Corregido
+- **El Razonador podía re-proponer un candidato ya presentado o ya rechazado en la misma conversación.** El prompt lo prohibía, pero nada persistía esa señal (`permanentKnowledgeCandidate` nunca formaba parte de los turnos de la Memoria de Sesión). Solución mínima sin memoria paralela ni estados nuevos: la mención del candidato ahora se integra en la propia respuesta hablada (ver corrección siguiente), que ya se persiste como turno normal — la próxima llamada al Razonador ve directamente su mención anterior en el hilo.
+- **El campo `reason` del candidato llegaba a la persona sin pasar por La Expresión**, rompiendo para esa superficie el principio de que "El Razonador nunca habla directamente con la persona". `supabase/functions/ai-guide/expression.ts`: `express()` recibe ahora también el candidato (nunca los hechos guardados, nunca el contexto crudo) y decide, con sus propias palabras, cómo comunicarlo — siempre como invitación a confirmar, nunca como algo ya guardado. `GuideChat.jsx` ya no muestra el `reason` crudo en el banner.
+
+### Documentado como limitación conocida (sin corregir, por decisión explícita)
+- La etiqueta de auditoría `revocado` no tiene hoy ningún camino real en la interfaz que la produzca (el único botón de borrado usa siempre `asRevocation: false`) — mecanismo ya construido, a la espera de una futura superficie que distinga explícitamente "revocar" de "borrar".
+- El nombre de una categoría puede aparecer en los logs de la Edge Function ante una entrada inválida — mismo patrón de logging usado en todo `ai-guide` desde bloques anteriores, no una desviación de este bloque; queda para una futura revisión transversal de observabilidad.
+
+### Verificado
+- `tsc --strict` sin errores nuevos. Regresión de `validateDecision()`/`validateMemoryInstruction()`/`validatePermanentKnowledgeCandidate()` sin cambios. Build y lint del frontend limpios.
+
 ## 2026-07-23 — Fase 7, Bloque 3: Conocimiento Permanente de la Persona, no-afinidad
 
 Tercer bloque técnico de la Fase 7. Guarda datos estables y explícitamente confirmados sobre una persona (idioma, estilo de respuesta, restricción alimentaria, movilidad, accesibilidad, dato financiero declarado), distintos de la Memoria de Sesión, el historial autorizado, la Afinidad y los datos de cuenta. El Razonador solo **propone un candidato** — nunca crea un "hecho": la interfaz confirma, y únicamente la acción explícita de la persona produce la escritura. Cinco bifurcaciones conceptuales y cuatro precisiones técnicas resueltas por el Product Owner antes de autorizar la implementación.
