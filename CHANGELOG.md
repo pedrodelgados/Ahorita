@@ -2,6 +2,27 @@
 
 Registro de cambios notables de Ahorita (Cuenca Viva). Formato libre, en español, más cercano a un registro de fases de producto que a versiones semánticas — ver `PROJECT.md` para el plan completo y el estado real de la implementación.
 
+## 2026-07-23 — Fase 7, Bloque 4: conexión de El Razonador con el Motor de Afinidad
+
+Cuarto bloque técnico de la Fase 7. El Razonador consulta, bajo demanda y nunca como prerrequisito de su pipeline, la dimensión `categoria` del perfil de Afinidad ya calculado por el Motor de Afinidad (Fase 6) — nunca la reconstruye, nunca escribe en ella. La Afinidad describe preferencia relativa, nunca identidad, nunca decide sola: solo desempata entre alternativas que el resto de la jerarquía ya dejó elegibles. Diez precisiones del Product Owner cerraron el análisis conceptual en cuatro rondas; ninguna en contradicción con la arquitectura existente. **Primer bloque de la Fase 7 sin ninguna migración nueva.**
+
+### Agregado
+- `supabase/functions/ai-guide/affinity.ts` (nuevo): resuelve el actor propio desde `auth.uid()`, consulta `affinity_profile()` con el propio token de quien llama, filtra a la dimensión `categoria` y solo a las categorías ya presentes en el contexto real del turno (minimización dentro del propio pipeline) — nunca expone el peso numérico crudo. Degrada honestamente a vacío ante cualquier fallo.
+
+### Cambiado
+- `supabase/functions/ai-guide/index.ts`: compuerta de consulta bajo demanda (`ownerId && context.type === 'city'`), sin ninguna llamada adicional al proveedor de IA.
+- `supabase/functions/ai-guide/decision.ts`: jerarquía de prioridad extendida de cinco a ocho niveles (restricciones duras → seguridad → pedido explícito → Conocimiento Permanente pertinente → Afinidad real → confianza/verificación → editorial → patrocinado nunca por encima); nueva `describeAffinityInsights()` traduce cada entrada a lenguaje de certeza relativa. Sin ningún campo nuevo en `Decision`/`ReasonerOutput` — la influencia de Afinidad cabe en `reason`/`priorityTrace`, ya existentes desde el Bloque 1.
+- `supabase/functions/export-user-data/index.ts`: agrega el perfil agregado de Afinidad (`affinity_profile()`, nunca `affinity_contributions` cruda), llamado con el token de quien pide la exportación.
+- `supabase/functions/ai-guide/expression.ts`: sin cambios — confirma la conclusión ya adelantada en el análisis conceptual.
+
+### Hallazgo técnico (encontrado durante la auditoría previa al diseño, no una contradicción)
+- `places` no tiene ningún vínculo estructural con `actors` (a diferencia de `events`/`editorial`, que sí podrían resolverlo). Conectar la dimensión `actor_seguido` en esta iteración habría producido cobertura asimétrica. El Product Owner confirmó limitar esta iteración a la dimensión `categoria`, difiriendo `actor_seguido`.
+- El perfil de Afinidad nunca se había incluido en `export-user-data` desde la Fase 6 — vacío preexistente, corregido en este bloque por decisión explícita.
+
+### Verificado
+- Postgres 16 real (sin migración nueva que verificar): simulación de extremo a extremo con contribuciones reales (categoría con evidencia reciente → `activa`; categoría antigua + corrección `atenuar` real → `historica`, confirmando que "histórico" exige una compensación negativa real, nunca solo el paso del tiempo); filtro de categorías pertinentes correcto contra datos reales; aislamiento estricto entre personas y frente a invitado (mecanismo ya construido en la Fase 6, sin cambios).
+- `tsc --strict`: cero errores nuevos. Regresión de los tres validadores (9/9, sin cambios de comportamiento). `describeAffinityInsights()` verificado de forma aislada (3/3 casos). Build y lint limpios, sin cambios de frontend.
+
 ## 2026-07-23 — Fase 7, Bloque 3: auditoría final y correcciones
 
 Auditoría final del Bloque 3 (exclusivamente sobre la implementación ya terminada, sin funcionalidades ni ideas nuevas), mismo rigor que el cierre de la Fase 6. Sin hallazgos en RLS, aislamiento, `consent_records`, consentimiento explícito, degradación segura ni exportación. Cuatro hallazgos: dos corregidos, dos documentados como limitación conocida por decisión del Product Owner.

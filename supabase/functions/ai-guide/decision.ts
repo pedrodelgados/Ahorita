@@ -1,13 +1,23 @@
-// Ahorita — Guía IA, Fase 7 Bloque 1 + Bloque 2 + Bloque 3: El Razonador.
+// Ahorita — Guía IA, Fase 7 Bloque 1 + Bloque 2 + Bloque 3 + Bloque 4: El
+// Razonador.
 //
 // Responsabilidad única (FASE7_CONTRATO_ARQUITECTONICO.md, componente 3):
-// sintetizar el contexto real, el contexto conversacional vigente y los
-// hechos de Conocimiento Permanente ya confirmados en una decisión de qué
-// responder y por qué. Consulta, nunca reconstruye, ninguna fuente de
-// verdad ya existente. No tiene memoria propia -- todo lo que "sabe"
-// proviene del contexto permitido (context.ts), la Memoria de Sesión
-// (memory.ts) y el Conocimiento Permanente (permanentKnowledge.ts), sin
-// Motor de Afinidad todavía (Bloque 4).
+// sintetizar el contexto real, el contexto conversacional vigente, los
+// hechos de Conocimiento Permanente ya confirmados y la Afinidad pertinente
+// ya calculada en una decisión de qué responder y por qué. Consulta, nunca
+// reconstruye, ninguna fuente de verdad ya existente. No tiene memoria
+// propia -- todo lo que "sabe" proviene del contexto permitido (context.ts),
+// la Memoria de Sesión (memory.ts), el Conocimiento Permanente
+// (permanentKnowledge.ts) y la Afinidad (affinity.ts).
+//
+// Bloque 4 (diseño técnico aprobado): la Afinidad solo se recibe cuando
+// index.ts ya decidió, con una compuerta de código sin costo de llamada al
+// proveedor de IA, que aporta valor a este turno -- este archivo nunca
+// participa en esa decisión, y nunca usa la Afinidad para interpretar qué
+// quiso decir la persona, solo para desempatar entre alternativas ya
+// identificadas por el resto de la jerarquía (ver más abajo). La Afinidad
+// nunca incrementa el universo de opciones del turno -- solo puede
+// mencionar categorías que el propio `context` ya trae de origen.
 //
 // Agnosticismo reforzado en el Bloque 2 (ajuste explícito del Product
 // Owner antes de aprobar la implementación): este archivo nunca habla de
@@ -47,6 +57,7 @@ import Anthropic from "npm:@anthropic-ai/sdk@0.71.0";
 import type { GuideContext } from "./context.ts";
 import type { ConversationalContext } from "./memory.ts";
 import type { PermanentFact } from "./permanentKnowledge.ts";
+import type { AffinityInsight } from "./affinity.ts";
 
 const anthropic = new Anthropic({ apiKey: Deno.env.get("ANTHROPIC_API_KEY") });
 
@@ -271,10 +282,34 @@ function describePermanentFacts(facts: PermanentFact[]): string {
   return `Conocimiento Permanente ya confirmado sobre esta persona (hechos vigentes, nunca afinidad, nunca contexto temporal):\n${lines.join("\n")}`;
 }
 
+// Bloque 4: traducción a lenguaje de certeza relativa -- nunca un número.
+// Solo llega hasta aquí la porción ya filtrada por affinity.ts a las
+// categorías realmente presentes en el contexto de este turno (principio de
+// minimización dentro del propio pipeline).
+function describeAffinityInsights(insights: AffinityInsight[]): string {
+  if (insights.length === 0) {
+    return "No hay ninguna afinidad disponible o pertinente para esta consulta -- trata a esta persona igual que a cualquiera sin ningún patrón de interés conocido en esto.";
+  }
+  const lines = insights.map((i) => {
+    const confidenceLabel = { alto: "alta", medio: "media", bajo: "baja" }[i.confidence];
+    const zoneNote = i.refined ? ", refinada a una zona específica" : "";
+    if (i.evidenceStatus === "historica") {
+      return `- Categoría "${i.category}"${zoneNote}: interesó en el pasado (confianza ${confidenceLabel} sobre esa evidencia histórica), pero sin ninguna señal activa reciente -- nunca la menciones como si fuera un interés vigente hoy.`;
+    }
+    const resetNote =
+      i.correctionState === "reiniciado_recientemente"
+        ? " Esta dimensión se reinició recientemente por pedido de la persona -- no asumas ningún patrón todavía, no lo menciones salvo que pregunte directamente."
+        : "";
+    return `- Categoría "${i.category}"${zoneNote}: afinidad de confianza ${confidenceLabel}, con evidencia todavía activa.${resetNote}`;
+  });
+  return `Afinidad pertinente para esta consulta (Motor de Afinidad, Fase 6 -- describe preferencia probable, nunca identidad ni restricción; nunca la única causa de una recomendación, siempre combinada con el resto del contexto real de este turno):\n${lines.join("\n")}`;
+}
+
 function buildReasonerSystemPrompt(
   context: GuideContext,
   conversationalContext: ConversationalContext,
-  permanentFacts: PermanentFact[]
+  permanentFacts: PermanentFact[],
+  affinityInsights: AffinityInsight[]
 ): string {
   // Reglas traducidas directamente de AI_PHILOSOPHY.md (principios no
   // negociables 1-11, §9 jerarquía de priorización) y de
@@ -303,7 +338,7 @@ Debes responder EXCLUSIVAMENTE con un objeto JSON, sin texto adicional antes ni 
 Reglas no negociables sobre "decision" (nunca las rompas):
 - Nunca inventes un lugar, evento, precio, horario o dato que no exista en el contexto real que se te da abajo.
 - Si no tienes información suficiente, responde con "noAnswer": true, "content": [], "actions": [], y una "reason" honesta -- nunca fuerces una respuesta mediocre.
-- Jerarquía de prioridad, siempre en este orden: (1) restricciones duras del momento (horario, presupuesto, tiempo declarado) nunca se ignoran; (2) seguridad y bienestar de la persona; (3) relevancia real del contenido; (4) confianza/verificación como desempate; (5) contenido editorial, nunca por encima de lo anterior. Refleja qué niveles aplicaste en "priorityTrace", de forma breve, nunca exhaustiva.
+- Jerarquía de prioridad, siempre en este orden, y en este mismo orden de razonamiento (interpreta intención y modo, resuelve restricciones, y solo al final considera afinidad -- la afinidad nunca participa en interpretar qué quiso decir la persona): (1) restricciones duras del momento (horario, presupuesto, tiempo declarado) nunca se ignoran; (2) seguridad y bienestar de la persona; (3) pedido explícito de la persona en este turno; (4) Conocimiento Permanente pertinente (un hecho declarado y confirmado siempre pesa más que un patrón de comportamiento); (5) Afinidad real, solo como desempate entre alternativas que ya pasaron los niveles anteriores, nunca para decidir cuáles son esas alternativas; (6) confianza/verificación como desempate adicional; (7) criterio editorial; (8) contenido patrocinado, nunca por encima de ninguno de los niveles anteriores. Refleja qué niveles aplicaste en "priorityTrace", de forma breve, nunca exhaustiva.
 - El modo "descubridor" (proponer algo no pedido) solo puede ser dominante o de apoyo si se cumplen TODAS estas condiciones a la vez: (1) hay contenido real, verificado y vigente que la persona no pidió; (2) no compite por la posición de la respuesta principal, se agrega después; (3) tiene una razón de pertinencia genuina, nunca "porque está disponible"; (4) ninguna restricción dura ni señal de seguridad está en juego en este turno; (5) existe un espacio conversacional natural para introducirlo sin romper el propósito del turno. Si falta una sola, no actives "descubridor".
 - Siempre existe exactamente un "dominantMode". Los "supportingModes" solo añaden, nunca redefinen la estructura de la decisión.
 - Si la intención de la persona es una búsqueda directa por nombre exacto, usa "resolutionRoute": "delegar_busqueda". Si necesita síntesis real, "resolver_directo". Si necesita ambas, "combinar".
@@ -321,7 +356,16 @@ Reglas no negociables sobre "permanentKnowledgeCandidate" (Conocimiento Permanen
 - Para categorías de sensibilidad baja o media ("idioma_preferido", "preferencia_estilo_respuesta", "restriccion_alimentaria", "necesidad_movilidad"), solo propones un candidato si se cumplen TODAS estas condiciones: (1) el dato ya fue expresado explícitamente por la persona, nunca inferido; (2) tiene una utilidad clara y concreta entre conversaciones futuras; (3) existe un momento conversacional natural para mencionarlo, nunca forzado; (4) la conversación no es urgente ni sensible en este turno; (5) la sugerencia no puede interrumpir ni desplazar la respuesta principal; (6) no se rechazó ya una sugerencia equivalente en esta misma conversación; (7) no la repites si ya la propusiste antes en este mismo hilo -- revisa el hilo de la conversación de arriba: si tu propia respuesta anterior ya menciona esta misma sugerencia, no la vuelvas a proponer; (8) la finalidad puede explicarse de forma simple. Si falta una sola, "permanentKnowledgeCandidate" debe ser "null".
 - Para categorías reforzadas ("necesidad_accesibilidad", "dato_financiero_declarado"), un criterio todavía más estricto: NUNCA propongas espontáneamente solo porque el dato sería útil. Solo puedes proponer un candidato si la propia persona ya expresó, en sus palabras, que quiere que esto se recuerde en el futuro, o preguntó explícitamente cómo evitar repetirlo.
 - Nunca propongas una categoría o un valor que ya coincide exactamente con un hecho ya confirmado (ver el Conocimiento Permanente ya existente abajo) -- si ya está guardado con el mismo valor, no hay nada que proponer.
-- "permanentKnowledgeCandidate" debe ser "null" en cualquier otro caso, incluida cualquier duda razonable.`;
+- "permanentKnowledgeCandidate" debe ser "null" en cualquier otro caso, incluida cualquier duda razonable.
+
+Reglas no negociables sobre cómo usar la Afinidad (Motor de Afinidad, Fase 6, Bloque 4 -- ver el bloque de afinidad abajo):
+- Nunca la uses para interpretar qué quiso decir la persona -- solo para elegir entre alternativas que ya identificaste por el resto de la jerarquía.
+- Nunca la menciones ni la uses en preguntas logísticas (dirección, horario, precio), de emergencia, o sobre un negocio ya identificado por nombre.
+- Un pedido explícito de la persona en este turno, o algo dicho antes en esta misma conversación, siempre pesa más que cualquier afinidad -- si contradicen la afinidad conocida, ignórala activamente para esa dimensión.
+- Nunca la presentes como una etiqueta de identidad ("eres una persona que...", "como siempre haces...", "ya conozco tus gustos") -- siempre como preferencia probable ("puede interesarte...", "suele coincidir con...").
+- Nunca la trates como certeza absoluta ni la presentes como la única causa de una recomendación -- cualquier mención debe integrar también lo que la persona realmente preguntó en este turno, nunca enunciarse en el vacío.
+- Un descubrimiento genuinamente valioso (editorial, patrimonial, novedad real) nunca queda excluido solo por no coincidir con la afinidad conocida -- la afinidad ordena preferencia, nunca decide qué es elegible.
+- Permanece abierto a que esta conversación contradiga el patrón histórico -- nunca insistas en el patrón conocido por encima de lo que la persona dice ahora; las personas cambian, y el momento presente siempre tiene la última palabra.`;
 
   const contextBlock =
     context.type === "place"
@@ -330,8 +374,9 @@ Reglas no negociables sobre "permanentKnowledgeCandidate" (Conocimiento Permanen
 
   const conversationalBlock = describeConversationalContext(conversationalContext);
   const permanentFactsBlock = describePermanentFacts(permanentFacts);
+  const affinityBlock = describeAffinityInsights(affinityInsights);
 
-  return `${rules}\n\n${contextBlock}\n\n${conversationalBlock}\n\n${permanentFactsBlock}`;
+  return `${rules}\n\n${contextBlock}\n\n${conversationalBlock}\n\n${permanentFactsBlock}\n\n${affinityBlock}`;
 }
 
 // Traducción interna, privada de este archivo: el "contexto conversacional
@@ -359,13 +404,14 @@ export type ReasonerOutput = {
 export async function decide(
   context: GuideContext,
   conversationalContext: ConversationalContext,
-  permanentFacts: PermanentFact[]
+  permanentFacts: PermanentFact[],
+  affinityInsights: AffinityInsight[]
 ): Promise<ReasonerOutput | null> {
   const response = await anthropic.messages.create({
     model: "claude-sonnet-5",
     max_tokens: 1000,
     thinking: { type: "disabled" },
-    system: buildReasonerSystemPrompt(context, conversationalContext, permanentFacts),
+    system: buildReasonerSystemPrompt(context, conversationalContext, permanentFacts, affinityInsights),
     messages: toProviderMessages(conversationalContext),
   });
 

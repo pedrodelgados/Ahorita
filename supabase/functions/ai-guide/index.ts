@@ -6,8 +6,8 @@
 // flujo monolítico a un pipeline con frontera de datos explícita:
 //
 //   Identidad resuelta -> Memoria de Sesión -> Conocimiento Permanente ->
-//   Contexto permitido -> El Razonador -> Decisión estructurada e
-//   inmutable -> La Expresión -> Respuesta final
+//   Contexto permitido -> Afinidad (bajo demanda) -> El Razonador ->
+//   Decisión estructurada e inmutable -> La Expresión -> Respuesta final
 //
 // Fase 7, Bloque 2 (Memoria de Sesión): añade, únicamente para personas
 // autenticadas, la única conversación activa por persona (nunca por
@@ -23,7 +23,13 @@
 // El Razonador puede proponer un candidato (nunca escribe); guardar un
 // candidato exige siempre una acción explícita posterior.
 //
-// Sin conexión al Motor de Afinidad todavía (Bloque 4).
+// Fase 7, Bloque 4 (conexión con el Motor de Afinidad, Fase 6): añade,
+// únicamente para personas autenticadas y solo cuando el contexto es de
+// ciudad (nunca la ficha de un lugar ya identificado), la lectura de la
+// porción de Afinidad pertinente a este turno. Consulta bajo demanda -- la
+// Afinidad nunca es un prerrequisito del pipeline; la compuerta de abajo
+// decide, sin ninguna llamada adicional al proveedor de IA, si vale la pena
+// consultarla en absoluto.
 
 import { buildContext } from "./context.ts";
 import {
@@ -50,6 +56,7 @@ import {
   deleteAllPermanentFacts,
   readAuditSummary,
 } from "./permanentKnowledge.ts";
+import { readAffinityInsights, type AffinityInsight } from "./affinity.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -206,12 +213,24 @@ Deno.serve(async (req) => {
     // --- Contexto permitido (sin cambios respecto al Bloque 1) ---
     const context = await buildContext(placeId);
 
+    // --- Afinidad (Bloque 4, consulta bajo demanda) ---
+    // Compuerta puramente de código, sin ninguna llamada adicional al
+    // proveedor de IA: la Afinidad nunca es un prerrequisito del pipeline.
+    // context.type === 'place' corresponde exactamente al escenario ya
+    // excluido en el análisis conceptual ("pregunta sobre un negocio
+    // concreto ya identificado por nombre") -- la persona ya resolvió el
+    // descubrimiento entrando a esa ficha. Un fallo de lectura degrada a
+    // un conjunto vacío, exactamente como si la compuerta hubiera decidido
+    // no consultar en absoluto -- ver affinity.ts.
+    const affinityInsights: AffinityInsight[] =
+      ownerId && context.type === "city" ? await readAffinityInsights(authHeader!, context) : [];
+
     // --- El Razonador ---
     let decision: Decision;
     let memoryInstruction: MemoryInstruction | null = null;
     let permanentKnowledgeCandidate: PermanentKnowledgeCandidate | null = null;
     try {
-      const reasonerOutput = await decide(context, conversationalContext, permanentFacts);
+      const reasonerOutput = await decide(context, conversationalContext, permanentFacts, affinityInsights);
       if (reasonerOutput) {
         decision = reasonerOutput.decision;
         memoryInstruction = reasonerOutput.memoryInstruction;

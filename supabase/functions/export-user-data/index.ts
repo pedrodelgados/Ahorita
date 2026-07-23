@@ -48,6 +48,30 @@ Deno.serve(async (req) => {
     // mande el cliente.
     const db = createClient(supabaseUrl, serviceRoleKey);
 
+    // Fase 7, Bloque 4 (conexión con el Motor de Afinidad): el perfil YA
+    // AGREGADO de Afinidad (`affinity_profile()`), nunca `affinity_contributions`
+    // cruda -- la Fase 6 nunca expone la evidencia individual, ni siquiera a
+    // su propia dueña. Desde que la Guía IA lo consulta activamente
+    // (Bloque 4), pasa a formar parte de los datos personales que el
+    // sistema usa para razonar -- mismo principio ya aplicado en los
+    // Bloques 2 y 3: todo dato personal nace exportable.
+    //
+    // `affinity_profile()` deriva su propia verificación de identidad de
+    // `auth.uid()` -- por eso se llama más abajo con `callerClient` (el
+    // token real de quien pidió la exportación), nunca con la clave de
+    // servicio: un llamador con `service_role` no tiene ningún `auth.uid()`
+    // que coincida con el `profile_id` del actor, así que la función
+    // simplemente devolvería cero filas si se llamara con `db`. Resolver el
+    // actor propio sí puede hacerse con `db` -- ya está filtrado por el
+    // `userId` verificado arriba, no expone nada de otra persona.
+    const { data: ownActor } = await db
+      .from("actors")
+      .select("id")
+      .eq("profile_id", userId)
+      .eq("type", "persona")
+      .maybeSingle();
+    const ownActorId = ownActor?.id ?? null;
+
     const [
       profile,
       businesses,
@@ -67,6 +91,7 @@ Deno.serve(async (req) => {
       aiConversationTurns,
       permanentKnowledgeFacts,
       permanentKnowledgeAuditLog,
+      affinityProfile,
     ] = await Promise.all([
       db.from("profiles").select("*").eq("id", userId).maybeSingle(),
       db.from("businesses").select("*").eq("owner_id", userId),
@@ -110,6 +135,13 @@ Deno.serve(async (req) => {
         .select("operation, category, subtype, occurred_at")
         .eq("owner_id", userId)
         .order("occurred_at"),
+      // Fase 7, Bloque 4: el perfil agregado, nunca la evidencia cruda --
+      // ver la nota completa arriba. Sin actor propio (no debería ocurrir
+      // para una persona autenticada, pero se maneja honestamente): sin
+      // ninguna fila.
+      ownActorId
+        ? callerClient.rpc("affinity_profile", { check_actor_id: ownActorId })
+        : Promise.resolve({ data: [], error: null }),
     ]);
 
     const firstError = [
@@ -131,6 +163,7 @@ Deno.serve(async (req) => {
       aiConversationTurns,
       permanentKnowledgeFacts,
       permanentKnowledgeAuditLog,
+      affinityProfile,
     ].find((r) => r.error)?.error;
     if (firstError) throw firstError;
 
@@ -154,6 +187,7 @@ Deno.serve(async (req) => {
       ai_guide_conversation_turns: aiConversationTurns.data,
       ai_guide_permanent_knowledge: permanentKnowledgeFacts.data,
       ai_guide_permanent_knowledge_history: permanentKnowledgeAuditLog.data,
+      affinity_profile: affinityProfile.data,
     });
   } catch (error) {
     console.error(error);
