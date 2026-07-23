@@ -297,11 +297,13 @@ Lo que ya existe y sobre lo cual se construye todo lo demás: identidad básica 
 
 ## Fase 7 — Guía IA v2 (sesiones persistentes y personalización)
 
-**Objetivo.** Introducir la Sesión de Guía IA persistente y conectar la IA al motor de recomendaciones de la Fase 6, para que responda con criterio de afinidad real, no solo con el contexto de la pregunta puntual. Esta es la fase donde la filosofía completa de `AI_PHILOSOPHY.md` se activa técnicamente por primera vez con memoria real.
+**Autoridad filosófica de esta fase: `FASE7_FILOSOFIA_GUIA_IA.md`** (aprobado 2026-07-23, previo a cualquier diseño técnico, mismo espíritu que `FASE6_FILOSOFIA_DESCUBRIMIENTO.md` tuvo para la Fase 6). Consolida `AI_PHILOSOPHY.md` y lo aterriza específicamente en el territorio que la memoria hace posible por primera vez — veintitrés principios permanentes, entre ellos: memoria de sesión, conocimiento permanente no-afinidad y afinidad son tres categorías que nunca deben confundirse; la Guía IA nunca inventa un recuerdo ni le atribuye a una persona algo que no dijo; ningún conocimiento pasa a ser permanente sin consentimiento explícito; la conversación pertenece siempre a la persona, nunca al sistema; la Guía IA nunca define la identidad de alguien, solo describe comportamientos y preferencias expresadas. El análisis técnico de esta fase debe rendirle cuentas a ese documento.
+
+**Objetivo.** Introducir la Sesión de Guía IA persistente y conectar la IA al Motor de Afinidad de la Fase 6, para que responda con criterio de afinidad real, no solo con el contexto de la pregunta puntual. Esta es la fase donde la filosofía completa de `AI_PHILOSOPHY.md` —ahora extendida por `FASE7_FILOSOFIA_GUIA_IA.md` al territorio de la memoria— se activa técnicamente por primera vez con memoria real.
 
 **Problema que resuelve.** Hoy cada consulta a la IA carece esencialmente de memoria.
 
-**Módulos que incluye.** Sesión de IA persistente. Conexión al motor de recomendaciones y al perfil de afinidad de la Fase 6. Aplicación práctica de todos los principios de comportamiento definidos en `AI_PHILOSOPHY.md`.
+**Módulos que incluye.** Sesión de IA persistente. Conexión al Motor de Afinidad y al perfil de afinidad de la Fase 6. Aplicación práctica de todos los principios de comportamiento definidos en `AI_PHILOSOPHY.md` y `FASE7_FILOSOFIA_GUIA_IA.md`.
 
 **De qué depende.** Fase 6. Y, por la decisión 9, hereda ya construida la línea base de privacidad de la Fase 1 — el consentimiento y el mecanismo de borrado no se construyen aquí desde cero, se aplican al nuevo tipo de dato (historial de conversación) sobre una infraestructura ya existente. También hereda de la Fase 1 el Actor "Guía IA" ya existente como identidad del sistema — esta fase no necesita crearlo, solo empezar a usarlo activamente.
 

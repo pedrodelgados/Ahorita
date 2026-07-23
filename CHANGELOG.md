@@ -2,6 +2,19 @@
 
 Registro de cambios notables de Ahorita (Cuenca Viva). Formato libre, en español, más cercano a un registro de fases de producto que a versiones semánticas — ver `PROJECT.md` para el plan completo y el estado real de la implementación.
 
+## 2026-07-23 — Fase 7: filosofía de la Guía IA adoptada
+
+Con la Fase 6 cerrada, análisis previo de la siguiente fase natural del proyecto (sin código ni diseño de solución) seguido de la construcción de `FASE7_FILOSOFIA_GUIA_IA.md` — autoridad filosófica permanente de la Guía IA para la Fase 7, subordinada a `VISION_MAESTRA.md` y construida consolidando `AI_PHILOSOPHY.md`, no reemplazándolo. Tres rondas de refinamiento crítico, cada punto propuesto evaluado por separado antes de aceptarlo. Ningún código, migración ni diseño técnico — trabajo exclusivamente filosófico.
+
+### Agregado
+
+- `FASE7_FILOSOFIA_GUIA_IA.md` (nuevo): veintitrés principios permanentes que gobernarán el futuro contrato arquitectónico de la Fase 7. Distingue tres categorías que nunca deben confundirse (contexto temporal de una conversación, conocimiento permanente no-afinidad, afinidad del Motor de Afinidad); establece un principio de memoria veraz (nunca inventar un recuerdo); extiende la prohibición de NLP/embeddings del Motor de Afinidad a la conversación con la Guía IA; establece que ningún conocimiento pasa de temporal a permanente sin consentimiento explícito de la persona; que la conversación pertenece siempre a la persona, nunca al sistema; que la Guía IA nunca define la identidad de alguien (extensión directa de un principio ya vigente del Motor de Afinidad); y cierra con el principio de que la persona siempre es más grande que el perfil que el sistema tiene de ella, y que la memoria se mide por selectividad, nunca por volumen acumulado.
+
+### Cambiado
+
+- `MASTERPLAN.md`, sección Fase 7: agregada la referencia a `FASE7_FILOSOFIA_GUIA_IA.md` como autoridad filosófica de la fase; precisada la conexión de "el motor de recomendaciones de la Fase 6" a "el Motor de Afinidad de la Fase 6".
+- `PROJECT.md`: nueva sección "FASE 7 — FILOSOFÍA DE LA GUÍA IA ADOPTADA (2026-07-23)" con el proceso completo de las tres rondas, los principios incorporados, y las tensiones heredadas sin resolver a propósito.
+
 ## 2026-07-23 — Auditoría final de liberación de la Fase 6: cinco hallazgos resueltos
 
 Segunda auditoría de cierre, deliberadamente más crítica que la primera (actuando como auditor externo, sin asumir que algo estaba correcto solo por haberse implementado antes). Encontró cinco hallazgos reales — uno crítico, cuatro importantes — todos resueltos en la misma ronda, sin abrir ningún frente de trabajo nuevo ni tocar la arquitectura de seis componentes ya aprobada.
