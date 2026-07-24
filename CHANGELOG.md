@@ -2,6 +2,17 @@
 
 Registro de cambios notables de Ahorita (Cuenca Viva). Formato libre, en español, más cercano a un registro de fases de producto que a versiones semánticas — ver `PROJECT.md` para el plan completo y el estado real de la implementación.
 
+## 2026-07-23 — Fase 7, Bloque 4: auditoría final y sincronización documental
+
+Auditoría final del Bloque 4 (18 puntos exigidos, exclusivamente sobre la implementación ya terminada), mismo rigor que las auditorías finales de la Fase 6 y del Bloque 3. Tres hallazgos, ninguno crítico: dos observacionales, documentados sin corrección; uno importante, corregido en esta entrada.
+
+### Corregido (exclusivamente documental — sin cambios de código, migraciones, Edge Functions ni frontend)
+- **La jerarquía de ocho niveles ya implementada en el prompt de `decision.ts` (Bloque 4) no estaba reflejada en `AI_PHILOSOPHY.md §9`**, que seguía mostrando la jerarquía original de cinco niveles, y `FASE7_CONTRATO_ARQUITECTONICO.md` prometía explícitamente que esa jerarquía "sigue vigente sin cambios". `AI_PHILOSOPHY.md §9` actualizado a los ocho niveles (restricciones duras → seguridad → pedido explícito → Conocimiento Permanente → afinidad real → confianza/verificación → editorial → patrocinado nunca por encima), con la referencia cruzada de la sección de verificación corregida de "(Cuarto, arriba)" a "(Sexto, arriba)". `FASE7_CONTRATO_ARQUITECTONICO.md` registra ahora una enmienda explícita documentando el refinamiento como excepción aprobada. `FASE7_FILOSOFIA_GUIA_IA.md §8` corregido de "tercer nivel" a "quinto nivel" (posición real de Afinidad tras el refinamiento). Verificado por búsqueda exhaustiva que ninguna otra referencia a la jerarquía de cinco niveles permanece en ningún documento vigente del proyecto.
+
+### Documentado como observación (sin corrección, por decisión explícita)
+- Ausencia de validadores de runtime explícitos para los campos tipo-enum de `AffinityInsight` — bajo riesgo real porque `affinity_profile()` los produce mediante `CASE` fijos en Postgres, nunca texto libre.
+- Una de las cuatro prohibiciones de lenguaje del prompt (evidencia histórica nunca como vigente) vive en el bloque de datos entregado al modelo en vez del bloque de reglas — sin efecto funcional.
+
 ## 2026-07-23 — Fase 7, Bloque 4: conexión de El Razonador con el Motor de Afinidad
 
 Cuarto bloque técnico de la Fase 7. El Razonador consulta, bajo demanda y nunca como prerrequisito de su pipeline, la dimensión `categoria` del perfil de Afinidad ya calculado por el Motor de Afinidad (Fase 6) — nunca la reconstruye, nunca escribe en ella. La Afinidad describe preferencia relativa, nunca identidad, nunca decide sola: solo desempata entre alternativas que el resto de la jerarquía ya dejó elegibles. Diez precisiones del Product Owner cerraron el análisis conceptual en cuatro rondas; ninguna en contradicción con la arquitectura existente. **Primer bloque de la Fase 7 sin ninguna migración nueva.**

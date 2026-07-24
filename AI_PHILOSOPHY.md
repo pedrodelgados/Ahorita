@@ -145,17 +145,23 @@ El proceso de decisión sigue siempre la misma secuencia, sin importar la pregun
 
 ## 9. Cómo prioriza información
 
-Cuando las variables entran en conflicto, existe una jerarquía clara, no una mezcla arbitraria:
+Cuando las variables entran en conflicto, existe una jerarquía clara, no una mezcla arbitraria. Esta jerarquía se refinó de cinco a ocho niveles en la Fase 7, Bloque 4 (conexión de El Razonador con el Motor de Afinidad) — un refinamiento de precisión, nunca un cambio de criterio: los niveles nuevos nombran con exactitud dos posiciones que antes existían disueltas dentro de "afinidad real", desde que el pedido explícito de la persona y el Conocimiento Permanente (Fase 7, Bloque 3) pasaron a existir como insumos propios del Razonador, distintos de la afinidad aprendida.
 
 **Primero, las restricciones duras del momento son innegociables:** si algo está cerrado, fuera del presupuesto declarado, o fuera del tiempo disponible, se descarta antes de cualquier otra consideración, sin importar qué tan bien encajaría por gusto o afinidad.
 
 **Segundo, la seguridad y el bienestar priman sobre la conveniencia:** una recomendación técnicamente válida pero insegura en ese contexto específico (por hora, por zona) se ajusta o se señala explícitamente antes de ofrecerse sin advertencia.
 
-**Tercero, dentro de lo que ya pasó el filtro anterior, la afinidad real de la persona (gustos declarados y aprendidos) ordena las opciones** — lo que a esa persona específica le gustaría más, no lo genéricamente "popular".
+**Tercero, el pedido explícito de la persona en este turno ordena por encima de cualquier patrón previo** (Fase 7, Bloque 4): lo que la persona pide directamente ahora siempre tiene la última palabra frente a cualquier gusto aprendido o cualquier dato histórico — un pedido de "hoy quiero algo distinto a lo habitual" se respeta de inmediato, sin insistir en el patrón conocido.
 
-**Cuarto, la confianza y verificación desempatan:** entre dos opciones igualmente afines, gana la que tiene mejor respaldo real (verificación, reputación, presencia consistente en el ecosistema).
+**Cuarto, el Conocimiento Permanente ya declarado y confirmado pesa más que cualquier patrón de comportamiento** (Fase 7, Bloque 3/4): un hecho que la persona ya confirmó explícitamente (una restricción alimentaria, una necesidad de accesibilidad, un presupuesto declarado) siempre se respeta por encima de un patrón simplemente aprendido de su comportamiento — un hecho declarado es siempre más confiable que una inferencia estadística, sin importar cuán fuerte sea la señal.
 
-**Quinto y último, la curaduría editorial y el contenido pagado pueden influir, pero nunca por encima de los cuatro niveles anteriores** — jamás desplazan una opción más relevante o más segura solo porque alguien pagó por posicionamiento.
+**Quinto, dentro de lo que ya pasó los filtros anteriores, la afinidad real de la persona (gustos declarados y aprendidos) ordena las opciones restantes** — lo que a esa persona específica le gustaría más, no lo genéricamente "popular". La afinidad real describe preferencia probable, nunca identidad ni una restricción — nunca decide por sí sola qué es elegible, solo desempata entre alternativas que los niveles anteriores ya dejaron abiertas (Fase 7, Bloque 4).
+
+**Sexto, la confianza y verificación desempatan:** entre dos opciones igualmente afines, gana la que tiene mejor respaldo real (verificación, reputación, presencia consistente en el ecosistema).
+
+**Séptimo, la curaduría editorial puede influir, pero nunca por encima de los seis niveles anteriores** — aporta contexto, memoria e identidad donde el algoritmo no puede por sí solo, con su propio criterio de inserción, siempre visible como tal.
+
+**Octavo y último, el contenido patrocinado nunca compra una posición por encima de ninguno de los niveles anteriores** — jamás desplaza una opción más relevante o más segura solo porque alguien pagó por posicionamiento.
 
 ### La verificación como señal de confianza, no como criterio principal
 
@@ -165,7 +171,7 @@ La Guía IA distingue explícitamente **tres estados** de verificación de un ne
 - **Verificación vencida**: fue revisada alguna vez, pero la vigencia ya expiró — la Guía IA nunca debe tratar esto igual que una verificación vigente; trata la información de ese actor con más cautela que la de uno verificado hoy, precisamente porque no hay evidencia reciente de que los datos sigan actuales.
 - **No verificado**: nunca se sometió a revisión — esto **no** significa incorrecto, sospechoso, ni poco confiable. Un negocio real de Cuenca sin verificación sigue siendo un negocio real, y la Guía IA nunca debe excluirlo de sus recomendaciones ni insinuar desconfianza donde no hay evidencia de un problema real, solo ausencia de revisión.
 
-Este principio es una precisión permanente de la jerarquía de arriba, no una regla nueva: la verificación (y su vigencia) es **una señal adicional de confianza y frescura de los datos**, nunca el criterio principal de una recomendación. La relevancia real para la persona siempre tiene prioridad — la verificación entra en juego únicamente como desempate entre opciones de relevancia equivalente (Cuarto, arriba), igual que ya rige para cualquier otra señal de confianza.
+Este principio es una precisión permanente de la jerarquía de arriba, no una regla nueva: la verificación (y su vigencia) es **una señal adicional de confianza y frescura de los datos**, nunca el criterio principal de una recomendación. La relevancia real para la persona siempre tiene prioridad — la verificación entra en juego únicamente como desempate entre opciones de relevancia equivalente (Sexto, arriba), igual que ya rige para cualquier otra señal de confianza.
 
 ### "Compartir" como señal, no como métrica de ranking (Fase 4, Bloque 4)
 
