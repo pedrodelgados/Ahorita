@@ -2642,3 +2642,68 @@ Ningún mecanismo nuevo de consentimiento; Afinidad y Conocimiento Permanente si
 **Con este bloque, la Fase 7 queda completa en sus cinco bloques técnicos**: separación Razonador/Expresión, Memoria de Sesión, Conocimiento Permanente, conexión con el Motor de Afinidad, y esta experiencia unificada de transparencia, corrección y borrado.
 
 ---
+
+## FASE 7 — AUDITORÍA TRANSVERSAL FINAL Y CIERRE (2026-07-24)
+
+Antes de declarar cerrada la Fase 7, se realizó una auditoría transversal de los cinco bloques como un único sistema (mismo estándar aplicado al cierre de la Fase 6) — no una revisión adicional de cada bloque por separado, sino específicamente de las fronteras entre ellos: el pipeline completo (identidad → Memoria de Sesión → Conocimiento Permanente → contexto → Afinidad condicional → El Razonador → La Expresión → persistencia), consentimiento, privacidad y aislamiento, borrado, exportación, eliminación de cuenta, integración frontend/backend, documentación canónica, migraciones, pruebas obligatorias, concurrencia e idempotencia, y rendimiento.
+
+**Conclusión de la auditoría, confirmada por el Product Owner**: la arquitectura de los cinco bloques es coherente como sistema único — sin fugas de datos entre personas, sin ninguna regla de pureza rota, la conversación nunca alimenta la Afinidad, El Razonador nunca escribe Conocimiento Permanente, La Expresión nunca recibe datos personales crudos. Ninguna contradicción arquitectónica encontrada.
+
+**Cuatro hallazgos importantes, ninguno una contradicción de diseño — todos defectos operativos reales en el cruce entre bloques o entre la Fase 7 y la Fase 1**, que el Product Owner exigió corregir antes del cierre formal (a diferencia de la deuda ordinaria) porque afectan garantías que la propia interfaz del Bloque 5 ya promete a la persona:
+
+### Corrección H1 — una sola solicitud de eliminación pendiente por persona
+
+Un doble clic real sobre "Eliminar mi cuenta" (`AccountDataSection.jsx`) podía crear más de una fila `data_requests` pendiente de tipo `eliminacion` a la vez — la interfaz solo mostraba y permitía cancelar la primera; una segunda, invisible, habría sobrevivido a esa cancelación.
+
+**`supabase/migrations/0046_fase7_cierre_correcciones_operativas.sql`** (nuevo): un índice único parcial —`unique index ... on data_requests (user_id) where type = 'eliminacion' and status = 'pendiente'`— garantiza del lado del servidor, nunca solo en el frontend, que jamás exista más de una solicitud pendiente por persona, sin restringir en absoluto cuántas solicitudes completadas, canceladas o rechazadas puede acumular esa misma persona con el tiempo. Un segundo intento falla con una violación de unicidad (código Postgres `23505`).
+
+`src/lib/privacy.js` (`requestAccountDeletion`) reconoce explícitamente ese código y responde con la solicitud pendiente que ya existe, nunca con un error críptico — para la persona, el resultado de un doble clic es exactamente el mismo, una única solicitud. `ConfirmationModal.jsx` gana un prop `confirmDisabled` (opcional, retrocompatible con sus otros nueve usos en el proyecto) que `AccountDataSection.jsx` conecta a su propio estado `busy` — defensa de experiencia en el frontend, nunca la única garantía.
+
+### Corrección H2 — idempotencia de `process-account-deletions` ante un fallo parcial
+
+Si `auth.admin.deleteUser()` ya tenía éxito pero la actualización posterior de `data_requests` a `completada` fallaba, el siguiente ciclo encontraba la misma solicitud todavía sin cerrar e intentaba reasignar comentarios de un actor que la cascada ya había borrado — un fallo real tratado como si fuera nuevo, dejando la solicitud atrapada para siempre sin poder alcanzar un estado terminal.
+
+`supabase/functions/process-account-deletions/index.ts` ahora comprueba explícitamente, antes de reasignar o eliminar, si el perfil de la persona todavía existe. Si ya no existe, la eliminación real ya ocurrió en un ciclo anterior: no se repite ninguna reasignación ni se vuelve a invocar `deleteUser` — se avanza directo a cerrar la solicitud como `completada`, preservando su trazabilidad. Un fallo real (de reasignación o de `deleteUser`, con la cuenta todavía existente) sigue distinguiéndose con claridad y revierte la solicitud a `pendiente` para reintentarse, nunca oculto como éxito ni perdido en silencio.
+
+### Corrección H3 — carrera entre cancelación y procesamiento
+
+El procesador antes leía primero las solicitudes vencidas y solo al final, una por una, actualizaba su estado — una cancelación legítima de la persona podía colarse en esa ventana sin que el procesador se enterara, procesando la eliminación con un estado ya obsoleto.
+
+`process-account-deletions/index.ts` ahora reclama todas las solicitudes vencidas en una sola sentencia atómica: `update data_requests set status = 'en_proceso' where type = 'eliminacion' and status = 'pendiente' and scheduled_for <= now() returning id, user_id` — reutilizando el estado `en_proceso` que el esquema original de la Fase 1 ya preveía, nunca uno nuevo. Esa transición es la frontera exacta: si la cancelación de la persona (que exige `status = 'pendiente'` tanto en su política de RLS como en su propio `update`) llega antes de que el reclamo tome esa fila, gana la cancelación; si el reclamo llega primero, la cancelación ya no encuentra ninguna fila en `pendiente` y no tiene ningún efecto. Un fallo posterior al reclamo revierte la fila a `pendiente` para reintentarse en el siguiente ciclo (que, gracias a H2, puede cerrarla de forma segura incluso si la eliminación ya se completó realmente).
+
+### Corrección H4 — degradación honesta del contexto real
+
+Memoria de Sesión, Conocimiento Permanente y Afinidad siempre degradaban a un valor vacío honesto ante cualquier fallo, dejando que el turno continuara; `context.ts` no tenía esa misma disciplina — un `placeId` de un lugar ya borrado, o un fallo transitorio de Postgres al leer lugares, eventos o contenido editorial, propagaba la excepción hasta el `catch` más externo de `index.ts`, que respondía con un 500 crudo — el turno completo nunca llegaba a El Razonador ni a La Expresión.
+
+`supabase/functions/ai-guide/context.ts` reescrito: `buildCityContext()` ahora degrada **cada una de sus tres fuentes de forma independiente** (lugares, eventos, contenido editorial) — un fallo en una nunca borra lo que sí se leyó con éxito en las otras, mismo principio de degradación independiente ya usado en Memoria/Conocimiento Permanente/Afinidad. `buildContext()` distingue explícitamente, en su registro de errores, un lugar legítimamente inexistente (código Postgres `PGRST116`) de un fallo transitorio, y en ambos casos continúa con el contexto general de ciudad (legítimo: la persona ya no está viendo la ficha de un negocio identificado) en vez de un 500 crudo; si ese contexto de ciudad también falla, el último nivel de seguridad es un contexto vacío pero válido — nunca una excepción sin manejar. El Razonador ya sabe reconocer, con esta misma información real pero incompleta, que no tiene base suficiente para responder (`"noAnswer": true`, regla ya vigente desde el Bloque 1).
+
+### Verificación de las cuatro correcciones
+
+- **Postgres 16 real, las 46 migraciones (`0001`-`0046`) reproducidas desde una base completamente limpia** (sin arrastrar estado de verificaciones anteriores): orden y dependencias correctas, sin objetos huérfanos.
+- **H1**: verificado que una segunda solicitud pendiente simultánea falla con `23505`; que cancelar la pendiente y crear una nueva funciona con normalidad (la historia de solicitudes canceladas se conserva intacta); reversión del índice (`drop index`) confirmada limpia.
+- **H3**: verificado con concurrencia real de Postgres (dos transacciones simultáneas, una reteniendo el bloqueo de fila con `pg_sleep` mientras la otra queda bloqueada esperando) en **ambos sentidos** — el reclamo del procesador gana cuando compromete primero (la cancelación posterior afecta 0 filas, la solicitud queda `en_proceso`), y la cancelación de la persona gana cuando compromete primero (el reclamo posterior afecta 0 filas, la solicitud queda `cancelada`).
+- **H2**: verificado en Postgres real que, tras simular una eliminación de cuenta ya ocurrida (`auth.users` borrado, cascada real disparada, `data_requests` todavía `pendiente`), el nuevo chequeo de existencia del perfil detecta correctamente la ausencia y permite cerrar la solicitud a `completada` sin ningún error. Complementado con una prueba funcional aislada (cinco casos: camino normal, cuenta ya eliminada, fallo real de reasignación, fallo de `deleteUser`, fallo al cerrar tras una eliminación ya exitosa) que reproduce fielmente el control de flujo real del archivo — los cinco casos distinguen correctamente entre "ya procesado parcialmente" y "fallo real", nunca ocultando uno como el otro.
+- **H4**: verificado con una prueba funcional aislada de seis casos (lugar existente, lugar inexistente, fallo transitorio de Postgres, fallo solo de eventos, fallo solo de contenido editorial, fallo total de las tres fuentes) que reproduce fielmente el control de flujo real de `context.ts` — confirmando degradación independiente por fuente y que el contexto vacío final nunca se alcanza salvo que las tres fuentes fallen a la vez.
+- `tsc --strict` sobre `context.ts`/`process-account-deletions/index.ts` modificados: cero errores nuevos — solo los mismos diagnósticos de referencia ya documentados desde bloques anteriores, replicados por primera vez en `process-account-deletions/index.ts` al incluirlo en el arnés de verificación de tipos.
+- Build y lint del frontend: limpios, sin advertencias nuevas.
+
+### H5 y H8 — documentados como deuda, sin corrección en esta ronda
+
+- **H5**: `data_requests.type = 'exportacion'` nunca tiene ningún camino de escritura en todo el proyecto, ni siquiera tras construir la interfaz en el Bloque 5 — `requestAccountExport()` solo escribe en `consent_records`. La exportación sí tiene trazabilidad legítima por esa vía; la variante de flujo de trabajo en `data_requests` permanece sin ningún consumidor. Su permanencia o eliminación futura requiere un análisis separado, deliberadamente no abierto en este cierre.
+- **H8**: `ai_ensure_fresh_conversation()` (migración `0043`, Bloque 2) no tiene ningún bloqueo explícito — dos turnos concurrentes de la misma persona (dos pestañas) que encuentran "sin conversación todavía" pueden intentar ambos crear la fila de estado; la clave primaria evita corrupción de datos, pero el segundo intento puede no persistirse (la persona sí recibe su respuesta con normalidad). Se registra como deuda de concurrencia — no se reabre el Bloque 2 en este cierre; una futura mejora de exclusión mutua o reintento idempotente queda pendiente.
+
+### H6 y H7 — documentación sincronizada antes del cierre
+
+- **`MASTERPLAN.md`**: la sección "Fase 7" describía una tabla `ai_sessions` que nunca se construyó. Corregida para describir el esquema real (`ai_active_conversations`, `ai_conversation_turns`, `permanent_knowledge_categories`, `permanent_knowledge_facts`, `permanent_knowledge_audit_log`, y el disparador de la migración `0045`), con una nota de corrección explícita (mismo formato ya usado al cerrar la Fase 6) y el encabezado marcado **✅ CERRADA (2026-07-24)**.
+- **`ROADMAP.md`**: Fase 7 agregada a "Fases completas" y marcada `✅ ... cerrada` en el resumen de fases — antes solo aparecía sin marcar, a diferencia de las Fases 1-6.
+- **`supabase/README.md`**: la descripción de `export-user-data` actualizada para mencionar la conversación activa, sus turnos, el Conocimiento Permanente vigente con su trazabilidad legítima, y el perfil agregado de Afinidad — agregados por los Bloques 2, 3 y 4 y nunca antes reflejados aquí. La descripción de `process-account-deletions` actualizada para mencionar el reclamo atómico y el reconocimiento seguro de una cuenta ya eliminada.
+
+### H9-H12 — limitaciones deliberadas, mantenidas sin corrección
+
+Confirmadas por el Product Owner como aceptables tal como están: confirmación reforzada de Conocimiento Permanente afirmada por el propio cliente (salvaguarda ligera ya aprobada desde el Bloque 3); la no repetición de un candidato ya rechazado depende de que El Razonador relea el hilo y reconozca su propia mención anterior (instrucción de prompt, no garantía de código); "Continuar conversación" navega a la superficie actual de la Guía IA pero no reabre automáticamente la cápsula; la exclusión de Afinidad en preguntas sobre un negocio ya identificado por nombre depende de una regla de El Razonador cuando no existe `placeId`, no de una compuerta estructural adicional.
+
+### Cierre formal
+
+Con las cuatro correcciones operativas verificadas contra Postgres 16 real (incluyendo concurrencia real, no solo revisión de código), la documentación canónica sincronizada, y la deuda restante (H5, H8) y las limitaciones deliberadas (H9-H12) registradas con la misma honestidad que el resto del proyecto: **el Product Owner declara oficialmente cerrada la Fase 7 — Guía IA v2**, completa en sus cinco bloques técnicos más esta auditoría transversal de cierre. No lista para producción hasta validar la deuda técnica obligatoria ya heredada de la Fase 1 (`export-user-data`/`process-account-deletions` nunca probadas contra un proyecto Supabase real ni contra su API de administración de Auth, existencia del actor semilla "Cuenta eliminada" no confirmada en un entorno real) — misma condición que ya rige el resto del proyecto desde su propio cierre de Fase 1.
+
+---

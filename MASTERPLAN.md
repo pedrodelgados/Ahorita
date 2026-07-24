@@ -295,7 +295,9 @@ Lo que ya existe y sobre lo cual se construye todo lo demás: identidad básica 
 
 ---
 
-## Fase 7 — Guía IA v2 (sesiones persistentes y personalización)
+## Fase 7 — Guía IA v2 (sesiones persistentes y personalización) ✅ CERRADA (2026-07-24)
+
+**Nota de corrección (2026-07-24, cierre formal de la fase):** esta sección describía originalmente una única tabla `ai_sessions` como esquema previsto — nunca llegó a existir. Lo realmente construido, en cinco bloques (Separación Razonador/Expresión; Memoria de Sesión; Conocimiento Permanente no-afinidad; Conexión con el Motor de Afinidad; Experiencia unificada de transparencia, corrección y borrado), está descrito abajo con el esquema real. Ver `PROJECT.md` (secciones "FASE 7, BLOQUE 1" a "FASE 7 CERRADA") para el detalle técnico completo, incluyendo la auditoría transversal final y las cuatro correcciones operativas (garantía de una sola solicitud de eliminación pendiente por persona, idempotencia del procesador de eliminaciones, resolución de la carrera entre cancelación y procesamiento, y degradación honesta del contexto real) aplicadas antes de este cierre.
 
 **Autoridad filosófica de esta fase: `FASE7_FILOSOFIA_GUIA_IA.md`** (aprobado 2026-07-23, previo a cualquier diseño técnico, mismo espíritu que `FASE6_FILOSOFIA_DESCUBRIMIENTO.md` tuvo para la Fase 6). Consolida `AI_PHILOSOPHY.md` y lo aterriza específicamente en el territorio que la memoria hace posible por primera vez — veintitrés principios permanentes, entre ellos: memoria de sesión, conocimiento permanente no-afinidad y afinidad son tres categorías que nunca deben confundirse; la Guía IA nunca inventa un recuerdo ni le atribuye a una persona algo que no dijo; ningún conocimiento pasa a ser permanente sin consentimiento explícito; la conversación pertenece siempre a la persona, nunca al sistema; la Guía IA nunca define la identidad de alguien, solo describe comportamientos y preferencias expresadas.
 
@@ -311,13 +313,13 @@ Lo que ya existe y sobre lo cual se construye todo lo demás: identidad básica 
 
 **Qué bloquea hasta completarse.** Nada de forma dura; mejora sustancialmente la Fase 9 (Guía IA contextual en puntos turísticos vía QR).
 
-**Tablas nuevas.** `ai_sessions` (usuario, historial de conversación, con mecanismo de borrado que reutiliza `consent_records` de la Fase 1).
+**Tablas nuevas (esquema real, actualizado al cierre de la fase — ver `PROJECT.md` para el detalle completo de los cinco bloques).** `ai_active_conversations` y `ai_conversation_turns` (Bloque 2, Memoria de Sesión: una única conversación activa por persona, con expiración por inactividad y borrado explícito). `permanent_knowledge_categories`, `permanent_knowledge_facts` y `permanent_knowledge_audit_log` (Bloque 3, Conocimiento Permanente no-afinidad: catálogo cerrado, hechos vigentes, trazabilidad dedicada sin lectura administrativa). Ningún esquema nuevo en el Bloque 4 (conexión con el Motor de Afinidad ya existente de la Fase 6). Un disparador en `data_requests` (migración `0045`, Bloque 5) que calcula el periodo de gracia de 30 días del lado del servidor, más un índice único parcial (migración `0046`, cierre de fase) que impide más de una solicitud de eliminación pendiente por persona.
 
-**Entidades nuevas.** Sesión de Guía IA.
+**Entidades nuevas.** Sesión de Guía IA (Memoria de Sesión); Conocimiento Permanente no-afinidad.
 
 **APIs externas necesarias.** Ninguna nueva — se mantiene la función de borde ya construida.
 
-**Migraciones que requerirá.** Creación de `ai_sessions`.
+**Migraciones que requirió.** `0043` (Memoria de Sesión), `0044` (Conocimiento Permanente), `0045` (periodo de gracia server-side de eliminación de cuenta), `0046` (índice único parcial de solicitudes de eliminación pendientes, cierre de fase). El Bloque 4 no requirió ninguna.
 
 **Riesgos.** Privacidad: el historial de conversación es, según `AI_PHILOSOPHY.md` §11, potencialmente el dato más sensible de todo el sistema. Mitigado por heredar ya lista la infraestructura de consentimiento/borrado de la Fase 1, en vez de construirla bajo presión en esta misma fase.
 

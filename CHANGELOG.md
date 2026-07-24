@@ -2,6 +2,32 @@
 
 Registro de cambios notables de Ahorita (Cuenca Viva). Formato libre, en español, más cercano a un registro de fases de producto que a versiones semánticas — ver `PROJECT.md` para el plan completo y el estado real de la implementación.
 
+## 2026-07-24 — Fase 7: auditoría transversal final y cierre
+
+Auditoría de los cinco bloques como un único sistema (mismo estándar del cierre de la Fase 6): pipeline completo, consentimiento, privacidad/aislamiento, borrado, exportación, eliminación de cuenta, integración frontend/backend, documentación, migraciones, concurrencia/idempotencia y rendimiento. Sin contradicciones arquitectónicas. Cuatro hallazgos importantes corregidos antes del cierre (ninguno de diseño, todos operativos); dos documentados como deuda; documentación canónica sincronizada; cuatro limitaciones deliberadas confirmadas sin cambio.
+
+### Agregado
+- `supabase/migrations/0046_fase7_cierre_correcciones_operativas.sql`: índice único parcial que garantiza una sola solicitud de eliminación de cuenta pendiente por persona (hallazgo H1).
+- `ConfirmationModal.jsx`: prop opcional `confirmDisabled` (retrocompatible con sus otros nueve usos) — defensa de doble clic en el frontend, nunca la única garantía.
+
+### Corregido
+- **H1** (importante, concurrencia/defecto funcional): un doble clic real podía crear dos solicitudes de eliminación pendientes; la interfaz solo cancelaba la primera, dejando la segunda invisible y destinada a ejecutarse igual. Resuelto con el índice único parcial de `0046` + reconocimiento explícito del código `23505` en `lib/privacy.js` (responde con la solicitud ya existente) + `confirmDisabled` en el frontend.
+- **H2** (importante, defecto funcional): `process-account-deletions` no era idempotente si `deleteUser` ya tenía éxito pero el cierre de `data_requests` fallaba — la solicitud quedaba atrapada para siempre. Ahora reconoce con seguridad que la cuenta ya no existe y cierra la trazabilidad sin repetir ningún trabajo destructivo.
+- **H3** (importante, concurrencia): carrera entre la cancelación de la persona y el procesamiento por lotes. Ahora un `update ... where status = 'pendiente'` atómico reclama las solicitudes vencidas (pasándolas a `en_proceso`, estado ya existente desde la Fase 1) — frontera exacta después de la cual la cancelación ya no tiene efecto, verificada con concurrencia real de Postgres en ambos sentidos.
+- **H4** (importante, defecto funcional): `context.ts` no degradaba como el resto del pipeline — un lugar borrado o un fallo transitorio producía un 500 crudo. Ahora degrada de forma independiente por fuente (lugares/eventos/editorial) y cae al contexto de ciudad o, en último caso, a un contexto vacío válido — nunca una excepción sin manejar.
+- `MASTERPLAN.md`: sección "Fase 7" corregida — ya no describe la tabla `ai_sessions` (nunca construida), ahora describe el esquema real; marcada ✅ CERRADA.
+- `ROADMAP.md`: Fase 7 agregada a fases completas y marcada cerrada.
+- `supabase/README.md`: descripción de `export-user-data`/`process-account-deletions` actualizada al comportamiento real.
+
+### Documentado como deuda (sin corrección en esta ronda)
+- H5: `data_requests.type = 'exportacion'` sin ningún consumidor — la trazabilidad real vive en `consent_records`.
+- H8: carrera sin bloqueo explícito al crear la primera conversación activa de una persona (clave primaria evita corrupción; un turno concurrente puede no persistirse).
+
+### Verificado
+- Postgres 16 real, las 46 migraciones reproducidas desde una base limpia. H1 (violación de unicidad, cancelar y recrear, reversión limpia). H3 (concurrencia real de Postgres en ambos sentidos de la carrera, vía transacciones con `pg_sleep`). H2 (escenario real de cuenta ya eliminada con `data_requests` huérfana + prueba funcional de 5 casos). H4 (prueba funcional de 6 casos). `tsc --strict`, build y lint limpios.
+
+**Fase 7 — Guía IA v2 — declarada oficialmente cerrada.**
+
 ## 2026-07-24 — Fase 7, Bloque 5: experiencia unificada de transparencia, corrección y borrado
 
 Quinto y último bloque técnico de la Fase 7. Consolida en `SettingsPage` toda la experiencia de privacidad de la persona: Memoria de Sesión, Conocimiento Permanente y Afinidad (ya existentes, sin cambios de lógica) junto con exportación de datos y solicitud de eliminación de cuenta, expuestas por primera vez desde la interfaz — el mecanismo ya existía desde la Fase 1, Bloque 5, pero nunca había tenido pantalla. **Sin mecanismos nuevos**: reutiliza exactamente `export-user-data`, `data_requests` y `consent_records`. El análisis conceptual incorporó, en tres rondas, los principios de ciclo de vida de la información, separación entre transparencia y funcionamiento, y simplicidad para la persona — ninguno en contradicción con la arquitectura existente.

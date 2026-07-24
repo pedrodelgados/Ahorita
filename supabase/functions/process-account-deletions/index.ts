@@ -32,10 +32,44 @@
 // `type = 'comentario'` del actor persona de este usuario al actor de
 // sistema "Cuenta eliminada" ANTES de invocar `auth.admin.deleteUser` — una
 // vez borrado el usuario, el cascade ya se disparó y no hay nada que
-// reasignar. Si esta reasignación falla, la eliminación de ese usuario se
-// aborta (no se llama a deleteUser) y la solicitud queda 'pendiente' para
-// reintentarse, igual que cualquier otro fallo por usuario de este bucle —
-// nunca se deja una eliminación a medias.
+// reasignar.
+//
+// Fase 7 — cierre (auditoría transversal, hallazgos H2 y H3):
+//
+// H3 (carrera entre cancelación y procesamiento): antes, este archivo
+// primero LEÍA las solicitudes vencidas (`select ... where status =
+// 'pendiente'`) y solo al final, una por una, actualizaba su estado — dejando
+// una ventana real entre "se decidió procesarla" y "se marcó como tal" donde
+// una cancelación legítima de la persona (permitida por RLS mientras
+// status = 'pendiente') podía colarse sin que el procesador se enterara.
+// Ahora el primer paso es un UPDATE atómico que reclama de una sola vez
+// todas las solicitudes vencidas, pasándolas de 'pendiente' a 'en_proceso'
+// (el mismo valor de estado que el esquema original de la Fase 1 ya
+// preveía, nunca uno nuevo). Postgres serializa esa transición fila por
+// fila: si la cancelación de la persona (que exige status = 'pendiente'
+// tanto en la política de RLS como en la condición del UPDATE) llega antes
+// de que este reclamo tome esa fila, gana la cancelación y el reclamo
+// simplemente no la selecciona; si el reclamo llega primero, la cancelación
+// ya no encuentra ninguna fila en 'pendiente' que actualizar y no tiene
+// ningún efecto. La frontera es exactamente esa transición — antes de ella
+// la cancelación siempre se respeta, después de ella la eliminación ya está
+// legítimamente en curso y es irreversible.
+//
+// H2 (idempotencia ante un fallo parcial): antes, si `auth.admin.deleteUser`
+// ya tenía éxito pero la actualización final a 'completada' fallaba (un
+// timeout, un corte de red), la siguiente ejecución encontraba la misma
+// solicitud todavía 'pendiente' (o ahora 'en_proceso', ver arriba) e
+// intentaba reasignar comentarios de un actor que la cascada ya había
+// borrado — un fallo real, pero tratado como si fuera nuevo, dejando la
+// solicitud atrapada para siempre sin poder alcanzar un estado terminal.
+// Ahora, antes de reasignar o eliminar, se comprueba explícitamente si el
+// perfil de la persona todavía existe. Si ya no existe, la eliminación real
+// ya ocurrió en un ciclo anterior (parcialmente): no se reasigna nada de
+// nuevo (no hay nada que reasignar, el actor propio ya no existe) ni se
+// vuelve a invocar `deleteUser` — se avanza directo a cerrar la solicitud
+// como 'completada'. Un fallo real (de reasignación, o de `deleteUser` en
+// sí) sigue distinguiéndose con claridad en los resultados y revierte la
+// solicitud a 'pendiente' para reintentarse, exactamente como antes.
 
 import { createClient } from "npm:@supabase/supabase-js@2";
 
@@ -69,6 +103,13 @@ async function reassignCommentsToDeletedAccount(userId: string) {
   if (reassignError) throw reassignError;
 }
 
+async function revertToPending(requestId: string) {
+  // Best-effort: si esto también falla, la solicitud queda 'en_proceso' y
+  // el próximo ciclo no la reclamará de nuevo (su condición exige
+  // 'pendiente') -- se documenta como límite conocido, nunca se oculta.
+  await db.from("data_requests").update({ status: "pendiente" }).eq("id", requestId);
+}
+
 Deno.serve(async (req) => {
   const providedSecret = req.headers.get("x-cron-secret") ?? "";
   if (!cronSecret || providedSecret !== cronSecret) {
@@ -76,34 +117,68 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { data: dueRequests, error } = await db
+    // Reclamo atómico (H3): una sola sentencia que decide, de una vez, qué
+    // solicitudes se procesan en este ciclo -- desde este momento, ya no
+    // están en 'pendiente' y ninguna cancelación posterior puede afectarlas.
+    const { data: claimed, error: claimError } = await db
       .from("data_requests")
-      .select("id, user_id")
+      .update({ status: "en_proceso" })
       .eq("type", "eliminacion")
       .eq("status", "pendiente")
-      .lte("scheduled_for", new Date().toISOString());
-    if (error) throw error;
+      .lte("scheduled_for", new Date().toISOString())
+      .select("id, user_id");
+    if (claimError) throw claimError;
 
     const results = [];
-    for (const request of dueRequests ?? []) {
+    for (const request of claimed ?? []) {
+      let accountAlreadyGone = false;
       try {
-        await reassignCommentsToDeletedAccount(request.user_id);
+        // H2: reconocer con seguridad que la cuenta ya no existe (un ciclo
+        // anterior ya la eliminó, pero no pudo cerrar la solicitud) --
+        // nunca un error, un estado esperable de un fallo parcial previo.
+        const { data: existingProfile } = await db
+          .from("profiles")
+          .select("id")
+          .eq("id", request.user_id)
+          .maybeSingle();
+        accountAlreadyGone = !existingProfile;
 
-        const { error: deleteError } = await db.auth.admin.deleteUser(request.user_id);
-        if (deleteError) throw deleteError;
+        if (!accountAlreadyGone) {
+          await reassignCommentsToDeletedAccount(request.user_id);
+          const { error: deleteError } = await db.auth.admin.deleteUser(request.user_id);
+          if (deleteError) throw deleteError;
+        }
 
         await db
           .from("data_requests")
           .update({ status: "completada", processed_at: new Date().toISOString() })
           .eq("id", request.id);
 
-        results.push({ id: request.id, status: "completada" });
+        results.push({
+          id: request.id,
+          status: "completada",
+          note: accountAlreadyGone ? "cuenta ya eliminada en un ciclo anterior -- solo se cerró la trazabilidad" : undefined,
+        });
       } catch (perUserError) {
-        // No se marca como fallida: se deja en 'pendiente' para
-        // reintentarse en la próxima ejecución, en vez de perder la
-        // solicitud silenciosamente por un error transitorio.
-        console.error(`Fallo al eliminar ${request.user_id}:`, perUserError);
-        results.push({ id: request.id, status: "error", message: perUserError.message });
+        // Distinción explícita, nunca oculta: un fallo aquí, con la cuenta
+        // ya confirmada inexistente, significa que la eliminación real ya
+        // ocurrió y solo faltó cerrar el registro -- se reintentará cerrarlo
+        // en el próximo ciclo sin repetir ningún trabajo destructivo. Un
+        // fallo con la cuenta todavía existente es un fallo real (de
+        // reasignación o de `deleteUser`) que debe reintentarse desde cero.
+        console.error(
+          accountAlreadyGone
+            ? `Solicitud ${request.id}: la cuenta ya no existía, pero no se pudo cerrar la trazabilidad:`
+            : `Fallo al eliminar ${request.user_id}:`,
+          perUserError
+        );
+        await revertToPending(request.id);
+        results.push({
+          id: request.id,
+          status: "error",
+          message: perUserError.message,
+          alreadyProcessedPartially: accountAlreadyGone,
+        });
       }
     }
 

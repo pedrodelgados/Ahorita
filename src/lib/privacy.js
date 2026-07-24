@@ -40,13 +40,30 @@ export async function requestAccountExport(userId) {
 // evidencia de consentimiento separada del flujo de trabajo de
 // data_requests (mismo principio de separación ya usado en el Bloque 5
 // original de la Fase 1).
+//
+// Cierre de Fase 7 (hallazgo H1): el índice único parcial de la migración
+// 0046 garantiza, del lado del servidor, que nunca exista más de una
+// solicitud pendiente por persona. Un doble envío real (dos clics antes de
+// que el primero resuelva) golpea esa restricción con una violación de
+// unicidad (código Postgres 23505) -- se reconoce explícitamente ese caso y
+// se responde con la solicitud pendiente que ya existe, nunca con un error
+// críptico: para la persona, el resultado de ambos clics es exactamente el
+// mismo, una única solicitud pendiente.
 export async function requestAccountDeletion(userId) {
   const { data, error } = await supabase
     .from("data_requests")
     .insert({ user_id: userId, type: "eliminacion" })
     .select("id, type, status, requested_at, scheduled_for")
     .single();
-  if (error) throw error;
+
+  if (error) {
+    if (error.code === "23505") {
+      const requests = await getDataRequests(userId);
+      const pending = requests.find((r) => r.type === "eliminacion" && r.status === "pendiente");
+      if (pending) return pending;
+    }
+    throw error;
+  }
 
   await supabase
     .from("consent_records")

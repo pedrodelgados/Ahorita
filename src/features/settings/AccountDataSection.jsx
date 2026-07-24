@@ -145,6 +145,7 @@ export default function AccountDataSection({ userId }) {
         title="¿Eliminar tu cuenta?"
         message="Tu cuenta se eliminará en 30 días — puedes cancelar esta solicitud en cualquier momento antes de esa fecha. Pasado ese plazo, la eliminación es definitiva y no se puede deshacer. Tus preguntas, respuestas y comentarios seguirán visibles para otras personas, pero sin tu nombre."
         confirmLabel="Eliminar mi cuenta"
+        confirmDisabled={busy}
         onConfirm={handleConfirmDeletion}
         onCancel={() => setConfirmOpen(false)}
       />

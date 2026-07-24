@@ -179,37 +179,102 @@ export async function buildPlaceContext(placeId: string): Promise<PlaceContext> 
   };
 }
 
+const EMPTY_CITY_CONTEXT: CityContext = { type: "city", places: [], upcomingEvents: [], editorial: [] };
+
+// Fase 7 -- cierre (auditoría transversal, hallazgo H4): cada una de las
+// tres fuentes se degrada de forma INDEPENDIENTE ante su propio fallo
+// (transitorio de Postgres, o de la propia candidatos_editorial()/RPC) --
+// exactamente la misma disciplina de degradación honesta que ya rige
+// Memoria de Sesión, Conocimiento Permanente y Afinidad desde sus propios
+// bloques. Un fallo en eventos nunca debe borrar lugares que sí se
+// leyeron con éxito, y viceversa -- antes, un solo `Promise.all` fallaba
+// en conjunto ante cualquiera de los tres, perdiendo silenciosamente
+// contenido que sí estaba disponible.
 export async function buildCityContext(): Promise<CityContext> {
   const now = new Date().toISOString();
-  const [placesRes, eventsRes, editorial] = await Promise.all([
-    supabase.from("places").select("name, area, channel_default").limit(40),
-    supabase
-      .from("events")
-      .select("title, category, location_name, start_at, price, tag")
-      .eq("status", "publicado")
-      .gte("start_at", now)
-      .order("start_at", { ascending: true })
-      .limit(20),
-    fetchEditorialCandidates(),
-  ]);
-  if (placesRes.error) throw placesRes.error;
-  if (eventsRes.error) throw eventsRes.error;
 
-  return {
-    type: "city",
-    places: (placesRes.data ?? []).map((p) => ({ name: p.name, area: p.area, category: p.channel_default })),
-    upcomingEvents: (eventsRes.data ?? []).map((e) => ({
-      title: e.title,
-      category: e.category,
-      locationName: e.location_name,
-      startAt: e.start_at,
-      price: e.price,
-      tag: e.tag,
-    })),
-    editorial,
-  };
+  const places = await supabase
+    .from("places")
+    .select("name, area, channel_default")
+    .limit(40)
+    .then(({ data, error }) => {
+      if (error) throw error;
+      return (data ?? []).map((p) => ({ name: p.name, area: p.area, category: p.channel_default }));
+    })
+    .catch((error) => {
+      console.error("Contexto: fallo al leer lugares, se continúa sin ellos en este turno:", error);
+      return [] as PlaceSummary[];
+    });
+
+  const upcomingEvents = await supabase
+    .from("events")
+    .select("title, category, location_name, start_at, price, tag")
+    .eq("status", "publicado")
+    .gte("start_at", now)
+    .order("start_at", { ascending: true })
+    .limit(20)
+    .then(({ data, error }) => {
+      if (error) throw error;
+      return (data ?? []).map((e) => ({
+        title: e.title,
+        category: e.category,
+        locationName: e.location_name,
+        startAt: e.start_at,
+        price: e.price,
+        tag: e.tag,
+      }));
+    })
+    .catch((error) => {
+      console.error("Contexto: fallo al leer eventos próximos, se continúa sin ellos en este turno:", error);
+      return [] as EventSummary[];
+    });
+
+  const editorial = await fetchEditorialCandidates().catch((error) => {
+    console.error("Contexto: fallo al leer candidatos editoriales, se continúa sin ellos en este turno:", error);
+    return [] as EditorialItem[];
+  });
+
+  return { type: "city", places, upcomingEvents, editorial };
 }
 
+// Fase 7 -- cierre (hallazgo H4): antes, cualquier fallo al construir el
+// contexto (un placeId de un lugar ya borrado, un error transitorio de
+// Postgres) propagaba la excepción hasta el catch más externo de
+// index.ts, que respondía con un 500 crudo -- el turno entero nunca
+// llegaba a El Razonador ni a La Expresión, a diferencia de cualquier otro
+// fallo del pipeline (Memoria, Conocimiento Permanente, Afinidad), que
+// siempre degradan y dejan que el turno continúe. Ahora un fallo al
+// construir la ficha de un lugar específico (el propio lugar no existe --
+// código PGRST116 de una fila no encontrada -- o un fallo transitorio de
+// Postgres) se registra distinguiendo ambos casos, y se continúa con el
+// contexto general de ciudad: la persona ya no está viendo la ficha de un
+// negocio identificado, así que el contexto de ciudad sigue siendo
+// legítimo, nunca una invención. Si construir el contexto de ciudad
+// también falla, el último nivel de seguridad es un contexto vacío --
+// nunca una excepción sin manejar. El Razonador ya sabe reconocer, con
+// esta misma información real pero incompleta, que no tiene base
+// suficiente para responder (regla ya vigente: "noAnswer": true).
 export async function buildContext(placeId: string | null | undefined): Promise<GuideContext> {
-  return placeId ? buildPlaceContext(placeId) : buildCityContext();
+  if (!placeId) {
+    return buildCityContext().catch((error) => {
+      console.error("Contexto: fallo al leer el contexto de ciudad, se continúa con un contexto vacío:", error);
+      return EMPTY_CITY_CONTEXT;
+    });
+  }
+
+  try {
+    return await buildPlaceContext(placeId);
+  } catch (error) {
+    const isMissingPlace = (error as { code?: string })?.code === "PGRST116";
+    console.error(
+      isMissingPlace
+        ? `Contexto: el lugar ${placeId} ya no existe, se continúa con el contexto de ciudad:`
+        : "Contexto: fallo transitorio al construir la ficha del lugar, se continúa con el contexto de ciudad:",
+      error
+    );
+    return buildCityContext().catch((cityError) => {
+      console.error("Contexto: fallo al leer el contexto de ciudad, se continúa con un contexto vacío:", cityError);
+      return EMPTY_CITY_CONTEXT;
+    });
+  }
 }

@@ -10,6 +10,7 @@ export default function ConfirmationModal({
   confirmLabel = "Eliminar",
   cancelLabel = "Cancelar",
   danger = true,
+  confirmDisabled = false,
   onConfirm,
   onCancel,
 }) {
@@ -47,6 +48,7 @@ export default function ConfirmationModal({
           <Button
             fullWidth
             onClick={onConfirm}
+            disabled={confirmDisabled}
             style={{
               padding: "12px 16px",
               background: danger ? COLORS.error : COLORS.accent,
