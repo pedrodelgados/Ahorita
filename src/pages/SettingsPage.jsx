@@ -12,8 +12,7 @@ import CategoryChip from "../components/ui/CategoryChip";
 import PlaceCard from "../features/places/PlaceCard";
 import PlaceSheet from "../features/places/PlaceSheet";
 import PushToggle from "../features/notifications/PushToggle";
-import AffinitySection from "../features/settings/AffinitySection";
-import PermanentKnowledgeSection from "../features/settings/PermanentKnowledgeSection";
+import PrivacySection from "../features/settings/PrivacySection";
 
 // Ajustes (Fase 3, Bloque C, Entrega 5): todo lo que antes vivía en
 // ProfilePage y NO es "el perfil en sí" — cuenta, intereses, guardados,
@@ -164,9 +163,7 @@ export default function SettingsPage() {
           <PushToggle userId={user.id} />
         </Card>
 
-        <AffinitySection actorId={myActorId} />
-
-        <PermanentKnowledgeSection userId={user.id} />
+        <PrivacySection userId={user.id} actorId={myActorId} />
 
         <h2 style={{ fontSize: 16, marginBottom: 12 }}>Lugares guardados</h2>
         {savedPlaces.length === 0 ? (

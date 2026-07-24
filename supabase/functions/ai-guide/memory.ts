@@ -128,6 +128,8 @@ export async function readConversationalContext(
 export type ExistingConversation = {
   statusEvent: ConversationStatusEvent;
   turns: Array<{ role: "user" | "assistant"; content: string }>;
+  startedAt: string | null;
+  lastActivityAt: string | null;
 };
 
 // Hidratación al abrir el chat -- nunca invoca a El Razonador ni a La
@@ -136,18 +138,28 @@ export type ExistingConversation = {
 // nada nuevo. Mismo criterio de degradación honesta: un fallo nunca lanza,
 // se trata como "ninguna conversación" en vez de bloquear la apertura del
 // chat.
+//
+// Fase 7, Bloque 5 (Experiencia unificada de transparencia, corrección y
+// borrado): `startedAt`/`lastActivityAt` se agregan aquí -- ya se leían de
+// `ai_get_active_conversation()` para otro propósito (readConversationalContext,
+// arriba), nunca se habían expuesto en esta lectura de hidratación. El
+// resumen de estado de Memoria de Sesión en Ajustes los necesita para
+// mostrar "activa desde hace X" -- misma acción (`get_conversation`), sin
+// ningún parámetro ni acción nueva.
 export async function fetchExistingConversation(authHeader: string): Promise<ExistingConversation> {
   try {
     const client = callerClient(authHeader);
     const { data: statusRows, error: statusError } = await client.rpc("ai_get_active_conversation");
     if (statusError) throw statusError;
-    const status = statusRows?.[0] as { conversation_status: string } | undefined;
+    const status = statusRows?.[0] as
+      | { conversation_status: string; started_at: string | null; last_activity_at: string | null }
+      | undefined;
 
     if (!status || status.conversation_status === "ninguna") {
-      return { statusEvent: "nueva", turns: [] };
+      return { statusEvent: "nueva", turns: [], startedAt: null, lastActivityAt: null };
     }
     if (status.conversation_status === "expirada") {
-      return { statusEvent: "expirada", turns: [] };
+      return { statusEvent: "expirada", turns: [], startedAt: null, lastActivityAt: null };
     }
 
     const { data: turnRows, error: turnsError } = await client.rpc("ai_get_conversation_turns");
@@ -158,10 +170,15 @@ export async function fetchExistingConversation(authHeader: string): Promise<Exi
       content: t.content,
     }));
 
-    return { statusEvent: "continuada", turns };
+    return {
+      statusEvent: "continuada",
+      turns,
+      startedAt: status.started_at,
+      lastActivityAt: status.last_activity_at,
+    };
   } catch (error) {
     console.error("Memoria de Sesión: fallo al hidratar la conversación existente, se muestra como nueva:", error);
-    return { statusEvent: "nueva", turns: [] };
+    return { statusEvent: "nueva", turns: [], startedAt: null, lastActivityAt: null };
   }
 }
 

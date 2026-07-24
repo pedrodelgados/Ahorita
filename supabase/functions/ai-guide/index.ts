@@ -134,9 +134,14 @@ Deno.serve(async (req) => {
     // recuperar (sin persistencia server-side); se responde honestamente
     // en vez de tratarlo como un error.
     if (action === "get_conversation") {
-      if (!ownerId) return jsonResponse({ event: null, turns: [] });
+      if (!ownerId) return jsonResponse({ event: null, turns: [], startedAt: null, lastActivityAt: null });
       const existing = await fetchExistingConversation(authHeader!);
-      return jsonResponse({ event: existing.statusEvent, turns: existing.turns });
+      return jsonResponse({
+        event: existing.statusEvent,
+        turns: existing.turns,
+        startedAt: existing.startedAt,
+        lastActivityAt: existing.lastActivityAt,
+      });
     }
 
     // Acciones de Conocimiento Permanente (Bloque 3) -- nunca tocan el

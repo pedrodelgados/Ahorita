@@ -2,6 +2,24 @@
 
 Registro de cambios notables de Ahorita (Cuenca Viva). Formato libre, en español, más cercano a un registro de fases de producto que a versiones semánticas — ver `PROJECT.md` para el plan completo y el estado real de la implementación.
 
+## 2026-07-24 — Fase 7, Bloque 5: experiencia unificada de transparencia, corrección y borrado
+
+Quinto y último bloque técnico de la Fase 7. Consolida en `SettingsPage` toda la experiencia de privacidad de la persona: Memoria de Sesión, Conocimiento Permanente y Afinidad (ya existentes, sin cambios de lógica) junto con exportación de datos y solicitud de eliminación de cuenta, expuestas por primera vez desde la interfaz — el mecanismo ya existía desde la Fase 1, Bloque 5, pero nunca había tenido pantalla. **Sin mecanismos nuevos**: reutiliza exactamente `export-user-data`, `data_requests` y `consent_records`. El análisis conceptual incorporó, en tres rondas, los principios de ciclo de vida de la información, separación entre transparencia y funcionamiento, y simplicidad para la persona — ninguno en contradicción con la arquitectura existente.
+
+### Agregado
+- `src/lib/privacy.js` (nuevo): `getDataRequests`, `requestAccountExport` (invoca `export-user-data` y, solo tras éxito, registra `consent_records` con `event_type: 'exportacion_solicitada'`), `requestAccountDeletion` (inserta en `data_requests` + `consent_records` con `event_type: 'eliminacion_solicitada'`), `cancelAccountDeletion`.
+- `src/features/settings/PrivacyIntro.jsx`, `SessionMemoryStatus.jsx`, `AccountDataSection.jsx`, `PrivacySection.jsx` (nuevos): la única experiencia de privacidad. `SessionMemoryStatus` es puramente informativo (activa/duración/enlace a la conversación) — la acción de borrar la Memoria de Sesión permanece, sin mover, en `GuideChat.jsx`. `AccountDataSection` reutiliza `ConfirmationModal` (ya existente) para la irreversibilidad de la eliminación de cuenta.
+- `supabase/migrations/0045_fase7_bloque5_privacidad_unificada.sql`: único cambio de esquema del bloque — un disparador `before insert` en `data_requests` que calcula `scheduled_for = requested_at + 30 días` para `type = 'eliminacion'` cuando no se manda explícitamente, del lado del servidor (nunca del reloj del cliente), decisión explícita del Product Owner.
+
+### Cambiado
+- `supabase/functions/ai-guide/memory.ts`: `fetchExistingConversation()` ahora también devuelve `startedAt`/`lastActivityAt` — ya se leían internamente para otro propósito, nunca se habían expuesto en esta lectura de hidratación.
+- `supabase/functions/ai-guide/index.ts`: la acción `get_conversation` incluye esos dos campos en su respuesta — mismo contrato, sin ninguna acción nueva.
+- `src/pages/SettingsPage.jsx`: `AffinitySection`/`PermanentKnowledgeSection`, antes montadas sueltas, ahora se consolidan dentro de `<PrivacySection />` — sin pantalla ni ruta nueva.
+
+### Verificado
+- Postgres 16 real, las 45 migraciones en orden: el disparador calcula correctamente los 30 días cuando no se manda `scheduled_for`; no sobreescribe un valor explícito; `exportacion` nunca recibe `scheduled_for`; verificado también bajo un rol de bajo privilegio real (`authenticated`, `auth.uid()` simulado), no solo como superusuario. Reversión de la migración confirmada limpia.
+- `tsc --strict` sobre `memory.ts`/`index.ts`: cero errores nuevos, solo los diagnósticos de referencia preexistentes. Build y lint del frontend limpios.
+
 ## 2026-07-23 — Fase 7, Bloque 4: auditoría final y sincronización documental
 
 Auditoría final del Bloque 4 (18 puntos exigidos, exclusivamente sobre la implementación ya terminada), mismo rigor que las auditorías finales de la Fase 6 y del Bloque 3. Tres hallazgos, ninguno crítico: dos observacionales, documentados sin corrección; uno importante, corregido en esta entrada.

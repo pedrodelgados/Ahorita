@@ -2602,3 +2602,43 @@ Antes de declarar cerrado el Bloque 4, se realizó una auditoría final exclusiv
 **Confirmación explícita.** Con esta sincronización, el comportamiento real de El Razonador y la documentación canónica de la Guía IA vuelven a describir exactamente lo mismo, sin ninguna referencia obsoleta pendiente. El Product Owner cierra formalmente el Bloque 4 con esta auditoría.
 
 ---
+
+## FASE 7, BLOQUE 5 — EXPERIENCIA UNIFICADA DE TRANSPARENCIA, CORRECCIÓN Y BORRADO (2026-07-24)
+
+Quinto y último bloque técnico de la Fase 7. La auditoría previa confirmó que `export-user-data` y `process-account-deletions` (Fase 1, Bloque 5) funcionaban correctamente desde su creación pero no tenían ninguna superficie en el frontend, y que `GuideChat`/`AffinitySection`/`PermanentKnowledgeSection` no tenían ningún cruce entre sí. El análisis conceptual, desarrollado en tres rondas de precisión del Product Owner, aprobó la lectura amplia de `FASE7_CONTRATO_ARQUITECTONICO.md` (línea 139): el Bloque 5 consolida no solo la transparencia propia de la Guía IA, sino la experiencia completa de privacidad de la cuenta, reutilizando exactamente la infraestructura de la Fase 1 — **ningún mecanismo nuevo**.
+
+### Principios aprobados en el análisis conceptual
+- **Ciclo de vida de la información**: la conversación es temporal por defecto; se vuelve permanente solo con consentimiento explícito; la Afinidad aprende patrones generales de la interacción con el ecosistema (seguir, guardar, reaccionar), nunca de la conversación; la persona siempre puede revisar, corregir, exportar o borrar.
+- **Separación entre transparencia y funcionamiento**: mirar o navegar información nunca es en sí mismo una acción de corrección; las acciones que modifican comportamiento (borrar, corregir, atenuar, reiniciar, eliminar) permanecen explícitas y visualmente diferenciadas.
+- **Simplicidad para la persona**: la transparencia nunca exige entender la arquitectura interna de la Guía IA para ejercer control real sobre la información.
+- **Una única experiencia de privacidad**: no una mera superficie visual — una experiencia funcional unificada (explicar, revisar, corregir, exportar, borrar), consolidada dentro de `SettingsPage` sin pantalla ni ruta nueva.
+
+### Hallazgos técnicos del diseño (ninguno bloqueante)
+- `get_conversation` no exponía `started_at`/`last_activity_at`, aunque `memory.ts` ya los leía internamente para otro propósito — necesarios para el resumen de estado de Memoria de Sesión en Ajustes. Aprobado extender la respuesta de esa misma acción, sin crear ninguna acción nueva.
+- `data_requests.scheduled_for` no tenía ningún valor por defecto ni disparador que calculara los 30 días de periodo de gracia ya aprobados como decisión de producto desde la Fase 1. El Product Owner aprobó explícitamente calcularlo del lado del servidor mediante un disparador mínimo — los 30 días son una garantía permanente del sistema, no deben depender del reloj del cliente.
+
+### `supabase/migrations/0045_fase7_bloque5_privacidad_unificada.sql` (nuevo, único cambio de esquema del bloque)
+Un disparador `before insert` en `data_requests`: si `type = 'eliminacion'` y `scheduled_for` es nulo, lo fija a `requested_at + 30 días`. No sobreescribe un valor ya provisto; nunca se dispara para `type = 'exportacion'`.
+
+### `supabase/functions/ai-guide/memory.ts` e `index.ts`
+`fetchExistingConversation()` agrega `startedAt`/`lastActivityAt` a su tipo de retorno y a la respuesta JSON de la acción `get_conversation` — mismo contrato, dos campos adicionales.
+
+### Frontend (nuevo)
+- `src/lib/privacy.js`: `getDataRequests`, `requestAccountExport` (invoca `export-user-data` con el mecanismo oficial de exportación ya existente; registra `consent_records` con `event_type: 'exportacion_solicitada'` solo tras éxito), `requestAccountDeletion` (inserta en `data_requests` sin enviar `scheduled_for` — lo calcula el disparador — y registra `consent_records` con `event_type: 'eliminacion_solicitada'`), `cancelAccountDeletion`.
+- `src/features/settings/PrivacyIntro.jsx`: explicación introductoria única de las tres capas (Conversación Activa / Conocimiento Permanente / Afinidad).
+- `src/features/settings/SessionMemoryStatus.jsx`: resumen de estado de la Memoria de Sesión — puramente informativo; un enlace reutiliza el mecanismo oficial mediante el cual la aplicación ya abre la conversación activa (hoy, la cápsula de la Guía IA en Inicio, que rehidrata la conversación persistida sin importar dónde se monte). La acción de borrar la conversación permanece, sin mover, en `GuideChat.jsx`.
+- `src/features/settings/AccountDataSection.jsx`: exportar mis datos (entrega el archivo mediante el mecanismo oficial de descarga de la plataforma) y eliminar mi cuenta (reutiliza `ConfirmationModal`, ya existente, explicando irreversibilidad, periodo de gracia y anonimización del contenido colaborativo — requisito no negociable ya registrado desde la Fase 1); si ya existe una solicitud pendiente, muestra su fecha y permite cancelarla.
+- `src/features/settings/PrivacySection.jsx`: consolida `PrivacyIntro` → `SessionMemoryStatus` → `AffinitySection` → `PermanentKnowledgeSection` → `AccountDataSection` en un solo punto de montaje.
+- `src/pages/SettingsPage.jsx`: `AffinitySection`/`PermanentKnowledgeSection`, antes montadas sueltas, se reemplazan por `<PrivacySection userId={user.id} actorId={myActorId} />` — sin pantalla ni ruta nueva.
+
+### Verificación realizada
+- **Postgres 16 real**, las 45 migraciones (`0001`-`0045`) en orden: el disparador calcula correctamente `scheduled_for = requested_at + 30 días` cuando no se manda explícitamente; una solicitud de `exportacion` nunca recibe `scheduled_for`; un valor explícito de `scheduled_for` no es sobreescrito; verificado también con un rol de bajo privilegio real (`authenticated`, `auth.uid()` simulado vía `request.jwt.claim.sub`), no solo como superusuario. Reversión de la migración (`drop trigger`/`drop function`) confirmada limpia.
+- `tsc --strict` sobre `memory.ts`/`index.ts` modificados: cero errores nuevos, solo los diagnósticos de referencia ya preexistentes (documentados desde bloques anteriores).
+- Build y lint del frontend: limpios, sin advertencias nuevas en ninguno de los archivos agregados o modificados.
+
+### Alcance explícitamente excluido
+Ningún mecanismo nuevo de consentimiento; Afinidad y Conocimiento Permanente sin cambios de lógica; Memoria de Sesión sin mover su acción de borrado del chat; sin pantalla ni ruta nueva; `profiles.interests` fuera de este bloque.
+
+**Con este bloque, la Fase 7 queda completa en sus cinco bloques técnicos**: separación Razonador/Expresión, Memoria de Sesión, Conocimiento Permanente, conexión con el Motor de Afinidad, y esta experiencia unificada de transparencia, corrección y borrado.
+
+---
