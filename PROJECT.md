@@ -2707,3 +2707,143 @@ Confirmadas por el Product Owner como aceptables tal como están: confirmación 
 Con las cuatro correcciones operativas verificadas contra Postgres 16 real (incluyendo concurrencia real, no solo revisión de código), la documentación canónica sincronizada, y la deuda restante (H5, H8) y las limitaciones deliberadas (H9-H12) registradas con la misma honestidad que el resto del proyecto: **el Product Owner declara oficialmente cerrada la Fase 7 — Guía IA v2**, completa en sus cinco bloques técnicos más esta auditoría transversal de cierre. No lista para producción hasta validar la deuda técnica obligatoria ya heredada de la Fase 1 (`export-user-data`/`process-account-deletions` nunca probadas contra un proyecto Supabase real ni contra su API de administración de Auth, existencia del actor semilla "Cuenta eliminada" no confirmada en un entorno real) — misma condición que ya rige el resto del proyecto desde su propio cierre de Fase 1.
 
 ---
+
+## FASE 7 CERRADA — Guía IA v2 (2026-07-24)
+
+Cierre histórico formal de la Fase 7 completa del `MASTERPLAN.md`, aprobado explícitamente por el Product Owner tras la auditoría transversal de los cinco bloques como sistema único (ver sección anterior) y las cuatro correcciones operativas (H1-H4) que esa auditoría exigió antes del cierre. Misma metodología de cierre ya aplicada a las Fases 4, 5B y 6.
+
+### 1. Objetivo original
+
+**Objetivo original** (`MASTERPLAN.md`, texto previo a esta fase): introducir la Sesión de Guía IA persistente y conectar la IA al Motor de Afinidad de la Fase 6, para que respondiera con criterio de afinidad real y no solo con el contexto de la pregunta puntual — el "objetivo" declarado hablaba de una única tabla `ai_sessions` (usuario, historial de conversación, con mecanismo de borrado que reutiliza `consent_records`).
+
+**Resultado final**: el objetivo de fondo (memoria real + afinidad real) se cumplió íntegramente, pero la forma técnica original quedó reemplazada, antes de escribirse una sola línea de código, por `FASE7_FILOSOFIA_GUIA_IA.md` y `FASE7_CONTRATO_ARQUITECTONICO.md` — la tabla `ai_sessions` nunca existió. Lo construido es deliberadamente más granular: dos tablas para Memoria de Sesión (`ai_active_conversations`/`ai_conversation_turns`, Bloque 2), tres tablas para una categoría que el plan original ni siquiera distinguía (Conocimiento Permanente no-afinidad, Bloque 3), una conexión de solo lectura al Motor de Afinidad ya existente (Bloque 4, sin ninguna tabla nueva), y la exposición por primera vez, desde la interfaz, de mecanismos de privacidad que ya existían desde la Fase 1 (Bloque 5). `MASTERPLAN.md` y `ROADMAP.md` quedaron corregidos como parte de este mismo cierre — el plan maestro no queda desactualizado silenciosamente, exactamente el mismo principio ya aplicado al cerrar la Fase 6.
+
+### 2. Filosofía adoptada
+
+**`FASE7_FILOSOFIA_GUIA_IA.md`** (aprobada 2026-07-23, previa a cualquier diseño técnico, subordinada a `VISION_MAESTRA.md` y construida consolidando —nunca reemplazando— `AI_PHILOSOPHY.md`). Responde qué debe significar que la Guía IA "recuerde" y "personalice", no cómo se implementa. Veintitrés principios permanentes; los de mayor peso arquitectónico:
+
+- **Tres categorías que nunca deben confundirse**: contexto temporal de una conversación, Conocimiento Permanente no-afinidad, y Afinidad construida por el Motor de Afinidad (Fase 6) — cada una con su propia naturaleza, su propio mecanismo de entrada y su propia relación con el consentimiento.
+- **La conversación no es una vía nueva hacia el Motor de Afinidad** (§11): la prohibición de NLP/embeddings ya vigente para el Motor de Afinidad se extiende sin excepción a la Guía IA — cualquier señal que deba fortalecer la afinidad permanente tendría que pasar por el mismo tipo de interacción estructurada y verificable que ya gobierna todo lo demás, nunca por analizar directamente lo que la persona dijo.
+- **Principio de memoria veraz** (§6): la Guía IA nunca puede atribuirle a una persona una preferencia, un dato o una declaración que no fue realmente expresada — inventar un recuerdo es tan grave como inventar un lugar que no existe.
+- **La Guía IA nunca define la identidad de una persona** (§16): puede describir comportamientos y preferencias expresadas, pero nunca las convierte en una etiqueta de identidad.
+- **La conversación pertenece siempre a la persona, nunca al sistema** (§13): la Guía IA la administra exclusivamente para servirle, nunca como un activo propio.
+- **Principio de cierre** (§25): ninguna persona es reducible a su perfil de Afinidad, a su historial de conversación, ni al patrón que la Guía IA cree reconocer en ella — la memoria existe para servir a la persona, nunca para definir quién es.
+
+### 3. Contrato arquitectónico
+
+**`FASE7_CONTRATO_ARQUITECTONICO.md`** (aprobado 2026-07-23, mismo espíritu que `FASE6_CONTRATO_ARQUITECTONICO.md`, arquitectura conceptual únicamente — sin sesiones, tablas, funciones, RPC, prompts ni proveedor de tecnología). Traduce los veintitrés principios en cuatro componentes conceptuales nuevos, más los ya heredados sin cambios:
+
+- **Memoria de Sesión**: da continuidad al momento presente de una conversación activa. Regla de pureza: es pasiva — retiene, nunca interpreta, nunca decide.
+- **Conocimiento Permanente de la Persona, no-afinidad**: retiene hechos estables que no son, en el sentido de la Fase 6, una señal de interés. Regla de pureza en dos capas: el consentimiento explícito es condición necesaria pero nunca suficiente — la plataforma conserva su propia responsabilidad de minimización, finalidad y proporcionalidad.
+- **El Razonador**: sintetiza las cuatro fuentes (contexto del ecosistema, Afinidad, Memoria de Sesión, Conocimiento Permanente) en una decisión articulable. Regla de pureza: consulta, nunca reconstruye — no tiene memoria propia entre turnos.
+- **La Expresión**: traduce la decisión ya tomada en lenguaje natural. Regla de pureza: nunca decide contenido, solo estilo — no tiene acceso a datos personales crudos.
+
+**Cadena de responsabilidad de un solo sentido**: Fuentes de contexto + Motor de Afinidad + Memoria de Sesión + Conocimiento Permanente → El Razonador → La Expresión → lo que la persona lee. Ningún componente escribe hacia atrás. **Principio de secuenciación explícito**: la transparencia, la corrección y el borrado deben nacer en el mismo bloque que introduce cualquier dato nuevo, nunca diferirse a un bloque posterior — condición que determinó que Memoria de Sesión (Bloque 2) y Conocimiento Permanente (Bloque 3) incluyeran su propio mecanismo de corrección/borrado desde su propio bloque, y que la separación Razonador/Expresión (Bloque 1) existiera antes de que hubiera memoria real que sintetizar.
+
+**Enmienda registrada durante la implementación (Bloque 4)**: la jerarquía de priorización de `AI_PHILOSOPHY.md` §9 se refinó de cinco a ocho niveles al construirse la conexión con el Motor de Afinidad — nombrando explícitamente el pedido explícito de la persona y el Conocimiento Permanente como niveles propios, antes disueltos dentro de "afinidad real". Refinamiento de precisión, nunca cambio de criterio ni reversión de la promesa original del contrato de que el comportamiento de `AI_PHILOSOPHY.md` "sigue vigente sin cambios".
+
+### 4. Resumen de los cinco bloques
+
+1. **Bloque 1 — Separación Razonador/Expresión**: el esqueleto del pipeline (qué responder / cómo decirlo), con explicabilidad ya presente desde el origen, antes de que existiera memoria real. Corrigió, durante su propia auditoría previa, un defecto real heredado: `context.ts` todavía consultaba `editorial_posts`, una tabla eliminada desde la Fase 4 — cualquier pregunta sin `placeId` fallaba con "relation does not exist".
+2. **Bloque 2 — Memoria de Sesión** (migración `0043`): una única conversación activa por persona (nunca por contexto/superficie), retención pasiva, expiración por inactividad de 2 horas con purga inmediata de turnos, retractación explícita marcando `retracted_at` sin borrar, borrado explícito y completo. Sin ninguna política de RLS — el único acceso es a través de funciones `security definer` que derivan identidad exclusivamente de `auth.uid()`.
+3. **Bloque 3 — Conocimiento Permanente de la Persona, no-afinidad** (migración `0044`): catálogo cerrado de seis categorías (idioma preferido, estilo de respuesta, restricción alimentaria, movilidad, accesibilidad, dato financiero declarado) con niveles de sensibilidad y confirmación reforzada para las dos más sensibles. El Razonador propone un candidato, nunca escribe un hecho — solo una acción explícita de interfaz, posterior y separada, puede confirmarlo. Registro de trazabilidad dedicado, sin lectura administrativa, ni siquiera de la propia dueña de forma directa.
+4. **Bloque 4 — Conexión de El Razonador con el Motor de Afinidad** (sin ninguna migración nueva — `affinity_profile()` de la Fase 6 ya tenía exactamente el contrato necesario): consulta bajo demanda, nunca un prerrequisito del pipeline, limitada a la dimensión `categoria` y solo a las categorías ya presentes en el contexto real del turno. La Afinidad nunca incrementa el universo de candidatos — solo desempata entre alternativas que el resto de la jerarquía ya dejó elegibles.
+5. **Bloque 5 — Experiencia unificada de transparencia, corrección y borrado** (migración `0045`): consolida en `SettingsPage` toda la experiencia de privacidad de la persona — Memoria de Sesión, Conocimiento Permanente y Afinidad, junto con exportación de datos y solicitud de eliminación de cuenta, expuestas por primera vez desde la interfaz, reutilizando exactamente `export-user-data`/`data_requests`/`consent_records` ya construidos desde la Fase 1. Sin pantalla ni ruta nueva.
+
+Una auditoría transversal final (migración `0046`) verificó los cinco bloques como sistema único y corrigió cuatro hallazgos operativos antes de este cierre (ver punto 7).
+
+### 5. Principales decisiones permanentes incorporadas
+
+- Memoria de Sesión, Conocimiento Permanente y Afinidad son tres categorías que nunca se confunden entre sí, ni en el código ni en el lenguaje de la Guía IA.
+- Nada pasa de temporal a permanente sin consentimiento explícito — y ese consentimiento nunca es, por sí solo, autorización ilimitada.
+- El Razonador nunca reescribe la Afinidad ni analiza el texto libre de una conversación como vía indirecta hacia ella — la conversación nunca alimenta la Afinidad, sin excepción, ni siquiera con consentimiento.
+- La Expresión nunca decide contenido ni tiene acceso a datos personales crudos — separación real garantizada por tipos de TypeScript, no solo por convención documental.
+- Jerarquía de priorización de ocho niveles: restricciones duras → seguridad y bienestar → pedido explícito de la persona → Conocimiento Permanente pertinente → Afinidad real (desempate, nunca decide elegibilidad) → confianza/verificación → curaduría editorial → contenido patrocinado nunca por encima.
+- La Afinidad nunca incrementa el conjunto de candidatos posibles — únicamente altera el orden de preferencia entre candidatos ya elegibles.
+- Principio de ciclo de vida de la información (Bloque 5, UX): conversación temporal por defecto → permanente solo con consentimiento explícito → Afinidad aprendiendo de la interacción estructurada con el ecosistema, nunca de la conversación → revisión/corrección/exportación/borrado siempre disponibles.
+- Principio de separación entre transparencia y funcionamiento (Bloque 5): mirar información nunca es, por sí mismo, una acción de corrección.
+- Los 30 días de periodo de gracia de eliminación de cuenta son una garantía de producto independiente del reloj del cliente — calculada del lado del servidor (migración `0045`) y protegida por un reclamo atómico irreversible una vez tomado (migración `0046`).
+
+### 6. Hallazgos relevantes encontrados durante el desarrollo
+
+- **Bloque 1**: `context.ts` consultaba una tabla ya eliminada (`editorial_posts`) — cualquier pregunta sin `placeId` fallaba en producción antes de este bloque.
+- **Bloque 3, auditoría final**: repetición de candidatos ya rechazados en el mismo hilo (dependía de una señal que nunca se persistía); El Razonador hablando directamente a la interfaz con el campo `reason` de un candidato, rompiendo para esa superficie el principio de que "El Razonador nunca habla directamente con la persona".
+- **Bloque 4, diseño técnico**: asimetría estructural real entre `places`/`events`/`editorial` (los dos últimos con vínculo indirecto a `actors`, el primero sin ninguno) — resuelta limitando esta iteración a la dimensión `categoria`, difiriendo `actor_seguido` sin inconsistencia.
+- **Bloque 4, auditoría final**: la jerarquía de ocho niveles ya implementada en el prompt real no estaba reflejada en `AI_PHILOSOPHY.md` §9, pese a que el propio contrato prometía que ese documento "sigue vigente sin cambios" — desalineación documental real, nunca una contradicción de criterio de fondo.
+- **Auditoría transversal final**: cuatro hallazgos operativos (H1-H4, ver punto 7) invisibles al auditar cada bloque por separado, todos en el cruce entre bloques o entre la Fase 7 y la Fase 1.
+
+### 7. Correcciones importantes realizadas durante las auditorías
+
+- **Bloque 3**: candidato mencionado dentro de la propia respuesta de La Expresión (nunca por El Razonador directamente), quedando naturalmente registrado en el turno para que El Razonador reconozca su propia mención anterior sin ningún mecanismo nuevo.
+- **Bloque 4**: `AI_PHILOSOPHY.md` §9 actualizado a la jerarquía de ocho niveles con nota explícita de refinamiento, nunca cambio de criterio; `FASE7_CONTRATO_ARQUITECTONICO.md` con una enmienda registrada; `FASE7_FILOSOFIA_GUIA_IA.md` con su referencia de nivel corregida.
+- **Auditoría transversal final (H1-H4, este cierre)**:
+  - **H1**: índice único parcial (`data_requests_one_pending_eliminacion_per_user`, migración `0046`) que garantiza, del lado del servidor, una sola solicitud de eliminación pendiente por persona; reconocimiento explícito del código `23505` en `lib/privacy.js`; defensa de doble clic en el frontend (`ConfirmationModal`'s `confirmDisabled`).
+  - **H2**: `process-account-deletions` reconoce con seguridad que una cuenta ya fue eliminada en un ciclo anterior (perfil inexistente) y cierra la trazabilidad sin repetir ningún trabajo destructivo, distinguiendo siempre un fallo real de un cierre parcial ya completado.
+  - **H3**: reclamo atómico (`pendiente` → `en_proceso`, reutilizando un estado ya existente desde la Fase 1) que resuelve la carrera entre la cancelación de la persona y el procesamiento por lotes — verificado con concurrencia real de Postgres en ambos sentidos.
+  - **H4**: `context.ts` degrada de forma independiente por fuente (lugares/eventos/editorial) en vez de un 500 crudo, con la misma disciplina de degradación honesta ya usada en Memoria de Sesión, Conocimiento Permanente y Afinidad.
+
+### 8. Deuda técnica registrada
+
+**Heredada de fases anteriores, sin cambios** (ver secciones de cierre de Fases 1-6): prueba end-to-end contra un proyecto Supabase real desplegado; `export-user-data`/`process-account-deletions` nunca probadas contra la API de administración de Auth real; existencia del actor semilla "Cuenta eliminada" no confirmada en un entorno real.
+
+**Propia de la Fase 7**:
+- **H5**: `data_requests.type = 'exportacion'` nunca tiene ningún camino de escritura en todo el proyecto — la trazabilidad real de una exportación vive en `consent_records`, la variante de flujo de trabajo permanece sin consumidor. Su permanencia o eliminación futura requiere un análisis separado.
+- **H8**: `ai_ensure_fresh_conversation()` no tiene bloqueo explícito — dos turnos concurrentes de la misma persona (dos pestañas) que encuentran "sin conversación todavía" pueden intentar ambos crear la fila de estado; la clave primaria evita corrupción, pero el segundo turno puede no persistirse en la Memoria de Sesión (la persona sí recibe su respuesta). Una futura mejora de exclusión mutua o reintento idempotente queda pendiente, sin reabrir el Bloque 2.
+
+### 9. Limitaciones conocidas
+
+- **H9**: la confirmación reforzada de Conocimiento Permanente (`reinforcedConfirmationShown`) es un booleano afirmado por el propio cliente — el backend no puede verificar que la interfaz realmente mostró el segundo diálogo. Salvaguarda deliberadamente ligera, sin riesgo entre personas.
+- **H10**: la no repetición de un candidato ya rechazado depende de que El Razonador relea el hilo completo y reconozca su propia mención anterior — instrucción de prompt, nunca una garantía estructural de código.
+- **H11**: "Continuar conversación" (Ajustes) navega a la superficie actual donde vive la Guía IA, pero no reabre automáticamente la cápsula — reutiliza el mecanismo de rehidratación ya existente sin crear uno nuevo, a costa de un toque adicional de la persona.
+- **H12**: la exclusión de Afinidad en preguntas sobre un negocio ya identificado por nombre (sin `placeId`) depende de una regla de El Razonador, no de una compuerta estructural adicional — la única compuerta de código es `context.type === 'city'`.
+
+### 10. Estado final del sistema al terminar la Fase 7
+
+Los cuatro componentes conceptuales nuevos (Memoria de Sesión, Conocimiento Permanente no-afinidad, El Razonador, La Expresión) están implementados, verificados contra Postgres 16 real (46 migraciones, `0001`-`0046`, reproducidas desde una base limpia), y documentados. El pipeline completo —identidad → Memoria de Sesión → Conocimiento Permanente → contexto → Afinidad condicional → El Razonador → La Expresión → persistencia— funciona como un único sistema coherente, sin ninguna regla de pureza rota y sin ninguna fuga de datos entre personas. Una auditoría transversal final, deliberadamente independiente de las auditorías de cada bloque, encontró cuatro hallazgos operativos reales (H1-H4) y los corrigió antes de este cierre, verificando las correcciones con concurrencia real de Postgres, no solo revisión de código. La documentación canónica (`AI_PHILOSOPHY.md`, `FASE7_FILOSOFIA_GUIA_IA.md`, `FASE7_CONTRATO_ARQUITECTONICO.md`, `MASTERPLAN.md`, `ROADMAP.md`, `supabase/README.md`) describe exactamente el mismo comportamiento que el código real, sin ninguna referencia obsoleta pendiente. **No lista para producción** hasta validar la deuda técnica obligatoria heredada de la Fase 1 (ver punto 8).
+
+### 11. Qué capacidades nuevas posee ahora la Guía IA (respecto al final de la Fase 6)
+
+- **Memoria real dentro de una conversación**: antes de esta fase, cada pregunta a la Guía IA carecía de cualquier continuidad, incluso dentro del mismo intercambio. Ahora retiene lo dicho en la conversación activa, permite retractación explícita, y expira honestamente por inactividad.
+- **Conocimiento estable sobre la persona, distinto de la Afinidad**: la Guía IA ahora puede recordar, con consentimiento explícito, una restricción alimentaria, una necesidad de accesibilidad o una preferencia de idioma — información que el Motor de Afinidad nunca tuvo la pretensión de capturar.
+- **Razonamiento informado por afinidad real**: El Razonador ahora consulta el perfil de Afinidad ya construido por la Fase 6 como insumo de desempate, con una jerarquía de priorización de ocho niveles que nombra con precisión dónde entra cada fuente de información.
+- **Separación tecnológica real, no solo documental**: El Razonador y La Expresión están separados por tipos de TypeScript, no solo por convención — cualquiera de los dos es reemplazable sin tocar el otro ni las tres fuentes de memoria.
+- **Transparencia y control completos**: la persona puede ver y corregir, en un solo lugar, su Memoria de Sesión, su Conocimiento Permanente y su Afinidad, y ejercer por primera vez desde la interfaz su derecho a exportar sus datos o solicitar (y cancelar) la eliminación de su cuenta.
+
+### 12. Qué partes de la arquitectura quedan preparadas para futuras fases
+
+- **El patrón de cuatro componentes con reglas de pureza propias** (Memoria pasiva, Conocimiento Permanente con consentimiento en dos capas, Razonador que consulta nunca reconstruye, Expresión que nunca decide contenido) queda como precedente arquitectónico reutilizable para cualquier futura extensión de la Guía IA.
+- **La compuerta de consulta bajo demanda de Afinidad** (sin costo de llamada al proveedor de IA cuando no aplica) queda como patrón para cualquier futura fuente de enriquecimiento condicional del pipeline.
+- **El catálogo cerrado de categorías de Conocimiento Permanente**, extensible solo por migración deliberada, queda listo para crecer sin ninguna reinterpretación de una categoría existente.
+- **La experiencia unificada de privacidad en `SettingsPage`** queda como el único lugar de la aplicación donde cualquier futuro dato personal nuevo debería exponer su propia transparencia/corrección/borrado, en vez de crear una superficie nueva.
+- **La Guía IA como Actor del sistema y motor de experiencias** (`AI_PHILOSOPHY.md` §16, visión futura no implementada) sigue intacta y sin fecha asignada — esta fase no la adelantó, y el pipeline de cuatro componentes ya construido es exactamente la base que esa visión necesitará cuando se autorice.
+- **La pregunta de si algo dicho en una conversación, con consentimiento explícito y deliberado, podría algún día fortalecer la Afinidad permanente** sigue explícitamente sin resolver, tal como la dejó `FASE7_FILOSOFIA_GUIA_IA.md` — cualquier fase futura que quiera abrir esa puerta deberá hacerlo mediante una interacción estructurada y verificable del Registro de Señales ya existente, nunca por inferencia directa de texto libre.
+
+### 13. Referencias a documentos canónicos
+
+- `FASE7_FILOSOFIA_GUIA_IA.md` — autoridad filosófica de la fase (veintitrés principios).
+- `FASE7_CONTRATO_ARQUITECTONICO.md` — arquitectura conceptual (cuatro componentes, reglas de pureza, principio de secuenciación).
+- `AI_PHILOSOPHY.md` §9 — jerarquía de priorización de ocho niveles, refinada en el Bloque 4.
+- `MASTERPLAN.md` — sección "Fase 7", corregida en este cierre para describir el esquema real.
+- `ROADMAP.md` — Fase 7 marcada cerrada en este cierre.
+- `supabase/README.md` — descripción de `export-user-data`/`process-account-deletions` sincronizada con el comportamiento real.
+- `CHANGELOG.md` — entradas cronológicas de los cinco bloques y de esta auditoría transversal final.
+- Este mismo documento (`PROJECT.md`), secciones "FASE 7, BLOQUE 1" a "FASE 7, BLOQUE 5" y "FASE 7 — AUDITORÍA TRANSVERSAL FINAL Y CIERRE" — el detalle técnico completo, bloque por bloque, del que esta sección es el resumen histórico.
+
+### Commits principales de la fase
+
+- `6c08a3a` — filosofía de la Guía IA (documento conceptual, sin código).
+- `4325b1d` — contrato arquitectónico conceptual (sin código, sin proveedor de IA).
+- `0df5928` — Bloque 1: separar El Razonador de La Expresión en `ai-guide`.
+- `5d431dd` — Bloque 2: Memoria de Sesión (migración `0043`).
+- `809882d` — Bloque 3: Conocimiento Permanente de la Persona, no-afinidad (migración `0044`).
+- `79651c8` — Bloque 3: correcciones de la auditoría final.
+- `89709d6` — Bloque 4: conexión de El Razonador con el Motor de Afinidad.
+- `783991e` — Bloque 4: sincronización documental (Hallazgo B).
+- `4f7495d` — Bloque 5: experiencia unificada de transparencia, corrección y borrado (migración `0045`).
+- `3112fc7` — auditoría transversal final: correcciones H1-H4 (migración `0046`), documentación sincronizada.
+
+### Estado final
+
+**FASE 7 CERRADA.** Los cuatro componentes conceptuales (Memoria de Sesión, Conocimiento Permanente no-afinidad, El Razonador, La Expresión) están implementados en cinco bloques técnicos, verificados contra Postgres 16 real, y documentados. Una auditoría transversal final, deliberadamente independiente de las auditorías de cada bloque, confirmó que los cinco bloques funcionan como un único sistema coherente y corrigió cuatro hallazgos operativos reales antes de este cierre — ninguno una contradicción arquitectónica. La documentación canónica de la fase (`FASE7_FILOSOFIA_GUIA_IA.md`, `FASE7_CONTRATO_ARQUITECTONICO.md`, `AI_PHILOSOPHY.md`, `MASTERPLAN.md`, `ROADMAP.md`, `supabase/README.md`) describe exactamente el mismo comportamiento que el código real. **No lista para producción** hasta validar la deuda técnica heredada de la Fase 1, igual que el resto del proyecto.
+
+---
