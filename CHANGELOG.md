@@ -2,6 +2,19 @@
 
 Registro de cambios notables de Ahorita (Cuenca Viva). Formato libre, en español, más cercano a un registro de fases de producto que a versiones semánticas — ver `PROJECT.md` para el plan completo y el estado real de la implementación.
 
+## 2026-07-25 — Registro de `BETA_READINESS_CHECKLIST.md`
+
+Se registra como archivo del proyecto la checklist de preparación para la beta real en Cuenca, construida en dos rondas de revisión crítica más una evaluación específica de tres incorporaciones potenciales (gestión de identidad, push transaccional, distribución en tiendas). Explícitamente **no** es un documento canónico — es una checklist operativa viva, subordinada a `ETAPA_PRODUCTO_VIVO.md`, sin filosofía ni contrato propios. Sin código, sin migraciones, sin cambios funcionales.
+
+### Agregado
+- `BETA_READINESS_CHECKLIST.md` (nuevo): 22 ítems bloqueantes antes de la primera persona real (A1-A22, incluyendo A16-bis de notificaciones push transaccionales y A5 ampliado con verificación de cambio de dispositivo), 3 verificaciones de la primera semana de beta (B1-B3), y 4 condiciones antes de ampliar el grupo piloto (C1-C4). Incluye una sección explícita de exclusiones justificadas por ausencia de evidencia, no por costumbre: login social, cambio de contraseña/correo desde la UI, distribución en Google Play/TestFlight.
+
+### Cambiado (referencias cruzadas)
+- `PROJECT.md`: nueva sección "BETA READINESS CHECKLIST — REGISTRO COMO INSTRUMENTO OPERATIVO (2026-07-25)" — contexto histórico, por qué no se creó un documento canónico, rondas de revisión, decisión final.
+
+### Verificado
+- Revisión cruzada de `MASTERPLAN.md`, `PRODUCT_MANIFESTO.md`, `PRODUCT_STRATEGY.md` y `ETAPA_PRODUCTO_VIVO.md`: sin contradicciones. La checklist no introduce ninguna decisión conceptual nueva ni ocupa ningún número de fase — no requirió cambios en `MASTERPLAN.md`.
+
 ## 2026-07-25 — Adopción de `ETAPA_PRODUCTO_VIVO.md` como documento canónico
 
 Tras el cierre de la Fase 7 y dos rondas de análisis estratégico, se adopta una nueva etapa —no una fase técnica más del `MASTERPLAN.md`— dedicada a validar el producto con negocios y personas reales en Cuenca antes de autorizar cualquier fase de crecimiento (Fase 8 en adelante). El documento maduró a través de cuatro rondas explícitas de revisión del Product Owner antes de su adopción. Sin código, sin migraciones, sin cambios funcionales — estrategia de producto pura.

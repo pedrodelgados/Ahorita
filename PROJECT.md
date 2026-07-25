@@ -2887,3 +2887,40 @@ El Product Owner aprobó, sin más rondas de revisión, el texto final de `ETAPA
 **"El Producto Vivo" queda adoptado como documento canónico y como la guía estratégica oficial de la etapa que sigue a la Fase 7.** No introduce código, migraciones, ni ningún cambio funcional — es, deliberadamente, estrategia de producto pura. Ninguna fase del `MASTERPLAN.md` a partir de la Fase 8 debe autorizarse hasta que los criterios de éxito medibles de `ETAPA_PRODUCTO_VIVO.md` §20 se cumplan.
 
 ---
+
+## BETA READINESS CHECKLIST — REGISTRO COMO INSTRUMENTO OPERATIVO (2026-07-25)
+
+### 1. Contexto histórico
+
+Tras adoptar `ETAPA_PRODUCTO_VIVO.md`, el Product Owner propuso continuar con lo que inicialmente llamó "Fase 8", redefiniendo su propósito: no agregar funcionalidad (Historias/video, la Fase 8 real de `MASTERPLAN.md`), sino preparar técnicamente a Ahorita para recibir personas y negocios reales. El análisis conceptual identificó dos problemas antes de aceptar ese marco: (a) la decisión se tomaba sin evidencia de campo, contradiciendo lo recién acordado sobre dejar que la realidad marque la agenda; (b) el nombre "Fase 8" ya está ocupado por Historias/video en `MASTERPLAN.md` — llamar "Fase 8" a esto habría creado una contradicción documental. Se resolvió tratar el trabajo como lo que `ETAPA_PRODUCTO_VIVO.md` §26 ya anticipaba como posible continuación: un plan operativo, subordinado a esa etapa, no una fase técnica nueva.
+
+### 2. De "Plan Operativo" a "checklist operativa"
+
+Antes de dar forma a ese plan operativo, se sometió la propia decisión de crear un documento nuevo al mismo estándar de evidencia que rige esta etapa: ¿hace falta un documento canónico con filosofía y contrato, o basta una checklist viva? El análisis concluyó que un documento de ese peso repetiría exactamente el patrón que `ETAPA_PRODUCTO_VIVO.md` fue creado para romper — más documentación antes de tocar la realidad —, porque ninguno de los puntos identificados introduce una decisión conceptual nueva sobre el modelo Actor/Publicación/Interacción; todos son verificación de algo ya construido o configuración operativa mínima. Se adoptó el formato de checklist con criterio de verificación objetivo por ítem, sin filosofía ni contrato propios.
+
+### 3. Construcción y rondas de revisión crítica
+
+La checklist se construyó en dos rondas:
+
+- **Primera ronda**: 17 ítems agrupados por bloqueante/diferible, cubriendo infraestructura desplegada, identidad y seguridad de datos, la Guía IA con costo real, privacidad y mínimo legal, resiliencia operativa, y un ciclo completo con un negocio real.
+- **Segunda ronda (10 ajustes del Product Owner)**: reorganización en tres momentos temporales (A: antes de la primera persona real: antes de admitir, B: primera semana de beta, C: antes de ampliar el piloto); matriz de RLS reproducible contra JWT reales en vez de una afirmación general; restauración de respaldo en entorno aislado con RPO/RTO; correo transaccional de producción; plan de reversión del despliegue; recorrido completo de una persona real; instrumentación mínima de aprendizaje; canal de soporte probado; inventario de semillas operativas; y pruebas ampliadas de PWA/caché.
+
+Una tercera ronda evaluó críticamente tres posibles incorporaciones adicionales (gestión moderna de identidad, infraestructura de notificaciones push, distribución en tiendas de aplicaciones) contra `PRODUCT_MANIFESTO.md`, `PRODUCT_STRATEGY.md`, `ETAPA_PRODUCTO_VIVO.md` y `MASTERPLAN.md`, sin apelar a costumbre. Resultado: se incorporó la verificación de notificaciones push transaccionales (nuevo ítem A16-bis, funcionalidad ya construida desde la Fase 0, nunca probada en producción) y se amplió el ítem A5 para verificar cambio de dispositivo sin pérdida de información (consecuencia natural de una arquitectura ya centrada en el servidor, no funcionalidad nueva). Quedaron explícitamente fuera, por ausencia de evidencia de necesidad —no por genericidad—: inicio de sesión con Google/Apple, cambio de contraseña/correo desde la interfaz, y distribución mediante Google Play/TestFlight.
+
+### 4. Decisión final
+
+El Product Owner aprobó el contenido consolidado y solicitó su registro como archivo del proyecto, con la condición explícita de que no se convirtiera en documento canónico. Antes de escribirlo se verificó la ausencia de contradicciones con `MASTERPLAN.md`, `PRODUCT_MANIFESTO.md`, `PRODUCT_STRATEGY.md` y `ETAPA_PRODUCTO_VIVO.md` — ninguna encontrada, porque la checklist no introduce ninguna decisión conceptual nueva ni ocupa ningún número de fase.
+
+### 5. Referencias a documentos canónicos
+
+- `BETA_READINESS_CHECKLIST.md` — archivo creado, checklist operativa viva.
+- `ETAPA_PRODUCTO_VIVO.md` §26 — autoridad de la que esta checklist es subordinada directa.
+- `PRODUCT_MANIFESTO.md` §10 — filtros usados para evaluar y excluir las tres incorporaciones potenciales de la tercera ronda.
+- `MASTERPLAN.md` — no requiere modificación; la checklist no ocupa ningún número de fase, y la sección "Etapa — El Producto Vivo" ya referencia a `ETAPA_PRODUCTO_VIVO.md` como su autoridad.
+- `CHANGELOG.md` — entrada cronológica de este registro.
+
+### Estado final
+
+**La Beta Readiness Checklist queda registrada como instrumento operativo vivo, subordinada a `ETAPA_PRODUCTO_VIVO.md`, sin autoridad conceptual propia.** Todos sus ítems inician en estado Pendiente. Se actualiza directamente en `BETA_READINESS_CHECKLIST.md` conforme cada ítem se verifica con evidencia real.
+
+---
