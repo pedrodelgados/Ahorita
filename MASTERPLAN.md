@@ -4,7 +4,7 @@
 
 Este documento convierte `ARCHITECTURE.md` (visión y arquitectura del ecosistema, ya aprobado) en un plan de ejecución accionable: fases de desarrollo concretas, en orden, con sus dependencias, sus tablas, sus riesgos y su criterio de éxito. **`MASTERPLAN.md` es la única hoja de ruta oficial de desarrollo de Ahorita** — `ROADMAP.md` apunta aquí para el detalle.
 
-Relación con los demás documentos: `VISION_MAESTRA.md` es, desde el 2026-07-21, la máxima autoridad conceptual del proyecto, y este plan debe leerse en coherencia con ella; `PRODUCT_MANIFESTO.md`/`PRODUCT_STRATEGY.md` definen la identidad y los principios de producto, subordinados a la Visión Maestra; `ARCHITECTURE.md` responde *qué es Ahorita técnicamente y por qué*; `AI_PHILOSOPHY.md` es la autoridad absoluta sobre el comportamiento de la Guía IA; este documento responde *en qué orden se construye y con qué criterio se sabe que cada pieza está lista*; `PROJECT.md` registra, fase por fase, lo que realmente se construyó; `CHANGELOG.md` sigue el detalle de cada cambio. Ninguna fase aquí descrita se implementa hasta que se apruebe explícitamente.
+Relación con los demás documentos: `VISION_MAESTRA.md` es, desde el 2026-07-21, la máxima autoridad conceptual del proyecto, y este plan debe leerse en coherencia con ella; `PRODUCT_MANIFESTO.md`/`PRODUCT_STRATEGY.md` definen la identidad y los principios de producto, subordinados a la Visión Maestra; `ARCHITECTURE.md` responde *qué es Ahorita técnicamente y por qué*; `AI_PHILOSOPHY.md` es la autoridad absoluta sobre el comportamiento de la Guía IA; este documento responde *en qué orden se construye y con qué criterio se sabe que cada pieza está lista*; `ETAPA_PRODUCTO_VIVO.md` (adoptado el 2026-07-25, entre el cierre de la Fase 7 y la Fase 8) es la guía estratégica que antepone la validación real de producto a la continuación de esta secuencia técnica — ver la sección dedicada más abajo; `PROJECT.md` registra, fase por fase, lo que realmente se construyó; `CHANGELOG.md` sigue el detalle de cada cambio. Ninguna fase aquí descrita se implementa hasta que se apruebe explícitamente.
 
 **Principio aprobado: la inteligencia artificial es un eje transversal del producto, no una función aislada.** Por eso cada fase incluye, además de sus doce campos técnicos habituales, un campo adicional — **"Aporte a la Guía IA"** — que documenta qué información o capacidad nueva le entrega a la Guía IA, aunque la integración técnica definitiva de esa capacidad se implemente después (en la Fase 7 y en las fases posteriores). Ninguna fase, sin importar cuán "no relacionada con IA" parezca su título, queda exenta de este campo.
 
@@ -333,6 +333,22 @@ Lo que ya existe y sobre lo cual se construye todo lo demás: identidad básica 
 
 ---
 
+## Etapa — El Producto Vivo (entre la Fase 7 y la Fase 8) ✅ ADOPTADA (2026-07-25)
+
+**Esta no es una fase técnica más de este plan.** No tiene tablas nuevas, no tiene migraciones, no tiene contrato arquitectónico, y no construye ninguna funcionalidad de las Fases 8-13. Se registra aquí, en el lugar exacto de la secuencia donde ocurre, únicamente para que nadie lea este documento de arriba a abajo y asuma que la Fase 8 es la continuación automática de la Fase 7.
+
+**Autoridad de esta etapa: `ETAPA_PRODUCTO_VIVO.md`** (adoptado el 2026-07-25, tras el cierre formal de la Fase 7 y dos rondas de análisis estratégico explícitamente solicitadas por el Product Owner). Nace de una observación repetida en el cierre de cada una de las siete fases anteriores: ninguna fue probada nunca contra infraestructura real desplegada, con contenido real, negocios reales o usuarios reales. `PRODUCT_MANIFESTO.md` §10, filtro 4, es explícito — toda funcionalidad que dependa de masa crítica inexistente se pospone — y esa masa crítica (negocios verificados reales, personas usuarias reales, contenido real de Cuenca) es precisamente lo que todavía no existe al cerrar la Fase 7.
+
+**Qué valida.** Que la arquitectura construida en las Fases 1 a 7 sostiene, con personas y negocios reales de Cuenca, la promesa que `VISION_MAESTRA.md` y `PRODUCT_MANIFESTO.md` definen — no si el código funciona (ya verificado fase por fase), sino si genera valor real fuera de un entorno de prueba.
+
+**Relación con la secuencia técnica de este documento.** No reordena ni reabre ninguna de las Fases 1-7, ya cerradas. Tampoco es, en sí misma, un requisito técnico de las Fases 8-13 — la matriz de dependencias de este documento sigue siendo exclusivamente técnica y no cambia. Lo que esta etapa añade es una condición adicional, de naturaleza distinta a la técnica: **ninguna fase de este plan a partir de la Fase 8 se autoriza hasta que los criterios de éxito medibles definidos en `ETAPA_PRODUCTO_VIVO.md` §20 se cumplan**, verificados con evidencia real y no con intuición, siguiendo la metodología de validación descrita en ese mismo documento (§17).
+
+**Qué puede ocurrir en paralelo.** La investigación formal de mecanismos de la Fase 12 y el diseño conceptual de fases futuras pueden seguir avanzando en paralelo, tal como ya lo permite este documento — lo que no puede ocurrir en paralelo es la *implementación* de cualquier fase de crecimiento (8 en adelante) antes del veredicto de esta etapa.
+
+**Aporte a la Guía IA.** Ninguno nuevo por diseño — esta etapa no modifica el comportamiento de la Guía IA. Su aporte es de otra naturaleza: por primera vez, la Guía IA construida en la Fase 7 conversará con personas reales, y esa observación (`ETAPA_PRODUCTO_VIVO.md` §16) es la que decide qué de lo ya construido demostró valor real y qué no.
+
+---
+
 ## Fase 8 — Historias y video como contenido de primera clase
 
 **Objetivo.** Evolucionar "estados" hacia Historias, con el alcance exacto ya aprobado para v1 (decisión 6): **duración máxima de 30 segundos**, foto o video, texto básico, ubicación, vigencia de 24 horas — **sin filtros, stickers ni funciones complejas**. Formalizar el video como atributo de medio disponible para cualquier Publicación, con transcodificación en servidor.
@@ -614,6 +630,7 @@ Lo que ya existe y sobre lo cual se construye todo lo demás: identidad básica 
 - **Monetización (Fase 11) nunca antes del Feed híbrido con su techo ya definido (Fase 6).**
 - **Fase 5B nunca antes de la Fase 4** — a diferencia de la Fase 5A, sí necesita contenido variado para generalizar comentarios/guardados/reacciones sobre algo real.
 - **Ninguna implementación de Azu Taxi (Fase 12) antes de confirmar formalmente su mecanismo de integración real** — la investigación puede adelantarse, la implementación no (decisión 11).
+- **Ninguna fase de este plan a partir de la Fase 8 antes de cumplir los criterios de éxito medibles de `ETAPA_PRODUCTO_VIVO.md` §20** — la etapa "El Producto Vivo", adoptada el 2026-07-25 entre el cierre de la Fase 7 y la Fase 8, antepone esta condición de validación real de producto a la secuencia técnica ya definida en este documento.
 
 ## Qué puede esperar a una versión 2.0
 

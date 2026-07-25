@@ -2,6 +2,20 @@
 
 Registro de cambios notables de Ahorita (Cuenca Viva). Formato libre, en español, más cercano a un registro de fases de producto que a versiones semánticas — ver `PROJECT.md` para el plan completo y el estado real de la implementación.
 
+## 2026-07-25 — Adopción de `ETAPA_PRODUCTO_VIVO.md` como documento canónico
+
+Tras el cierre de la Fase 7 y dos rondas de análisis estratégico, se adopta una nueva etapa —no una fase técnica más del `MASTERPLAN.md`— dedicada a validar el producto con negocios y personas reales en Cuenca antes de autorizar cualquier fase de crecimiento (Fase 8 en adelante). El documento maduró a través de cuatro rondas explícitas de revisión del Product Owner antes de su adopción. Sin código, sin migraciones, sin cambios funcionales — estrategia de producto pura.
+
+### Agregado
+- `ETAPA_PRODUCTO_VIVO.md` (nuevo, documento canónico independiente): guía estratégica de la etapa "El Producto Vivo", subordinada a `VISION_MAESTRA.md` y `PRODUCT_MANIFESTO.md`/`PRODUCT_STRATEGY.md`, par conceptual de `AI_PHILOSOPHY.md`/`ARCHITECTURE.md`.
+
+### Cambiado (referencias cruzadas)
+- `MASTERPLAN.md`: párrafo de relación con los demás documentos actualizado; nueva sección "Etapa — El Producto Vivo (entre la Fase 7 y la Fase 8) ✅ ADOPTADA (2026-07-25)"; nueva condición en "Qué nunca debería empezar antes de otra cosa" — ninguna fase a partir de la Fase 8 se autoriza sin cumplir los criterios medibles de `ETAPA_PRODUCTO_VIVO.md` §20.
+- `PROJECT.md`: nueva sección "ETAPA \"EL PRODUCTO VIVO\" — ADOPCIÓN DEL DOCUMENTO CANÓNICO (2026-07-25)" — contexto histórico, proceso de maduración en cuatro rondas, motivo de creación, decisión final y verificación de consistencia documental.
+
+### Verificado
+- Revisión cruzada de `VISION_MAESTRA.md`, `PRODUCT_MANIFESTO.md`, `PRODUCT_STRATEGY.md`, `MASTERPLAN.md` y `ETAPA_PRODUCTO_VIVO.md`: sin contradicciones. El argumento de "masa crítica inexistente" del nuevo documento opera sobre un eje distinto al de la matriz de dependencias técnicas del `MASTERPLAN.md` — aclarado explícitamente en la nueva sección de ese documento, no una contradicción.
+
 ## 2026-07-24 — Fase 7: auditoría transversal final y cierre
 
 Auditoría de los cinco bloques como un único sistema (mismo estándar del cierre de la Fase 6): pipeline completo, consentimiento, privacidad/aislamiento, borrado, exportación, eliminación de cuenta, integración frontend/backend, documentación, migraciones, concurrencia/idempotencia y rendimiento. Sin contradicciones arquitectónicas. Cuatro hallazgos importantes corregidos antes del cierre (ninguno de diseño, todos operativos); dos documentados como deuda; documentación canónica sincronizada; cuatro limitaciones deliberadas confirmadas sin cambio.

@@ -2847,3 +2847,43 @@ Los cuatro componentes conceptuales nuevos (Memoria de Sesión, Conocimiento Per
 **FASE 7 CERRADA.** Los cuatro componentes conceptuales (Memoria de Sesión, Conocimiento Permanente no-afinidad, El Razonador, La Expresión) están implementados en cinco bloques técnicos, verificados contra Postgres 16 real, y documentados. Una auditoría transversal final, deliberadamente independiente de las auditorías de cada bloque, confirmó que los cinco bloques funcionan como un único sistema coherente y corrigió cuatro hallazgos operativos reales antes de este cierre — ninguno una contradicción arquitectónica. La documentación canónica de la fase (`FASE7_FILOSOFIA_GUIA_IA.md`, `FASE7_CONTRATO_ARQUITECTONICO.md`, `AI_PHILOSOPHY.md`, `MASTERPLAN.md`, `ROADMAP.md`, `supabase/README.md`) describe exactamente el mismo comportamiento que el código real. **No lista para producción** hasta validar la deuda técnica heredada de la Fase 1, igual que el resto del proyecto.
 
 ---
+
+## ETAPA "EL PRODUCTO VIVO" — ADOPCIÓN DEL DOCUMENTO CANÓNICO (2026-07-25)
+
+### 1. Contexto histórico
+
+Inmediatamente después del cierre formal de la Fase 7 (Guía IA v2, ver sección anterior), el Product Owner pausó explícitamente todo desarrollo de funcionalidad nueva y solicitó un análisis estratégico puro sobre cuál debía ser la siguiente gran etapa del proyecto — sin asumir que fuera automáticamente la Fase 8 del `MASTERPLAN.md`. El análisis se desarrolló en dos rondas de profundidad creciente: una primera comparando explícitamente la opción de continuar con el `MASTERPLAN.md` frente a la de abrir una etapa nueva; una segunda, adoptando explícitamente el rol de "Director de Producto y Arquitecto Principal", que releyó de forma crítica `VISION_MAESTRA.md`, `PRODUCT_MANIFESTO.md`, `PRODUCT_STRATEGY.md` y `ARCHITECTURE.md` completos, evaluó el estado real del proyecto en nueve dimensiones, un ejercicio de "beta mañana", una estimación de escalabilidad en cinco escenarios de tráfico, y una tabla de criterios medibles de madurez.
+
+Ambas rondas concluyeron lo mismo: cada cierre de fase, de la 1 a la 7, repitió la misma deuda — nunca probado contra infraestructura real desplegada, cero contenido real, cero usuarios reales, cero negocios reales. `PRODUCT_MANIFESTO.md` §10, filtro 4, es explícito al respecto — toda funcionalidad que dependa de masa crítica inexistente se pospone — y las Fases 8-13 dependen todas, en distinto grado, de una masa crítica que hoy no existe. El Product Owner aceptó esta conclusión y solicitó, en vez de continuar automáticamente hacia la Fase 8, el diseño de una nueva etapa estratégica dedicada exclusivamente a validar el producto en el mundo real.
+
+### 2. Proceso de maduración del documento
+
+El documento resultante, `ETAPA_PRODUCTO_VIVO.md`, se maduró a través de **cuatro rondas explícitas de revisión del Product Owner** antes de su adopción — el mismo nivel de escrutinio que recibieron `FASE6_FILOSOFIA_DESCUBRIMIENTO.md` y `FASE7_FILOSOFIA_GUIA_IA.md` antes de sus fases respectivas:
+
+- **Primera ronda**: borrador inicial con diagnóstico, principio central, visión, riesgos, objetivos, principios no negociables, estrategia de contenido, economía del producto y criterios de éxito medibles — incluyendo una propuesta de nombre ("Ahorita Vivo en Cuenca") que el Product Owner rechazó por sonar a campaña más que a etapa estratégica.
+- **Segunda ronda**: adopción del nombre definitivo **"AHORITA — EL PRODUCTO VIVO"** (por su resonancia directa con `VISION_MAESTRA.md` §1: "un reflejo vivo", "un organismo que respira"), e incorporación de cuatro elementos ausentes: el rol del fundador durante la etapa ("el fundador también forma parte del producto"), la lectura de Ahorita como ecosistema ("la comunidad como sistema"), el tratamiento cualitativo de los primeros usuarios y negocios como "los primeros creyentes", y el principio de que toda funcionalidad debe tener un rostro humano.
+- **Tercera ronda**: refuerzo de la tesis central del documento ("¿cómo nace un producto real?"), con la distinción explícita entre construir software y construir un producto, una metodología formal de validación (paralela en rigor a la disciplina de análisis-diseño-implementación-verificación-documentación-cierre de las fases técnicas), el principio de que escuchar al usuario no significa construir lo que pide, y un cierre que sintetiza el momento como el más importante del proyecto hasta ahora.
+- **Cuarta ronda (edición final de pulido)**: recuperación explícita de la ciudad como protagonista original de Ahorita — hilo conductor de `VISION_MAESTRA.md` que las rondas anteriores, centradas en fundador/comunidad/usuarios/producto, habían dejado en segundo plano — y una corrección de redacción en la sección "El momento más importante del proyecto" ("las Fases 1-7 construyeron software" pasó a "las Fases 1-7 construyeron la infraestructura necesaria para que un producto pudiera nacer").
+
+### 3. Motivo de su creación
+
+`ETAPA_PRODUCTO_VIVO.md` existe para cerrar la brecha entre "arquitectura verificada técnicamente" y "producto validado en el mundo real" que ninguna de las siete fases anteriores pudo cerrar, por diseño — verificar contra Postgres real, contra un dataset sintético o con Playwright nunca fue, ni podía ser, lo mismo que verificar contra una persona real de Cuenca decidiendo si confía en Ahorita. El documento formaliza esa etapa con la misma rigurosidad metodológica que el proyecto ya exige para el trabajo técnico: objetivos, principios no negociables, una metodología explícita de validación, criterios de éxito medibles, y un veredicto requerido antes de autorizar cualquier fase de crecimiento del `MASTERPLAN.md`.
+
+### 4. Decisión final
+
+El Product Owner aprobó, sin más rondas de revisión, el texto final de `ETAPA_PRODUCTO_VIVO.md` tras su cuarta ronda, y decidió explícitamente que se registrara como **documento canónico independiente** — al mismo nivel jerárquico que `VISION_MAESTRA.md`, `PRODUCT_MANIFESTO.md`/`PRODUCT_STRATEGY.md` y `AI_PHILOSOPHY.md`/`ARCHITECTURE.md` — en vez de como una sección dentro del `MASTERPLAN.md`. Como parte de la integración documental, se verificó la ausencia de contradicciones entre `VISION_MAESTRA.md`, `PRODUCT_MANIFESTO.md`, `PRODUCT_STRATEGY.md`, `MASTERPLAN.md` y `ETAPA_PRODUCTO_VIVO.md`: el único punto que requería aclaración — que la argumentación de "masa crítica inexistente" de `ETAPA_PRODUCTO_VIVO.md` opera sobre un eje distinto al de la matriz de dependencias técnicas del `MASTERPLAN.md`, sin contradecirla — quedó resuelto añadiendo una sección dedicada en `MASTERPLAN.md` que ubica esta etapa explícitamente entre la Fase 7 y la Fase 8, y una condición explícita en su sección "Qué nunca debería empezar antes de otra cosa".
+
+### 5. Referencias a documentos canónicos
+
+- `ETAPA_PRODUCTO_VIVO.md` — documento adoptado, autoridad estratégica de esta etapa.
+- `VISION_MAESTRA.md` §1 — fuente del nombre y del hilo conductor de la ciudad como protagonista.
+- `PRODUCT_MANIFESTO.md` §10, filtro 4 — argumento central que pospone las Fases 8-13.
+- `PRODUCT_STRATEGY.md` §14 — ya anticipaba que el criterio de éxito de cada fase, no solo su orden técnico, debía cambiar respecto al `MASTERPLAN.md` original.
+- `MASTERPLAN.md` — nueva sección "Etapa — El Producto Vivo (entre la Fase 7 y la Fase 8)" y condición añadida en "Qué nunca debería empezar antes de otra cosa".
+- `CHANGELOG.md` — entrada cronológica de esta adopción.
+
+### Estado final
+
+**"El Producto Vivo" queda adoptado como documento canónico y como la guía estratégica oficial de la etapa que sigue a la Fase 7.** No introduce código, migraciones, ni ningún cambio funcional — es, deliberadamente, estrategia de producto pura. Ninguna fase del `MASTERPLAN.md` a partir de la Fase 8 debe autorizarse hasta que los criterios de éxito medibles de `ETAPA_PRODUCTO_VIVO.md` §20 se cumplan.
+
+---
