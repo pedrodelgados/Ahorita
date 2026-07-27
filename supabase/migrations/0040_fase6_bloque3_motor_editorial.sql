@@ -309,38 +309,23 @@ comment on function public.candidatos_editorial(double precision, double precisi
   'Fase 6, Bloque 3: TODOS los candidatos editoriales actualmente elegibles -- sin límite de cantidad. La existencia de una fila en editorial_selections nunca hace elegible contenido oculto, vencido o de autor no autorizado -- editorial_eligible aplica siempre los mismos filtros base de vigencia/verificación. Expone geo_status (misma función compartida geo_eligible() del Bloque 2) y reason_code crudo -- la redacción visible final es responsabilidad de una capa de presentación posterior, nunca de este bloque.';
 
 -- -----------------------------------------------------------------------
--- 5. Backfill de events.editor_pick -> editorial_selections. Administrador
---    determinístico: el más antiguo registrado (mismo criterio siempre).
---    Si no existe ningún administrador, la migración falla explícitamente
---    -- nunca se inventa una identidad. events.editor_pick queda legacy,
---    sin nuevas escrituras desde la aplicación desde este bloque en
---    adelante (mismo patrón ya usado con saved_events/follows).
+-- 5. events.editor_pick queda legacy, sin nuevas escrituras desde la
+--    aplicación desde este bloque en adelante (mismo patrón ya usado con
+--    saved_events/follows).
+--
+--    CORRECCIÓN PREPRODUCCIÓN (ver PROJECT.md / supabase/README.md):
+--    esta migración fue corregida antes del primer despliegue remoto
+--    para eliminar una dependencia operativa que impedía una aplicación
+--    determinista desde una base de datos vacía -- el backfill original
+--    de events.editor_pick exigía un administrador ya existente y
+--    abortaba toda la secuencia de migraciones si no lo encontraba. El
+--    backfill correspondiente fue trasladado a una herramienta operativa
+--    separada (supabase/scripts/backfill_editorial_selections.sql),
+--    ejecutada una vez, manualmente, después de bootstrap_admin.sql.
+--    Ninguna migración posterior (0041-0046) depende de que esas filas
+--    existan durante la propia secuencia de aplicación -- solo de que la
+--    tabla y las funciones de esta sección existan (ver auditoría de
+--    impacto en PROJECT.md).
 -- -----------------------------------------------------------------------
-do $$
-declare
-  v_admin_id uuid;
-  v_migrated_count integer;
-begin
-  select id into v_admin_id
-  from public.profiles
-  where is_admin = true
-  order by created_at asc, id asc
-  limit 1;
-
-  if v_admin_id is null then
-    raise exception 'Motor Editorial: no existe ningún administrador registrado -- no se puede migrar events.editor_pick sin un administrador válido al que atribuir la decisión.';
-  end if;
-
-  insert into public.editorial_selections (target_type, target_id, reason_code, decided_by, decided_at)
-  select 'event', e.id, 'seleccionado_equipo', v_admin_id, now()
-  from public.events e
-  where e.editor_pick = true
-  on conflict (target_type, target_id) do nothing;
-
-  get diagnostics v_migrated_count = row_count;
-  raise notice 'Motor Editorial: % eventos migrados desde events.editor_pick.', v_migrated_count;
-end;
-$$;
-
 comment on column public.events.editor_pick is
-  'Legacy (Fase 6, Bloque 3): reemplazado por editorial_selections, que ya conserva su contenido migrado. Sin nuevas escrituras desde la aplicación -- se conserva sin eliminar, mismo patrón ya usado con columnas legacy anteriores (saved_events/follows), para que la reversión de este bloque sea completa y segura.';
+  'Legacy (Fase 6, Bloque 3): reemplazado por editorial_selections. Sin nuevas escrituras desde la aplicación -- se conserva sin eliminar, mismo patrón ya usado con columnas legacy anteriores (saved_events/follows), para que la reversión de este bloque sea completa y segura. El backfill de su contenido hacia editorial_selections no ocurre en esta migración -- ver supabase/scripts/backfill_editorial_selections.sql.';
