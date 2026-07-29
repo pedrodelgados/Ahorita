@@ -44,6 +44,10 @@ Antes del primer `db push` real contra `ahorita-production`, se encontró que `0
 
 Esta corrección deja una condición permanente para cualquier aplicación futura desde cero (restauración de respaldo — A14 —, CI, o un entorno nuevo): **el backfill del Motor Editorial ya no es automático** y debe ejecutarse manualmente, en este orden, después de `db push --include-all`: (1) crear la cuenta Auth real del administrador, (2) `bootstrap_admin.sql`, (3) `backfill_editorial_selections.sql`. A14, al probarse, debe verificar explícitamente que este paso no se omitió.
 
+## Nota — preparación local de A2 (Vercel), en progreso
+
+**A2 sigue Pendiente.** Se agregó únicamente `vercel.json` (fallback SPA hacia `index.html`, confirmado necesario contra la documentación oficial de Vercel para Vite + React Router) como preparación local — ningún despliegue, configuración de Vercel ni configuración de Supabase Auth ha ocurrido todavía. Ver el detalle completo, incluyendo las condiciones explícitas bajo las que se autorizó este paso, en `PROJECT.md`.
+
 ## B. Verificaciones obligatorias durante la primera semana de beta
 
 | # | Objetivo | Criterio objetivo | Evidencia a conservar | Estado |

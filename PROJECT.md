@@ -2979,3 +2979,30 @@ El backfill del Motor Editorial ya no es automático dentro de las migraciones. 
 **A1 queda Hecho**, con evidencia real conservada (`db_push_output.txt`, `migration_list_post_push.txt`, resultados de las 7 consultas de verificación del Motor Editorial). Ninguna otra migración de las 46 requirió corrección. El proyecto `ahorita-production` tiene ahora el esquema completo de las 46 migraciones, un administrador único, y las 3 selecciones editoriales legacy migradas correctamente.
 
 ---
+
+## A2 — preparación local (en progreso, 2026-07-29)
+
+**A2 sigue Pendiente — esta entrada documenta únicamente el primer paso local autorizado, no un cierre.** Ningún despliegue, configuración de Vercel ni configuración de Supabase Auth ha ocurrido todavía.
+
+### Diagnóstico previo (verificado contra el código y un build real)
+
+Sin ningún despliegue existente del frontend (sin `netlify.toml`/`vercel.json`/workflows previos), se auditó el estado real de la PWA: `vite-plugin-pwa` (estrategia `injectManifest`, `src/sw.js`) registra el service worker correctamente en el build generado (`dist/registerSW.js`, confirmado ejecutando `npm run build` localmente) — pero **no contiene `skipWaiting()` ni `clientsClaim()`**, y no existe ningún mecanismo que comunique al usuario que hay una versión nueva disponible. Se buscó en todo `src/` cualquier uso de `localStorage`/`sessionStorage`/`indexedDB`/Cache Storage: solo `AuthContext.jsx` lo usa (flag de invitado en `sessionStorage`, token de sesión de `supabase-js` en `localStorage`, ambos limpiados por `signOut()`) — sin persistencia adicional de datos privados encontrada. Ninguna de estas observaciones se trata todavía como conclusión definitiva: las pruebas reales de actualización, offline y logout, ejecutadas contra la app ya desplegada, son las que determinarán si hace falta algún cambio de código — no la sola lectura del código.
+
+### Decisiones tomadas antes de implementar
+
+1. **Hosting:** Vercel.
+2. **Dominio:** subdominio gratuito `*.vercel.app` por ahora; sin dominio propio todavía.
+3. **Rama de producción en Vercel:** `claude/esto-tengo-2wzbnj`, usada **de forma explícitamente temporal** únicamente para completar A2 — el repositorio migrará más adelante a una rama `main` estándar para producción, lo cual exigirá reconfigurar Vercel en su momento. No es una decisión permanente.
+4. **Entornos Preview:** **deliberadamente no conectados a `ahorita-production`.** No se crea todavía un proyecto Supabase de staging. Preview queda sin credenciales reales configuradas hasta que exista una estrategia de staging específica — es una decisión consciente, no una omisión.
+5. **Fallback SPA:** verificado contra la documentación oficial de Vercel (con la salvedad de que el acceso directo a `vercel.com/docs` fue bloqueado en este entorno, y la verificación se apoyó en el resumen de búsqueda que cita esas páginas, más varios reportes independientes de la comunidad) — la detección automática del framework Vite **no** incluye el fallback SPA para React Router; es una configuración explícita necesaria. Se agrega `vercel.json` desde el inicio.
+6. **Bundle (~858 kB, medido con un build real):** registrado únicamente como hallazgo técnico diferido. No forma parte de los criterios de A2 y no se optimiza en este hito — queda como trabajo independiente futuro.
+
+### Cambio realizado en este paso
+
+- `vercel.json` (nuevo, en la raíz del repositorio): rewrite de fallback SPA hacia `index.html`.
+
+### Explícitamente no realizado todavía
+
+Ningún commit, push, creación de proyecto en Vercel, configuración de variables de entorno, configuración de dominio, despliegue, cambio en Supabase Auth, ni cambio en `src/sw.js` o en el código de la aplicación (sin `skipWaiting`, `clientsClaim` ni lógica offline agregada). Todo eso requiere autorización expresa y separada.
+
+---
