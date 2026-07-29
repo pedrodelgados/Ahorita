@@ -2924,3 +2924,58 @@ El Product Owner aprobó el contenido consolidado y solicitó su registro como a
 **La Beta Readiness Checklist queda registrada como instrumento operativo vivo, subordinada a `ETAPA_PRODUCTO_VIVO.md`, sin autoridad conceptual propia.** Todos sus ítems inician en estado Pendiente. Se actualiza directamente en `BETA_READINESS_CHECKLIST.md` conforme cada ítem se verifica con evidencia real.
 
 ---
+
+## A1 CERRADO — Infraestructura Supabase de producción operativa (2026-07-29)
+
+Primer ítem bloqueante de `BETA_READINESS_CHECKLIST.md` verificado con evidencia real contra el proyecto de producción `ahorita-production` (Supabase, South America / São Paulo, plan Free — con el paso a Pro registrado como condición obligatoria antes de A21/A22).
+
+### 1. Hallazgo previo al primer despliegue: `0040` bloqueaba una aplicación desde cero
+
+Antes de ejecutar el primer `db push` real, se auditó el procedimiento de aplicar las 46 migraciones completas contra un proyecto recién creado, sin ningún dato todavía. Se encontró que `0040_fase6_bloque3_motor_editorial.sql` incluía, en la misma transacción que su DDL, un backfill de `events.editor_pick → editorial_selections` que exigía un administrador ya existente (`raise exception` explícito si no lo encontraba) — dependencia de un dato operativo dentro de una migración de esquema que impedía aplicar las 46 migraciones deterministas contra una base de datos vacía sin intervención manual previa. El defecto no era hipotético: al no existir todavía ningún administrador en un proyecto nuevo, un `db push --include-all` completo habría abortado exactamente en `0040`, bloqueando también `0041`-`0046`.
+
+**Diagnóstico arquitectónico.** Se evaluó si esto era un smell real (sí: rompe la propiedad de que el conjunto de migraciones sea reproducible contra cualquier entorno nuevo sin intervención externa — la misma propiedad que exige A14, restauración de respaldo en entorno aislado, y cualquier futuro pipeline de CI) y si el bootstrap de datos operativos debía vivir separado del DDL (sí — mismo patrón ya establecido por `bootstrap_admin.sql`, que deliberadamente vive fuera de `supabase/migrations/`).
+
+**Auditoría de impacto antes de tocar nada:** se verificó, contra el código real de las 46 migraciones, que (a) ninguna migración posterior (`0041`-`0046`) depende de que las filas del backfill existan durante la propia secuencia de aplicación — solo de que la tabla y las funciones de `0040` existan; (b) ningún archivo de prueba ni RPC del frontend presupone un mínimo de filas en `editorial_selections`; (c) `0040` era el único bloqueo de este tipo en las 46 migraciones — se revisaron todos los `raise exception` y todos los bloques `do $$` de nivel superior del historial completo, sin encontrar ningún otro caso.
+
+### 2. Corrección aplicada, antes del primer despliegue remoto
+
+Se separó `0040` en DDL puro (tabla `editorial_selections`, triggers, RLS, y las cuatro funciones `set_editorial_selection()`/`revoke_editorial_selection()`/`editorial_selection_public()`/`candidatos_editorial()`) y se extrajo el backfill hacia una nueva herramienta operativa, `supabase/scripts/backfill_editorial_selections.sql` (mismo patrón que `bootstrap_admin.sql`: idempotente vía `on conflict do nothing`, sin parámetros, con `raise notice` reportando exactamente qué filas procesó, fallo explícito solo si no existe ningún administrador — sin introducir ninguna comprobación de "más de un administrador" que no existiera en el algoritmo original, para no cambiar semántica donde nunca hubo ninguna). El comentario de `events.editor_pick` se ajustó para no afirmar que el contenido ya estaba migrado en el momento de aplicar la migración.
+
+**Es la única de las 46 migraciones corregida reabriendo su propio archivo en vez de hacia adelante** (convención seguida sin excepción en el resto del historial — ver `0031`, `0036`, `0039` en `supabase/README.md`). Se justifica porque (a) el proyecto remoto seguía completamente vacío — `supabase migration list` confirmó 0 de 46 aplicadas antes de esta corrección — y (b) este defecto aborta la aplicación completa antes de que cualquier migración posterior pueda alcanzarse, haciendo estructuralmente inviable una corrección hacia adelante (a diferencia de los hallazgos de `0031`/`0039`, que sí podían corregirse sin reabrir la migración original).
+
+**Prueba de equivalencia funcional**, exigida antes de aprobar el diff: se comparó el estado final de aplicar el diseño original (backfill dentro de `0040`) contra el corregido (DDL puro + `backfill_editorial_selections.sql` posterior) en tablas, funciones, triggers, políticas RLS, grants, comentarios, datos creados/modificados, comportamiento observable del frontend/`AdminEventEditorPage`, y las RPC del feed. Única diferencia real, aceptada conscientemente: la atomicidad — antes, DDL y backfill se garantizaban juntos por la propia transacción de la migración; después, el DDL es determinista y el backfill queda como paso operativo posterior, cuya ejecución se verifica formalmente (ver §4) en vez de darse por descontada.
+
+Commit `246de51` en `claude/esto-tengo-2wzbnj`: `supabase/migrations/0040_fase6_bloque3_motor_editorial.sql` (modificado) y `supabase/scripts/backfill_editorial_selections.sql` (nuevo).
+
+### 3. Primer despliegue real contra `ahorita-production`
+
+- `npx supabase@2.109.1 db push --include-all --dry-run`: confirmó las 46 migraciones detectadas y ordenadas (`0001`-`0046`) contra el proyecto real, sin ejecutar SQL — insuficiente por sí solo para probar la corrección, porque el defecto original era una excepción en tiempo de ejecución, no un error estático.
+- `npx supabase@2.109.1 db push --include-all` (real, sin `--dry-run`): las 46 migraciones se aplicaron sin ningún `ERROR`, incluida `0040` ya corregida. Salida completa conservada en `db_push_output.txt`.
+- `npx supabase@2.109.1 migration list`: las 46 versiones confirmadas en las columnas Local y Remote. Salida conservada en `migration_list_post_push.txt`.
+- Verificación estructural: `select p.proname from pg_proc p join pg_namespace n on n.oid = p.pronamespace where n.nspname = 'public' and p.proname in ('set_editorial_selection','revoke_editorial_selection','editorial_selection_public','candidatos_editorial')` devolvió exactamente las 4 filas esperadas, confirmando el DDL del Motor Editorial completamente instalado.
+
+### 4. Bootstrap del administrador y backfill editorial, contra producción real
+
+- Cuenta Auth real creada vía dashboard (Authentication → Users, con confirmación automática — el correo transaccional, A16, todavía no está configurado). Disparador de creación de `profiles` verificado: exactamente una fila para el nuevo `id`.
+- `bootstrap_admin.sql` ejecutado con ese `id` real. Verificado por consulta: exactamente un administrador (`is_admin = true`), sin modificación manual de `profiles`.
+- `backfill_editorial_selections.sql` ejecutado: 3 eventos migrados (Feria Gastronómica de Calle Larga, Festival de las Flores, Noche de Jazz en el Barranco) en la primera ejecución; 0 eventos migrados en una segunda ejecución inmediata, con el conteo final permaneciendo en exactamente 3 filas — idempotencia confirmada por prueba real, no solo por lectura del código.
+- Verificaciones de datos, todas contra `ahorita-production` real: conteo exacto de 3 filas activas; las 3 con `target_type = 'event'`; `decided_by` coincide en las 3 con el único administrador sembrado; sin duplicados por `(target_type, target_id)`.
+- **Hallazgo verificado durante esta ronda, no un defecto:** `candidatos_editorial(null, null, null)` devolvió solo 2 de las 3 selecciones. Se obtuvo la definición real de la función (`pg_get_functiondef`) y se determinó la causa exacta: la condición `coalesce(e.end_at, e.start_at) >= now()` dentro del CTE `editorial_eligible` (no `es.ends_at`, que pertenece a la ventana de vigencia de la propia selección editorial y que el backfill deja en `NULL` para las tres filas por igual) excluye a "Feria Gastronómica de Calle Larga" porque su `end_at` ya había pasado al momento de la consulta — comportamiento correcto de vigencia del evento, confirmado leyendo la definición real de la función, no inferido de los datos.
+
+### 5. Condición permanente para el futuro
+
+El backfill del Motor Editorial ya no es automático dentro de las migraciones. Cualquier aplicación futura desde cero (restauración de respaldo — A14 —, un entorno de CI, o un proyecto nuevo) debe ejecutar, en orden, después de `db push --include-all`: (1) crear la cuenta Auth real del administrador, (2) `bootstrap_admin.sql`, (3) `backfill_editorial_selections.sql`. Registrado como nota permanente en `BETA_READINESS_CHECKLIST.md` (bajo la tabla de la sección A) y en `supabase/README.md`.
+
+### Referencias
+
+- `supabase/migrations/0040_fase6_bloque3_motor_editorial.sql` — corregida, commit `246de51`.
+- `supabase/scripts/backfill_editorial_selections.sql` — nueva, commit `246de51`.
+- `supabase/README.md` — addendum de corrección preproducción junto a la entrada de `0040`; nueva sección "Sembrar el primer administrador y el backfill del Motor Editorial".
+- `BETA_READINESS_CHECKLIST.md` — ítem A1 marcado Hecho; nota de corrección preproducción bajo la tabla de la sección A.
+- `CHANGELOG.md` — entrada cronológica de este cierre.
+
+### Estado final
+
+**A1 queda Hecho**, con evidencia real conservada (`db_push_output.txt`, `migration_list_post_push.txt`, resultados de las 7 consultas de verificación del Motor Editorial). Ninguna otra migración de las 46 requirió corrección. El proyecto `ahorita-production` tiene ahora el esquema completo de las 46 migraciones, un administrador único, y las 3 selecciones editoriales legacy migradas correctamente.
+
+---

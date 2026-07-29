@@ -2,6 +2,26 @@
 
 Registro de cambios notables de Ahorita (Cuenca Viva). Formato libre, en español, más cercano a un registro de fases de producto que a versiones semánticas — ver `PROJECT.md` para el plan completo y el estado real de la implementación.
 
+## 2026-07-29 — A1 cerrado: infraestructura Supabase de producción operativa
+
+Primer ítem bloqueante de `BETA_READINESS_CHECKLIST.md` (A1) verificado con evidencia real contra el proyecto de producción `ahorita-production`. Incluye una corrección preproducción de la migración `0040`, la única de las 46 corregida reabriendo su propio archivo en vez de hacia adelante, y el primer bootstrap real de administrador y backfill editorial.
+
+### Corregido
+- `supabase/migrations/0040_fase6_bloque3_motor_editorial.sql`: se extrajo el backfill de `events.editor_pick → editorial_selections` (que exigía un administrador ya existente y abortaba toda la secuencia de migraciones si no lo encontraba) hacia una herramienta operativa separada. Ninguna versión había llegado a aplicarse contra ningún proyecto remoto; justificado porque el defecto aborta la aplicación completa antes de que cualquier migración posterior pueda alcanzarse, haciendo inviable una corrección hacia adelante. Sin cambio de comportamiento del producto ni de las garantías de Fase 6 — misma semántica histórica del backfill, ahora ejecutada como paso operativo separado. Prueba de equivalencia funcional documentada en `PROJECT.md`.
+
+### Agregado
+- `supabase/scripts/backfill_editorial_selections.sql` (nuevo): herramienta operativa idempotente, sin parámetros, que migra los eventos legacy con `editor_pick = true` hacia `editorial_selections`, atribuidos al administrador real ya sembrado por `bootstrap_admin.sql`. Mismo patrón que `bootstrap_admin.sql` — fuera de `supabase/migrations/` deliberadamente.
+- `BETA_READINESS_CHECKLIST.md`: ítem A1 marcado **Hecho**; nueva nota bajo la tabla de la sección A documentando la corrección de `0040` y la condición permanente para futuras aplicaciones desde cero (A14, CI, entornos nuevos).
+- `supabase/README.md`: addendum de corrección preproducción junto a la entrada de `0040`; nueva sección "Sembrar el primer administrador y el backfill del Motor Editorial".
+
+### Verificado contra `ahorita-production` real
+- `db push --include-all`: las 46 migraciones aplicadas sin error, en una sola pasada, incluida `0040` ya corregida (salida conservada en `db_push_output.txt`).
+- `migration list`: las 46 versiones confirmadas en Local y Remote (`migration_list_post_push.txt`).
+- Verificación estructural: las 4 funciones públicas del Motor Editorial confirmadas por catálogo del sistema (`pg_proc`).
+- Cuenta Auth real del administrador creada; disparador de `profiles` confirmado (exactamente una fila); `bootstrap_admin.sql` ejecutado, exactamente un administrador.
+- `backfill_editorial_selections.sql`: 3 eventos migrados en la primera ejecución, 0 en una segunda ejecución inmediata (idempotencia real, no solo de código) — conteo final de 3 filas, sin duplicados, `decided_by` coincidente con el administrador sembrado.
+- Hallazgo aclarado, no defecto: `candidatos_editorial()` solo mostraba 2 de las 3 selecciones — causa real localizada en `pg_get_functiondef`: vigencia propia del evento (`coalesce(e.end_at, e.start_at) >= now()` en `editorial_eligible`), no `es.ends_at` ni ningún fallo del backfill.
+
 ## 2026-07-25 — Registro de `BETA_READINESS_CHECKLIST.md`
 
 Se registra como archivo del proyecto la checklist de preparación para la beta real en Cuenca, construida en dos rondas de revisión crítica más una evaluación específica de tres incorporaciones potenciales (gestión de identidad, push transaccional, distribución en tiendas). Explícitamente **no** es un documento canónico — es una checklist operativa viva, subordinada a `ETAPA_PRODUCTO_VIVO.md`, sin filosofía ni contrato propios. Sin código, sin migraciones, sin cambios funcionales.
