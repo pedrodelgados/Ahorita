@@ -1,3 +1,4 @@
+import { supabase } from "./supabaseClient";
 import { listUpcomingEvents } from "./events";
 import { listPublishedFeedPublications } from "./publications";
 import { listPublishedFeedPromotions } from "./promotions";
