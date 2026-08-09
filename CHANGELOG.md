@@ -2,6 +2,25 @@
 
 Registro de cambios notables de Ahorita (Cuenca Viva). Formato libre, en español, más cercano a un registro de fases de producto que a versiones semánticas — ver `PROJECT.md` para el plan completo y el estado real de la implementación.
 
+## 2026-08-07 — A2 cerrado: frontend desplegado, PWA validada
+
+Segundo ítem bloqueante de `BETA_READINESS_CHECKLIST.md` (A2) verificado con evidencia real: despliegue del frontend en Vercel y validación de la PWA en un dispositivo Android real y en escritorio. Incluye dos defectos reales de producción encontrados y corregidos durante la validación.
+
+### Agregado
+- `vercel.json` (nuevo): rewrites de fallback SPA para `react-router-dom`.
+- `workbox-core` promovida a dependencia directa de desarrollo (antes transitiva), usada por la corrección del service worker.
+
+### Corregido
+- `src/lib/feed.js`: faltaba el import de `supabase`, causando un `ReferenceError` en producción al cargar el feed (único archivo de `src/lib/` con esta omisión; no detectado por `npm run lint` ni por el build).
+- `src/sw.js`: faltaban `self.skipWaiting()` y `clientsClaim()`, dejando el service worker nuevo indefinidamente en estado "esperando a activarse" tras cada despliegue en vez de tomar control de la página — encontrado durante la prueba de actualización en escritorio.
+
+### Verificado contra el despliegue real de Vercel y un dispositivo Android real
+- Instalación, sesión, pérdida/recuperación de conectividad y persistencia de logout verificadas en un dispositivo Android real; prueba de actualización (marcador visible, añadido y retirado) repetida en Android tras la corrección del service worker, con resultado exitoso.
+- En escritorio: verificación forense de invalidación de caché (Cache Storage) y de ausencia de datos residuales tras logout (Local/Session Storage, IndexedDB) en DevTools.
+- Hallazgo aclarado, no defecto: feed vacío en producción — causa real fue el vencimiento de los eventos de semilla (`0012_seed_events.sql`), confirmado con consulta directa a la base de producción; sin cambios en `compose_feed()` ni en los seeds.
+- Limitación metodológica documentada explícitamente: la invalidación de caché y la ausencia de residuales tras logout se verificaron de forma forense solo en escritorio; en Android se verificaron de forma funcional (comportamiento observado), no forense (sin inspección directa de Cache Storage/almacenamiento del dispositivo).
+- Sin soporte offline completo: la PWA no navega entre rutas sin conexión — limitación declarada, no una prueba fallida.
+
 ## 2026-07-29 — A1 cerrado: infraestructura Supabase de producción operativa
 
 Primer ítem bloqueante de `BETA_READINESS_CHECKLIST.md` (A1) verificado con evidencia real contra el proyecto de producción `ahorita-production`. Incluye una corrección preproducción de la migración `0040`, la única de las 46 corregida reabriendo su propio archivo en vez de hacia adelante, y el primer bootstrap real de administrador y backfill editorial.

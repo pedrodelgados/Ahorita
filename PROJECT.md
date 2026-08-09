@@ -3006,3 +3006,79 @@ Sin ningún despliegue existente del frontend (sin `netlify.toml`/`vercel.json`/
 Ningún commit, push, creación de proyecto en Vercel, configuración de variables de entorno, configuración de dominio, despliegue, cambio en Supabase Auth, ni cambio en `src/sw.js` o en el código de la aplicación (sin `skipWaiting`, `clientsClaim` ni lógica offline agregada). Todo eso requiere autorización expresa y separada.
 
 ---
+
+## A2 CERRADO — Frontend desplegado, PWA validada (2026-08-07)
+
+Segundo ítem bloqueante de `BETA_READINESS_CHECKLIST.md` verificado con evidencia real, en escritorio y en un Android real, contra el frontend desplegado en producción.
+
+### 1. Despliegue en Vercel
+
+Proyecto creado e importado desde `pedrodelgados/Ahorita`, Framework Preset Vite (autodetectado), Production Branch fijada explícitamente en `claude/esto-tengo-2wzbnj` (única rama existente en `origin`; el repositorio migrará más adelante a una rama `main` estándar, lo que exigirá reconfigurar Vercel en su momento — no es una decisión permanente). Dominio de producción: `https://ahorita-five.vercel.app`, sobre HTTPS. Variables de entorno de Production: `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` (valores reales de `ahorita-production`); `VITE_VAPID_PUBLIC_KEY` deliberadamente ausente (pertenece a A16-bis, no a A2 — `src/lib/push.js` tolera su ausencia de forma controlada, confirmado con un build local). Entornos Preview deliberadamente sin credenciales reales, hasta que exista una estrategia de staging específica.
+
+### 2. PWA — manifest, service worker, fallback SPA
+
+`vite-plugin-pwa` (`strategies: 'injectManifest'`, `registerType: 'autoUpdate'`) confirmado registrando el service worker en el build real (`dist/registerSW.js` inyectado automáticamente en `dist/index.html`). Manifest cargando correctamente (nombre "Ahorita", `display: standalone`, iconos). PWA instalable y verificada como instalada, en escritorio y en Android real (ícono propio, ventana/app independiente).
+
+Fallback SPA (`vercel.json`, `rewrites` hacia `index.html`) confirmado necesario contra la documentación oficial de Vercel para Vite + React Router (con la salvedad de que el acceso directo a `vercel.com/docs` estuvo bloqueado en el entorno de esta sesión; la verificación se apoyó en el resumen de búsqueda que cita esas páginas, más varios reportes independientes de la comunidad). Verificado en producción real: navegación directa a `/explorar` y refrescos repetidos, sin ningún 404.
+
+### 3. Defecto real encontrado: `ReferenceError: supabase is not defined`
+
+Durante la primera prueba real del frontend desplegado, la pantalla de Inicio (ruta `/`) quedaba colgada indefinidamente en el esqueleto de carga. Causa raíz: `src/lib/feed.js` llamaba `supabase.rpc("compose_feed", ...)` sin importar el cliente `supabase` — único archivo de los 15 en `src/lib/` con esa omisión (todos los demás sí lo importan desde `./supabaseClient`). No detectado por `oxlint` (sin regla de variable no definida entre módulos) ni por el build (JS plano, sin verificación de referencias en tiempo de compilación) — solo se manifestaba en tiempo de ejecución real, en el navegador. `FeedPage.jsx` no tenía `.catch()` en la promesa de `getComposedFeed()`, por lo que el rechazo quedaba sin capturar y `setLoading(false)` nunca se ejecutaba (hallazgo relacionado, registrado pero no corregido en este commit — queda como tarea independiente).
+
+**Corregido** con una sola línea: `import { supabase } from "./supabaseClient";`. Commit `45dd146d12ed053ee76c18c9db60897b527ba92d`. Verificado en producción: el error desapareció, el feed dejó de colgarse y mostró correctamente "Todavía no hay eventos aquí".
+
+### 4. Investigación del feed vacío — no fue un defecto
+
+No se asumió que el feed vacío fuera otro bug. Se consultó `ahorita-production` en vivo (vía `psql`, Session Pooler): `now()` real del servidor `2026-08-07 17:50:23.485503+00`. Los 5 eventos de `0012_seed_events.sql` (fechas generadas como `now() + interval` en el momento del `db push` real, ~2026-07-27) tenían todos `coalesce(end_at, start_at) >= now() = false` — el más lejano ("Carrera 10K Río Tomebamba") había terminado el 2026-08-05. Conclusión: "Todavía no hay eventos aquí" era el comportamiento correcto dado que los datos de demostración ya habían vencido — no un defecto de `compose_feed()`, RLS, `candidatos_editorial()` ni del frontend. No se modificó `compose_feed()` ni los seeds por este motivo.
+
+### 5. Recuperación tras pérdida de conexión
+
+**Escritorio** (DevTools → Network → Offline, simulado): el shell de la PWA permaneció disponible, Inicio quedó cargando (depende de datos remotos de Supabase), la app no colapsó; al volver a "No throttling", recuperación correcta.
+
+**Android real** (pérdida real de conectividad, no simulada): la app no se cerró, navegación básica siguió disponible, Perfil pudo quedar en blanco inicialmente o mostrar "No tienes conexión" al refrescar; al restablecer Internet, recuperación completa.
+
+**Limitación explícita:** Ahorita conserva el shell de la PWA sin conexión, pero las vistas que dependen de datos remotos requieren conectividad real — no hay caché de respuestas de Supabase (`src/sw.js` solo precachea assets estáticos, sin ninguna ruta de runtime caching registrada). No se afirma funcionamiento offline completo.
+
+### 6. Defecto real encontrado: service worker nuevo quedaba en `waiting` indefinidamente
+
+Con un marcador visual temporal ("Ahorita — A2 update test", commit `84ce1a1565c807b4562c072419ae7100849b2ebc`) se ejecutó la primera prueba real de actualización en escritorio. DevTools mostró el worker viejo `activated and is running` junto al worker nuevo `waiting to activate` — el deployment nuevo estaba correctamente en Production/Current, así que el problema no era Vercel. Causa raíz: `src/sw.js` no llamaba `self.skipWaiting()` ni `clientsClaim()`, requeridos por la documentación de `vite-plugin-pwa` para `injectManifest` + `registerType: 'autoUpdate'`.
+
+**Corregido** agregando ambas llamadas y declarando `workbox-core ^7.4.1` como `devDependency` directa (antes solo transitiva vía `workbox-precaching`/`workbox-build`). Commit `c030d93728618ed1cb9fd972142f5b8a59070e94`. Confirmado en el artefacto real (`dist/sw.js`) que ambas llamadas quedaron presentes antes de desplegar.
+
+### 7. Actualización sin romper sesión — verificado en escritorio
+
+Repetida la prueba real: el worker nuevo pasó a `activated and is running` sin quedar ningún otro en `waiting`; la PWA instalada recibió "Ahorita — A2 update test"; la sesión de Supabase permaneció iniciada; navegación normal. Retirado el marcador (commit `07a3404e143a8d92b8a848708e5818f8bdfd171f`); confirmado que la actualización de reversión también llegó limpia, con la sesión intacta.
+
+### 8. Invalidación de caché — verificado en escritorio con inspección forense directa
+
+DevTools → Application → Cache Storage (`workbox-precache...`): un único bundle JS principal vigente (`/assets/index-xBqFqrTs.js`) y su CSS correspondiente, 12 entradas totales, sin ningún `index-XXXXXXXX.js` antiguo coexistiendo. Service Workers: un único worker `activated and is running`, cero en `waiting`. Confirma que la renovación de caché no dejó versiones mezcladas.
+
+### 9. Logout y datos residuales — verificado en escritorio con inspección forense directa
+
+Antes del logout: `Local Storage` contenía `sb-...-auth-token` (sin exponer su contenido). Tras el botón normal "Cerrar sesión": esa clave desapareció por completo. `Session Storage`: vacío. `IndexedDB`: ninguna base de datos detectada. `Cache Storage`: permaneció `workbox-precache...` — correcto, son assets públicos de la app, nunca datos de sesión. La app regresó correctamente a `/login`.
+
+### 10. Android real — recorrido completo
+
+- **Instalación:** PWA instalada desde el navegador, abierta desde su propio ícono, funcionando como app independiente, navegación normal.
+- **Sesión:** inicio de sesión correcto, uso normal de la app.
+- **Pérdida/recuperación de conexión:** ver punto 5.
+- **Logout:** cierre de sesión mediante el flujo normal, regreso correcto a login; tras cerrar Ahorita por completo desde apps recientes y reabrirla desde el ícono, permaneció deslogueada — sin reautenticación silenciosa.
+- **Actualización sin romper sesión:** con la PWA instalada y sesión iniciada, marcador temporal "Ahorita — Android update test" (commit `218ed82933bf1b68d9daaef146e231b2959d5fa3`) recibido correctamente tras el deployment automático, sesión preservada, navegación normal. Retirado el marcador (commit `9c4491842ff43a31742c23cccd0f636e111f1b95`); la reversión también se recibió correctamente, sesión intacta.
+
+**Dos matices metodológicos explícitos, no ocultos:** en Android, la invalidación de caché y la ausencia de datos residuales tras logout se verificaron de forma **funcional/de comportamiento** (dos actualizaciones consecutivas correctas sin ningún síntoma de mezcla de versiones; sesión no restaurada tras cierre completo y reapertura), **no mediante inspección forense directa** de Cache Storage (no se usó `chrome://inspect`/depuración remota vía USB). Se consideró razonablemente suficiente porque es exactamente el mismo código (`sw.js`, Workbox, adaptador de almacenamiento de `supabase-js`) ya verificado de forma forense en escritorio, corriendo sobre el mismo motor Chromium en ambas plataformas — pero se deja escrito con precisión qué se verificó y cómo, sin inventar una inspección que no ocurrió.
+
+### Commits relevantes
+
+- `539a54f` — `vercel.json` + notas de preparación local de A2.
+- `45dd146` — fix: import de `supabase` faltante en `feed.js`.
+- `84ce1a1` — marcador de prueba de actualización (escritorio).
+- `c030d93` — fix: `skipWaiting()` + `clientsClaim()` + `workbox-core` como devDependency.
+- `07a3404` — retiro del marcador (escritorio).
+- `218ed82` — marcador de prueba de actualización (Android).
+- `9c44918` — retiro del marcador (Android).
+
+### Estado final
+
+**A2 queda Hecho.** Las seis cláusulas del criterio verificadas con evidencia real: instalable sobre HTTPS (ambos dispositivos), actualización sin romper sesión (ambos dispositivos), invalidación de caché correcta (forense en escritorio, funcional en Android — matiz documentado arriba), recuperación tras pérdida de conexión (ambos dispositivos, con la limitación offline explícita), cierre de sesión sin datos residuales visibles (forense en escritorio, funcional en Android — mismo matiz), probado en un Android real y un navegador de escritorio. Dos defectos reales encontrados durante la validación y corregidos (`feed.js`, `sw.js`) — ninguno relacionado con Supabase, migraciones ni infraestructura de A1.
+
+---
