@@ -116,7 +116,7 @@ export default function FeedPage() {
   return (
     <div style={{ minHeight: "100svh" }}>
       <AppHeader
-        title="Ahorita — Android update test"
+        title="Ahorita"
         display
         right={
           <>
