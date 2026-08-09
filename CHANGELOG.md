@@ -2,6 +2,16 @@
 
 Registro de cambios notables de Ahorita (Cuenca Viva). Formato libre, en español, más cercano a un registro de fases de producto que a versiones semánticas — ver `PROJECT.md` para el plan completo y el estado real de la implementación.
 
+## 2026-08-09 — A3 cerrado: secretos y credenciales de producción separados de desarrollo
+
+Tercer ítem bloqueante de `BETA_READINESS_CHECKLIST.md` (A3) verificado, bajo el alcance aclarado en el commit `2b25b75`: higiene y separación de secretos de los componentes ya desplegados en producción (frontend en Vercel, base de datos `ahorita-production`), sin exigir el despliegue anticipado de las Edge Functions de A8/A9/A10/A11/A16-bis.
+
+### Verificado
+- Grep exhaustivo del repositorio y su historial de git: sin secretos, tokens ni credenciales hardcodeadas; `.env` nunca commiteado.
+- Inventario de variables consumidas por el cliente (`VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, `VITE_VAPID_PUBLIC_KEY`): las tres diseñadas para ser públicas por su propio proveedor; ningún secreto de servidor alcanzable desde el frontend.
+- Evidencia real de producción: el frontend desplegado conecta correctamente contra el project ref de `ahorita-production` (confirmado en Network y en el dashboard de Supabase); Vercel Production solo contiene las dos variables esperadas; la clave configurada es la `anon`/`public` legacy, separada de `service_role`/`secret` (nunca revelada).
+- Limitación documentada con honestidad: sin comparación byte por byte ni decodificación del payload de la JWT — conclusión apoyada en evidencia convergente, no en verificación criptográfica exhaustiva.
+
 ## 2026-08-07 — A2 cerrado: frontend desplegado, PWA validada
 
 Segundo ítem bloqueante de `BETA_READINESS_CHECKLIST.md` (A2) verificado con evidencia real: despliegue del frontend en Vercel y validación de la PWA en un dispositivo Android real y en escritorio. Incluye dos defectos reales de producción encontrados y corregidos durante la validación.

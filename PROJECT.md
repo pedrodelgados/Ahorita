@@ -3082,3 +3082,57 @@ Antes del logout: `Local Storage` contenía `sb-...-auth-token` (sin exponer su 
 **A2 queda Hecho.** Las seis cláusulas del criterio verificadas con evidencia real: instalable sobre HTTPS (ambos dispositivos), actualización sin romper sesión (ambos dispositivos), invalidación de caché correcta (forense en escritorio, funcional en Android — matiz documentado arriba), recuperación tras pérdida de conexión (ambos dispositivos, con la limitación offline explícita), cierre de sesión sin datos residuales visibles (forense en escritorio, funcional en Android — mismo matiz), probado en un Android real y un navegador de escritorio. Dos defectos reales encontrados durante la validación y corregidos (`feed.js`, `sw.js`) — ninguno relacionado con Supabase, migraciones ni infraestructura de A1.
 
 ---
+
+## A3 CERRADO — Secretos y credenciales de producción propios y separados de desarrollo (2026-08-09)
+
+Tercer ítem bloqueante de `BETA_READINESS_CHECKLIST.md` verificado, bajo el alcance aclarado en el commit `2b25b75` (higiene y separación de secretos de los componentes **ya desplegados** en producción — frontend en Vercel y base de datos `ahorita-production` — sin exigir el despliegue anticipado de las Edge Functions de A8/A9/A10/A11/A16-bis).
+
+### 1. Objetivo y alcance
+
+Confirmar que ninguna credencial, secreto o valor conocido de desarrollo/pruebas quedó activo o embebido en producción, y que las credenciales que sí están en producción son exclusivamente de producción — verificado tanto en la configuración del entorno como en el artefacto real desplegado, desde un dispositivo fuera de la red de desarrollo. Explícitamente fuera de alcance: el despliegue funcional de `ai-guide`, `send-push`, `export-user-data`, `process-account-deletions` y `process-verification-lifecycle`, que se verifica bajo A8/A9, A16-bis, A10 y A11 respectivamente — ninguna de las 5 ha sido desplegada todavía contra `ahorita-production`, y A3 no lo exige.
+
+### 2. Inventario de variables consumidas por el cliente
+
+Grep exhaustivo de `import.meta.env` en todo `src/` encontró únicamente 3 usos: `VITE_SUPABASE_URL` y `VITE_SUPABASE_ANON_KEY` (`src/lib/supabaseClient.js`), y `VITE_VAPID_PUBLIC_KEY` (`src/lib/push.js`, deliberadamente ausente en Production, pertenece a A16-bis). Las tres están diseñadas para ser públicas por su propio proveedor (URL/anon key de Supabase protegida por RLS; clave pública VAPID pensada para viajar al navegador vía `applicationServerKey`) — su presencia en el bundle no es, por sí misma, un hallazgo de seguridad. `vite.config.js` no contiene ningún bloque `define` que exponga variables adicionales al cliente más allá de la convención estándar `VITE_*` de Vite.
+
+### 3. Separación frontend/servidor
+
+Los secretos previstos para las Edge Functions (`SUPABASE_SERVICE_ROLE_KEY`, `ANTHROPIC_API_KEY`, `CRON_SECRET`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT`) no aparecen consumidos mediante `import.meta.env` en ningún punto del frontend — viven exclusivamente como `Deno.env.get(...)` dentro de `supabase/functions/*`. Esta observación no implica que esas funciones ya estén desplegadas o configuradas en producción (no lo están, ver A1 y el diagnóstico de A3) — solo que el código del cliente nunca podría exponerlas aunque lo estuvieran, por diseño de Vite.
+
+### 4. Resultado del grep sobre el repositorio completo
+
+Búsqueda exhaustiva (excluyendo `node_modules`/`dist`) de JWTs, `service_role`, `SUPABASE_SERVICE_ROLE`, `localhost`/`127.0.0.1`, dominios `.supabase.co` hardcodeados, y asignaciones literales de `password`/`api_key`/`secret`/`token`: sin hallazgos de secretos, tokens ni credenciales hardcodeadas en código. Las únicas coincidencias de `localhost`/`127.0.0.1` están en `PROJECT.md` (prosa histórica de entornos de desarrollo anteriores) y en el propio texto del criterio de A16 — ninguna es configuración activa.
+
+### 5. Estado de `.env` y del historial de git
+
+`.env` está en `.gitignore`. `git log --all --full-history -- .env` confirmó que nunca fue commiteado a este repositorio, en ninguna rama.
+
+### 6. Evidencia real de producción — Network
+
+Verificado directamente en `https://ahorita-five.vercel.app` (DevTools → Network): el frontend desplegado realiza peticiones REST reales contra `itbycfshmvxp....supabase.co/rest/v1/...`, con respuestas `200 OK`. Confirma que el frontend real está conectado a un proyecto Supabase real — no al `127.0.0.1` usado en desarrollo local.
+
+### 7. Project ref y verificación de `ahorita-production`
+
+El project ref visible en las peticiones reales (`itbycfshmvxp...`) coincide exactamente con el project ref mostrado en la URL del dashboard del proyecto llamado `ahorita-production` en Supabase. Confirma que la aplicación desplegada está comunicándose con el proyecto de producción correcto, no con un proyecto de pruebas o abandonado.
+
+### 8. Vercel Production
+
+`Project Settings → Environment Variables` de Vercel contiene únicamente `VITE_SUPABASE_URL` y `VITE_SUPABASE_ANON_KEY` como variables de proyecto relevantes, ambas asignadas específicamente al scope **Production** — ninguna variable adicional ni residual encontrada. Consistente con la configuración documentada en el cierre de A2.
+
+### 9. Legacy anon/public vs service_role/secret
+
+En `Supabase → Settings → API Keys → Legacy anon, service_role API keys`, el proyecto `ahorita-production` muestra dos claves clasificadas oficialmente por Supabase: una como `anon`/`public` (apta para navegador, con su seguridad dependiente de RLS/policies) y otra, separada, como `service_role`/`secret`. La segunda permaneció oculta — no fue revelada ni copiada en ningún momento. Al abrir "Edit" sobre `VITE_SUPABASE_ANON_KEY` en Vercel, el valor mostrado comenzaba con `eyJhbGci...`, formato JWT legacy consistente con el formato de la clave `anon`/`public` de Supabase. Aclaración explícita: Supabase también expone una nueva `sb_publishable_...` key; la aplicación usa hoy la JWT legacy `anon`, y migrar a la nueva Publishable key no es parte de este cierre ni se realizó en esta ronda.
+
+### 10. Limitación metodológica, documentada con honestidad
+
+No se realizó una comparación byte por byte entre la JWT configurada en Vercel y la anon key mostrada en el dashboard de Supabase, ni se decodificó su payload para confirmar explícitamente el claim `role`/`ref` — deliberadamente, para no manipular ni exponer innecesariamente la credencial completa. La conclusión de cierre se apoya en evidencia convergente e independiente: peticiones reales exitosas (`200 OK`) desde el frontend desplegado contra el project ref correcto de `ahorita-production`, combinadas con la evidencia independiente de Vercel, Supabase y el repositorio (nomenclatura y clasificación coincidentes en las tres superficies) — no en una verificación criptográfica exhaustiva del valor exacto.
+
+### Explícitamente fuera de alcance de este cierre
+
+El despliegue y la validación funcional de `ai-guide`, `send-push`, `export-user-data`, `process-account-deletions` y `process-verification-lifecycle` contra `ahorita-production`, incluida la configuración de `ANTHROPIC_API_KEY`, `VAPID_PUBLIC_KEY`/`VAPID_PRIVATE_KEY`/`VAPID_SUBJECT` y `CRON_SECRET` — pertenecen a A8, A9, A10, A11 y A16-bis respectivamente, y ninguno se dio por resuelto ni se inició en esta ronda.
+
+### Estado final
+
+**A3 queda Hecho.** Sin evidencia de ninguna credencial de desarrollo/pruebas activa o embebida en producción; credenciales de producción confirmadas como propias de `ahorita-production` mediante evidencia real convergente (Network, dashboard de Supabase, configuración de Vercel), con una limitación metodológica documentada explícitamente, no oculta.
+
+---
