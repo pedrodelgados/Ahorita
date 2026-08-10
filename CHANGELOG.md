@@ -2,6 +2,13 @@
 
 Registro de cambios notables de Ahorita (Cuenca Viva). Formato libre, en español, más cercano a un registro de fases de producto que a versiones semánticas — ver `PROJECT.md` para el plan completo y el estado real de la implementación.
 
+## 2026-08-09 — A5: aclaración documental de alcance ("historial")
+
+Durante la validación real de A5 (registro self-service, confirmación de correo, cambio de dispositivo verificado para guardado de lugar y preferencias) se encontró que su criterio incluía la palabra "historial" sin respaldo en ninguna funcionalidad existente del repositorio.
+
+### Corregido
+- `BETA_READINESS_CHECKLIST.md`: se retira la palabra "historial" del criterio objetivo de A5 — trazado su origen al commit `d8d429d` (nunca modificado desde entonces), sin implementación real ni evidencia documental de qué se pretendía nombrar; descartada explícitamente cualquier equivalencia con `me_gusta`/`ya_fui` por falta de respaldo. Corrección de una inconsistencia documental, no un cambio de producto. A5 permanece **Pendiente**.
+
 ## 2026-08-09 — A4 cerrado: buckets de Storage reales con políticas RLS
 
 Cuarto ítem bloqueante de `BETA_READINESS_CHECKLIST.md` (A4) verificado con evidencia real contra `ahorita-production`, ceñido estrictamente a su texto literal — sin ampliarlo hacia A6 (matriz de permisos) ni A21 (ciclo real de verificación).

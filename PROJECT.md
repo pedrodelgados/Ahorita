@@ -3156,3 +3156,15 @@ Cuarto ítem bloqueante de `BETA_READINESS_CHECKLIST.md` verificado, con alcance
 **A4 queda Hecho.** Las dos cláusulas del criterio verificadas con evidencia real contra `ahorita-production`: subir/leer en `media`, y un archivo privado de `verification_evidence` inaccesible sin sesión — con el matiz metodológico de `NoSuchKey` documentado con honestidad, no forzado. Cero filas de prueba creadas o eliminadas en cualquier tabla; todo el impacto sobre producción quedó limitado a dos objetos de Storage, ambos limpiados y confirmados ausentes.
 
 ---
+
+## A5 — aclaración de alcance ("historial"), en progreso (2026-08-09)
+
+Durante la validación real de A5 (Etapa 1: registro self-service, confirmación de correo, logout/login, todo verificado exitosamente contra `ahorita-production`; Etapa 2: guardado de lugar y preferencia de interés verificados cross-device PC↔Android real, ambos exitosos) se detectó que el criterio de A5 incluía la palabra "historial" sin que exista, en ningún punto del repositorio, una tabla, función, pantalla o concepto dedicado a esa idea.
+
+**Trazabilidad completa realizada antes de tocar el documento.** La palabra nace con el commit `d8d429d8c0dd619ad8bbb17750ca6b091afc184b` (creación de `BETA_READINESS_CHECKLIST.md`, 2026-07-25) y nunca fue modificada en ningún commit posterior — verificado filtrando específicamente líneas `+`/`-` que contuvieran "A5" en los seis commits que tocaron ese archivo desde entonces. El único texto contemporáneo a su redacción (la sección de registro de la checklist, más arriba en este mismo documento) explica que la ampliación de A5 hacia cambio de dispositivo fue "consecuencia natural de una arquitectura ya centrada en el servidor, no funcionalidad nueva" — consistente con el principio fundacional explícito de la propia checklist ("No introduce funcionalidad nueva"). Búsqueda exhaustiva de conceptos equivalentes (`activity`, `recent`, `viewed`, `visited`, `history`, reacciones) sin resultados relevantes — la única superficie remotamente cercana (`me_gusta`/`ya_fui` en `interactions`) fue evaluada y descartada explícitamente por falta de respaldo documental para tratarla como "historial".
+
+**Decisión:** se retira la palabra "historial" del criterio objetivo de A5, dejando intacto el resto ("...conserva sus guardados, seguimientos y preferencias sin pérdida"). Es una corrección de una inconsistencia documental de la propia checklist, no un cambio de alcance de producto — no se construyó, ni se descartó, ninguna funcionalidad real de Ahorita.
+
+**Estado de A5**: sigue **Pendiente** — la aclaración de "historial" no cierra el ítem. Falta todavía evidencia real de "seguimientos" (bloqueado por ausencia de un actor alcanzable vía UI sin crear contenido nuevo, ver diagnóstico en la sesión de validación) y, opcionalmente, de guardado de evento (bloqueado por ausencia de un evento vigente en producción). Ninguna prueba adicional se ejecutó en esta ronda — exclusivamente aclaración documental.
+
+---
