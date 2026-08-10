@@ -1,6 +1,7 @@
 import { Navigate, Route, Routes } from "react-router-dom";
 import { useAuth } from "./contexts/AuthContext";
 import LoginPage from "./features/auth/LoginPage";
+import UpdatePasswordPage from "./features/auth/UpdatePasswordPage";
 import UsageModeScreen from "./features/auth/UsageModeScreen";
 import FeedPage from "./pages/FeedPage";
 import ExplorePage from "./pages/ExplorePage";
@@ -54,6 +55,7 @@ export default function App() {
         }
       />
       <Route path="/login" element={<LoginPage />} />
+      <Route path="/actualizar-contrasena" element={<UpdatePasswordPage />} />
       <Route
         path="/bienvenida"
         element={
