@@ -2,6 +2,16 @@
 
 Registro de cambios notables de Ahorita (Cuenca Viva). Formato libre, en español, más cercano a un registro de fases de producto que a versiones semánticas — ver `PROJECT.md` para el plan completo y el estado real de la implementación.
 
+## 2026-08-09 — A5 cerrado: registro/login real de punta a punta, cambio de dispositivo
+
+Quinto ítem bloqueante de `BETA_READINESS_CHECKLIST.md` (A5) verificado con evidencia real contra `ahorita-production`, con el alcance ya aclarado (sin "historial").
+
+### Verificado
+- Registro self-service real, correo real confirmado, y un ciclo real de cierre/inicio de sesión sin intervención del equipo.
+- Cambio de dispositivo (PC↔Android real, misma cuenta): guardado de "Parque Calderón", preferencia de interés "Naturaleza", y seguimiento del autor de una pregunta de prueba en ese mismo lugar — los tres confirmados en el segundo dispositivo sin repetir la acción.
+- Artefacto de prueba (pregunta temporal en "Parque Calderón") limpiado tras obtener la evidencia; sin contenido público de prueba remanente.
+- Distinción explícita: la recuperación de contraseña de la cuenta administrativa (commit `a58f3cf`) fue un paso operativo necesario para esta validación, no un requisito del criterio de A5.
+
 ## 2026-08-09 — A5: aclaración documental de alcance ("historial")
 
 Durante la validación real de A5 (registro self-service, confirmación de correo, cambio de dispositivo verificado para guardado de lugar y preferencias) se encontró que su criterio incluía la palabra "historial" sin respaldo en ninguna funcionalidad existente del repositorio.

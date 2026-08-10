@@ -3168,3 +3168,24 @@ Durante la validación real de A5 (Etapa 1: registro self-service, confirmación
 **Estado de A5**: sigue **Pendiente** — la aclaración de "historial" no cierra el ítem. Falta todavía evidencia real de "seguimientos" (bloqueado por ausencia de un actor alcanzable vía UI sin crear contenido nuevo, ver diagnóstico en la sesión de validación) y, opcionalmente, de guardado de evento (bloqueado por ausencia de un evento vigente en producción). Ninguna prueba adicional se ejecutó en esta ronda — exclusivamente aclaración documental.
 
 ---
+
+## A5 CERRADO — Registro/login real de punta a punta, cambio de dispositivo (2026-08-09)
+
+Quinto ítem bloqueante de `BETA_READINESS_CHECKLIST.md` verificado, con el alcance ya aclarado en la sección anterior (sin "historial"). Las siete cláusulas del criterio vigente quedaron demostradas con evidencia real contra `ahorita-production`, usando una cuenta self-service real, distinta de la cuenta administrativa.
+
+**Registro, correo y sesión (sin intervención del equipo):** una persona real se registró desde el frontend real de producción, recibió y usó un correo de confirmación real, y completó un ciclo real de cierre/inicio de sesión sin que el equipo interviniera manualmente en ningún paso de ese flujo.
+
+**Cambio de dispositivo — las tres categorías del criterio, cada una confirmada reabriendo la app en el segundo dispositivo sin repetir la acción:**
+- **Guardados**: "Parque Calderón" guardado desde PC; visible en "Lugares guardados" (`/ajustes`) al iniciar sesión en Android real con la misma cuenta.
+- **Preferencias**: interés "Naturaleza" activado desde PC; visible ya activo en Android real.
+- **Seguimientos**: se reutilizó el mismo lugar ya guardado ("Parque Calderón") para publicar, desde la cuenta administrativa, una pregunta de prueba claramente identificada ("PRUEBA A5 — seguimiento, eliminar después") — el único artefacto de contenido nuevo de todo este cierre, y temporal. Desde la cuenta A5 en PC se pulsó "Seguir" sobre el autor de esa pregunta (mostrado como "Alguien de Ahorita", el `fallback` real de `AuthorTag.jsx` cuando el perfil no tiene `username` — consistente con el código, corrobora la evidencia); en Android, con la misma cuenta, el mismo autor apareció directamente como "Siguiendo", sin volver a pulsar el botón.
+
+**Limpieza confirmada:** se dejó de seguir a la cuenta usada en la prueba y se eliminó manualmente la pregunta de prueba desde Supabase Table Editor tras obtener la evidencia — no quedó contenido público de prueba, no se tocó `Parque Calderón`, no se eliminó ni modificó ningún usuario ni rol.
+
+**Distinción explícita, no ambigua:** en el curso de esta validación se descubrió que la cuenta administrativa no podía iniciar sesión por falta de una contraseña funcional, y se implementó un flujo mínimo de finalización de `PASSWORD_RECOVERY` (commit `a58f3cf`) para recuperar el acceso sin eliminar ni recrear esa cuenta, conservando `auth.users.id` y `profiles.is_admin` intactos. **Esa recuperación de acceso no es, ni sustituye, ningún requisito del criterio de A5** — fue un paso operativo necesario para poder publicar el artefacto de prueba de seguimiento (que requería una segunda persona real, distinta de la cuenta A5), documentado aquí solo como contexto, no como evidencia del criterio en sí.
+
+### Estado final
+
+**A5 queda Hecho.** Las siete cláusulas del criterio vigente (registro, confirmación de correo, cierre/inicio de sesión sin intervención del equipo, segundo dispositivo, guardados, seguimientos, preferencias) verificadas con evidencia real. "Historial" permanece fuera del criterio, tal como se aclaró en la sección anterior — no se reinterpretó ni se reintrodujo.
+
+---
