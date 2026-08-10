@@ -2,6 +2,17 @@
 
 Registro de cambios notables de Ahorita (Cuenca Viva). Formato libre, en español, más cercano a un registro de fases de producto que a versiones semánticas — ver `PROJECT.md` para el plan completo y el estado real de la implementación.
 
+## 2026-08-09 — A4 cerrado: buckets de Storage reales con políticas RLS
+
+Cuarto ítem bloqueante de `BETA_READINESS_CHECKLIST.md` (A4) verificado con evidencia real contra `ahorita-production`, ceñido estrictamente a su texto literal — sin ampliarlo hacia A6 (matriz de permisos) ni A21 (ciclo real de verificación).
+
+### Verificado
+- Bucket público `media`: subida real autenticada, lectura pública real, y subida sin autenticación rechazada explícitamente por RLS (`403`/`AccessDenied`/"row-level security policy" en el cuerpo de respuesta).
+- Bucket privado `verification_evidence`: objeto de prueba subido vía Dashboard (sin crear ninguna fila en `public`), existencia confirmada visualmente, y no recuperable mediante una petición sin sesión contra el endpoint privado (`404`/`NoSuchKey`/"Object not found").
+- Análisis honesto de `NoSuchKey`: no es una confirmación textual de RLS; es el comportamiento de enmascaramiento de denegaciones como "no encontrado" ya reportado en fuentes oficiales de Supabase (repositorio y foro de discusión de la organización `supabase` en GitHub) — la conclusión se apoya en la comparación controlada entre existencia confirmada y no recuperación bajo el mismo path, no en una frase literal.
+- Limpieza completa: ambos objetos de prueba eliminados; cero filas de base de datos creadas o eliminadas.
+- Hallazgo de hardening registrado, no corregido: política `select` de `media` permite listar/enumerar objetos (innecesario para un bucket público) — deuda de hardening aparte, junto con la ya registrada ausencia de `delete`/`update` en `media`.
+
 ## 2026-08-09 — A3 cerrado: secretos y credenciales de producción separados de desarrollo
 
 Tercer ítem bloqueante de `BETA_READINESS_CHECKLIST.md` (A3) verificado, bajo el alcance aclarado en el commit `2b25b75`: higiene y separación de secretos de los componentes ya desplegados en producción (frontend en Vercel, base de datos `ahorita-production`), sin exigir el despliegue anticipado de las Edge Functions de A8/A9/A10/A11/A16-bis.

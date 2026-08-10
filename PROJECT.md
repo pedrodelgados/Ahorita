@@ -3136,3 +3136,23 @@ El despliegue y la validación funcional de `ai-guide`, `send-push`, `export-use
 **A3 queda Hecho.** Sin evidencia de ninguna credencial de desarrollo/pruebas activa o embebida en producción; credenciales de producción confirmadas como propias de `ahorita-production` mediante evidencia real convergente (Network, dashboard de Supabase, configuración de Vercel), con una limitación metodológica documentada explícitamente, no oculta.
 
 ---
+
+## A4 CERRADO — Buckets de Storage reales con políticas RLS (2026-08-09)
+
+Cuarto ítem bloqueante de `BETA_READINESS_CHECKLIST.md` verificado, con alcance estrictamente ceñido a su texto literal (subir/leer un archivo real; un archivo privado de evidencia permanece inaccesible públicamente) — sin ampliarlo hacia la matriz completa de permisos (A6) ni el ciclo real de verificación con negocio reclutado (A21).
+
+**Bucket `media`** (público): subida real autenticada desde `/admin/eventos/nuevo` sin guardar el evento (evitando crear datos de prueba en `events`), lectura pública real sin sesión, y un intento de subida sin autenticación rechazado explícitamente por RLS (cuerpo de respuesta: `statusCode 403`, `error: Unauthorized`, `message: "new row violates row-level security policy"`, `code: AccessDenied`). Objeto de prueba eliminado; su URL dejó de responder tras la limpieza.
+
+**Bucket `verification_evidence`** (privado): se evitó deliberadamente crear cualquier fila nueva en `public` (sin usuario Auth, `profiles`, `actors`, `businesses` ni `verifications` de prueba) — un objeto se subió directamente vía Dashboard de Supabase (que no pasa por la política `insert` de `storage.objects`, mismo mecanismo ya usado para eliminar objetos de `media` sin política `delete`), y su existencia se confirmó visualmente antes de la prueba. Una petición sin sesión, contra el endpoint privado de descarga (no el endpoint público, inaplicable a un bucket con `public=false`), no recuperó el objeto: `statusCode 404`, `error: not_found`, `message: "Object not found"`, `code: NoSuchKey`.
+
+**Análisis honesto de `NoSuchKey`**: ese cuerpo no menciona RLS explícitamente. `supabase.com/docs` no fue accesible desde este entorno (misma restricción de red ya documentada en A3); como fuente oficial alternativa se consultaron el repositorio y el foro de discusión propios de la organización `supabase` en GitHub, donde está reportado que Supabase Storage responde con `400`/tipo genérico (en vez de un `403`/`AccessDenied` explícito) cuando una política RLS deniega una descarga privada, y que ese comportamiento enmascara deliberadamente la denegación como "objeto no encontrado" para no confirmar la existencia de archivos a quien no tiene permiso (`github.com/supabase/storage` issue #640; `github.com/orgs/supabase/discussions` #20366 — caso casi idéntico: mismo archivo, accesible con permiso público, "not found" al restringir por RLS). La conclusión de cierre se apoya en la comparación controlada — el objeto existía momentos antes en la misma ruta exacta, confirmado independientemente en el Dashboard, y dejó de ser recuperable únicamente al cambiar el contexto de autorización de la petición — no en una frase literal de error que la respuesta no contenía.
+
+**Limpieza**: el objeto de `verification_evidence/probe-a4/` fue eliminado vía Dashboard; la carpeta quedó vacía. Ninguna fila de base de datos fue creada ni requirió eliminarse. Ninguna política, configuración de bucket, RLS, código ni infraestructura fue modificada durante esta verificación.
+
+**Hallazgo de hardening registrado, no corregido en esta ronda**: el Dashboard de Supabase advirtió que la política `select` de `media` ("Media es pública para lectura") permite listar/enumerar objetos del bucket, no solo leerlos por ruta conocida — innecesario para un bucket público, cuyas lecturas por URL directa no dependen de RLS. Riesgo bajo (sin datos sensibles en `media`; `verification_evidence` no tiene ninguna política equivalente). Queda como deuda de hardening a decidir en una ronda aparte, junto con la ya registrada ausencia de políticas `delete`/`update` en `media` (huérfanos de Storage, `PROJECT.md` línea 1045, `ROADMAP.md` línea 50) — ninguna de las dos bloquea el criterio literal de A4.
+
+### Estado final
+
+**A4 queda Hecho.** Las dos cláusulas del criterio verificadas con evidencia real contra `ahorita-production`: subir/leer en `media`, y un archivo privado de `verification_evidence` inaccesible sin sesión — con el matiz metodológico de `NoSuchKey` documentado con honestidad, no forzado. Cero filas de prueba creadas o eliminadas en cualquier tabla; todo el impacto sobre producción quedó limitado a dos objetos de Storage, ambos limpiados y confirmados ausentes.
+
+---
