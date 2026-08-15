@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Mail, Lock, ArrowRight } from "lucide-react";
 import { useAuth } from "../../contexts/AuthContext";
 import Button from "../../components/ui/Button";
@@ -96,6 +96,14 @@ export default function LoginPage() {
               : "Crear cuenta"}
         </Button>
       </form>
+
+      <p style={{ fontSize: 12, color: "#948A80", marginTop: 12 }}>
+        Al registrarte, aceptas nuestros{" "}
+        <Link to="/legal" style={{ color: "#4FA383", fontWeight: 600 }}>
+          Términos de Servicio y Política de Privacidad
+        </Link>
+        .
+      </p>
 
       <button
         onClick={() => {

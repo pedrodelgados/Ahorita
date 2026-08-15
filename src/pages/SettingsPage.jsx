@@ -168,6 +168,13 @@ export default function SettingsPage() {
 
         <SupportSection />
 
+        <Link
+          to="/legal"
+          style={{ display: "inline-block", fontSize: 13, color: "#948A80", marginBottom: 20 }}
+        >
+          Términos de Servicio y Política de Privacidad
+        </Link>
+
         <h2 style={{ fontSize: 16, marginBottom: 12 }}>Lugares guardados</h2>
         {savedPlaces.length === 0 ? (
           <p style={{ color: "#948A80", fontSize: 14 }}>
