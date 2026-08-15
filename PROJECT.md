@@ -3223,3 +3223,17 @@ Séptimo ítem bloqueante de `BETA_READINESS_CHECKLIST.md` verificado con una co
 **A16 queda Hecho.** Las cláusulas del criterio (confirmación de registro, recuperación de contraseña, remitente correcto, URLs de redirección de producción, SPF/DKIM, más de un proveedor de correo, sin enlaces a localhost, sin secretos expuestos) quedan demostradas con evidencia real posterior a la corrección del hallazgo histórico — documentado aquí como defecto real ya corregido, no omitido. Ninguna escritura de configuración, RLS, código ni migraciones se realizó para obtener esta evidencia.
 
 ---
+
+## A20 CERRADO — Inventario de datos operativos/semillas verificado (2026-08-15)
+
+Ítem A20 de `BETA_READINESS_CHECKLIST.md` verificado con una consulta de solo lectura contra `ahorita-production`, comprobando uno a uno cada semilla exigida por el criterio literal.
+
+**Semillas identificadas y su origen en el repositorio**, antes de ejecutar cualquier consulta: administrador inicial (`public.profiles.is_admin`, sembrado por `supabase/scripts/bootstrap_admin.sql`); actor de sistema "Ahorita Editorial" (`public.actors`, `0015_bloque1_esquema_fundacional.sql:113-115`); actor de sistema "Cuenta eliminada" (`public.actors`, `0034_fase5b_bloque3_comentarios_generalizados.sql:56`); ciudad "Cuenca" (`public.cities`, `0015:42`); zonas "Centro Histórico" y "Turi", hijas de Cuenca (`public.zones`, `0015:72-75`); catálogo de 10 canales (`public.channels`, `0001_init.sql:63-73`) — incluido bajo la cláusula abierta del criterio ("cualquier configuración sin la cual un flujo crítico falle") por ser la base de los filtros de categoría de toda la app.
+
+**Resultado real obtenido**: administrador inicial = 1; actor "Ahorita Editorial" = 1; actor "Cuenta eliminada" = 1; ciudad "Cuenca" = 1; zona "Centro Histórico" de Cuenca = 1; zona "Turi" de Cuenca = 1; canales presentes = 10 de 10 esperados; canales faltantes = ninguno. Todos los valores coinciden exactamente con lo esperado — sin ausencias, sin duplicados.
+
+### Estado final
+
+**A20 queda Hecho.** Cada semilla exigida por el criterio literal existe, en la tabla y con el valor exacto esperado, verificado con una consulta exclusivamente de lectura contra producción real, sin ninguna escritura.
+
+---

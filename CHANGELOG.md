@@ -2,6 +2,17 @@
 
 Registro de cambios notables de Ahorita (Cuenca Viva). Formato libre, en español, más cercano a un registro de fases de producto que a versiones semánticas — ver `PROJECT.md` para el plan completo y el estado real de la implementación.
 
+## 2026-08-15 — A20 cerrado: inventario de datos operativos/semillas verificado
+
+Ítem A20 de `BETA_READINESS_CHECKLIST.md` verificado con una consulta de solo lectura contra `ahorita-production`, comprobando uno a uno cada semilla exigida por el criterio literal.
+
+### Verificado
+- Administrador inicial (`profiles.is_admin=true`): 1 fila, como esperado.
+- Actores de sistema "Ahorita Editorial" y "Cuenta eliminada" (`actors`): 1 fila cada uno, como esperado.
+- Ciudad "Cuenca" (`cities`): 1 fila; zonas "Centro Histórico" y "Turi", hijas de Cuenca (`zones`): 1 fila cada una.
+- Catálogo de canales (`channels`): 10 de 10 esperados, sin faltantes.
+- Consulta exclusivamente `SELECT`, sin ninguna escritura contra producción.
+
 ## 2026-08-15 — A16 cerrado: correo transaccional de producción
 
 Ítem A16 de `BETA_READINESS_CHECKLIST.md` verificado con evidencia real contra `ahorita-production`, incluyendo un hallazgo histórico documentado explícitamente, no ocultado.
