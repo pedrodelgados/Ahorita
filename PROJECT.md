@@ -3189,3 +3189,37 @@ Quinto ítem bloqueante de `BETA_READINESS_CHECKLIST.md` verificado, con el alca
 **A5 queda Hecho.** Las siete cláusulas del criterio vigente (registro, confirmación de correo, cierre/inicio de sesión sin intervención del equipo, segundo dispositivo, guardados, seguimientos, preferencias) verificadas con evidencia real. "Historial" permanece fuera del criterio, tal como se aclaró en la sección anterior — no se reinterpretó ni se reintrodujo.
 
 ---
+
+## A7 CERRADO — Trigger de creación de `profiles` contra Auth real (2026-08-15)
+
+Séptimo ítem bloqueante de `BETA_READINESS_CHECKLIST.md` verificado con una consulta de solo lectura contra `ahorita-production`, comparando `auth.users` con `public.profiles`.
+
+**Resultado real obtenido:** `total_auth_users = 4`, `total_profiles = 4`; cero filas de `auth.users` sin su correspondiente `profiles` (huérfano en esa dirección); cero filas de `profiles` sin su `auth.users` correspondiente (huérfano en la otra dirección); cero `id` con más de una fila en `profiles` (duplicado). Verificación puntual adicional, positiva, para dos cuentas reales conocidas (Pedro y Moisés, cada una con exactamente una fila).
+
+**Consistencia con el esquema:** `profiles.id` es simultáneamente clave primaria de `profiles` y clave foránea hacia `auth.users(id) on delete cascade` (`0001_init.sql`), lo cual hace estructuralmente muy improbables los tres casos que el criterio prohíbe — pero, siguiendo el mismo estándar aplicado en A1-A6, esta verificación se apoya en datos reales de producción, no únicamente en el diseño del esquema.
+
+### Estado final
+
+**A7 queda Hecho.** El criterio ("un registro real produce exactamente una fila de perfil, sin duplicados ni huérfanos") queda demostrado con evidencia real, mediante una consulta exclusivamente de lectura, sin ninguna escritura en producción.
+
+---
+
+## A16 CERRADO — Correo transaccional de producción (2026-08-15)
+
+Ítem A16 de `BETA_READINESS_CHECKLIST.md` verificado con evidencia real contra `ahorita-production`, tras un hallazgo histórico real que se documenta explícitamente en vez de omitirse.
+
+**Hallazgo histórico, no ocultado:** un correo real de confirmación de registro recibido el 7 de agosto de 2026 contenía `redirect_to=http://localhost:3000` — una configuración de `Site URL`/`Redirect URLs` del proyecto de Supabase incorrecta y real en ese momento, no hipotética. Esto habría hecho fallar el criterio de A16 si se hubiera evaluado entonces.
+
+**Estado actual de la configuración**, verificado en Supabase Dashboard → Authentication → URL Configuration: `Site URL: https://ahorita-five.vercel.app`; `Redirect URLs: https://ahorita-five.vercel.app/**`. Sin `localhost` en la configuración vigente. Esta configuración, por sí sola, no se consideró evidencia suficiente para cerrar A16 — se exigió, en cambio, un correo real nuevo, generado después de la corrección, que la confirmara empíricamente.
+
+**Prueba real de recuperación de contraseña** (reutilizando una cuenta ya existente, sin crear ninguna nueva): correo real de recuperación disparado desde el Dashboard para una cuenta real, recibido en Gmail. Remitente: `Supabase Auth <noreply@mail.app.supabase.io>`. Enlace real con `type=recovery` y `redirect_to=https://ahorita-five.vercel.app`, sin `localhost`. Verificado directamente en Gmail → "Mostrar original": SPF PASS, DKIM PASS (dominio `mail.app.supabase.io`), DMARC PASS.
+
+**Prueba real de confirmación de registro en un segundo proveedor de correo**: una cuenta nueva registrada desde el frontend real de Ahorita con una dirección de Yahoo Mail. El correo de confirmación llegó realmente a Yahoo Mail, enviado por Supabase Auth, con enlace `type=signup` y `redirect_to=https://ahorita-five.vercel.app`, sin `localhost`. Se pulsó "Confirm email address": la confirmación fue aceptada, el navegador terminó en `https://ahorita-five.vercel.app`, Ahorita cargó correctamente y apareció el onboarding de intereses correspondiente a una cuenta nueva — ciclo completo de punta a punta, con evidencia real.
+
+**Dos proveedores de correo distintos, no solo dos cuentas**: Gmail (prueba de recuperación) y Yahoo Mail (prueba de confirmación de una cuenta nueva) — satisface explícitamente la exigencia del criterio de "más de un proveedor de correo", distinguida de simplemente usar dos direcciones distintas del mismo proveedor.
+
+### Estado final
+
+**A16 queda Hecho.** Las cláusulas del criterio (confirmación de registro, recuperación de contraseña, remitente correcto, URLs de redirección de producción, SPF/DKIM, más de un proveedor de correo, sin enlaces a localhost, sin secretos expuestos) quedan demostradas con evidencia real posterior a la corrección del hallazgo histórico — documentado aquí como defecto real ya corregido, no omitido. Ninguna escritura de configuración, RLS, código ni migraciones se realizó para obtener esta evidencia.
+
+---

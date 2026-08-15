@@ -2,6 +2,27 @@
 
 Registro de cambios notables de Ahorita (Cuenca Viva). Formato libre, en español, más cercano a un registro de fases de producto que a versiones semánticas — ver `PROJECT.md` para el plan completo y el estado real de la implementación.
 
+## 2026-08-15 — A16 cerrado: correo transaccional de producción
+
+Ítem A16 de `BETA_READINESS_CHECKLIST.md` verificado con evidencia real contra `ahorita-production`, incluyendo un hallazgo histórico documentado explícitamente, no ocultado.
+
+### Verificado
+- Correo real de recuperación de contraseña (Gmail, reutilizando una cuenta existente): remitente `Supabase Auth <noreply@mail.app.supabase.io>`, `redirect_to=https://ahorita-five.vercel.app`, SPF/DKIM/DMARC en PASS (verificado en Gmail → "Mostrar original").
+- Correo real de confirmación de una cuenta nueva self-service en un segundo proveedor (Yahoo Mail): mismo remitente, `redirect_to=https://ahorita-five.vercel.app`, ciclo completo de punta a punta (enlace real, confirmación aceptada, redirección real, onboarding de intereses cargado).
+- Dos proveedores de correo distintos (Gmail y Yahoo Mail), no solo dos cuentas — satisface explícitamente esa cláusula del criterio.
+
+### Corregido (hallazgo histórico)
+- Un correo real de confirmación recibido el 7 de agosto de 2026 mostraba `redirect_to=http://localhost:3000` — configuración de `Site URL`/`Redirect URLs` de Supabase incorrecta en ese momento. La configuración actual del Dashboard (`Site URL`/`Redirect URLs` apuntando a `https://ahorita-five.vercel.app`) ya no lo reproduce, confirmado empíricamente con los dos correos reales nuevos descritos arriba, generados después de la corrección.
+
+## 2026-08-15 — A7 cerrado: trigger de creación de `profiles` contra Auth real
+
+Séptimo ítem bloqueante de `BETA_READINESS_CHECKLIST.md` verificado con una consulta de solo lectura contra `ahorita-production`.
+
+### Verificado
+- `auth.users` vs `public.profiles`: 4 usuarios reales, 4 perfiles, cero huérfanos en cualquier dirección, cero duplicados.
+- Verificación puntual positiva para dos cuentas reales conocidas (Pedro y Moisés), cada una con exactamente una fila de perfil.
+- Evidencia obtenida sin ninguna escritura contra producción.
+
 ## 2026-08-09 — A5 cerrado: registro/login real de punta a punta, cambio de dispositivo
 
 Quinto ítem bloqueante de `BETA_READINESS_CHECKLIST.md` (A5) verificado con evidencia real contra `ahorita-production`, con el alcance ya aclarado (sin "historial").
