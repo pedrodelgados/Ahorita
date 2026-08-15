@@ -3237,3 +3237,17 @@ Séptimo ítem bloqueante de `BETA_READINESS_CHECKLIST.md` verificado con una co
 **A20 queda Hecho.** Cada semilla exigida por el criterio literal existe, en la tabla y con el valor exacto esperado, verificado con una consulta exclusivamente de lectura contra producción real, sin ninguna escritura.
 
 ---
+
+## A19 CERRADO — Canal de soporte visible y probado (2026-08-15)
+
+Ítem A19 de `BETA_READINESS_CHECKLIST.md` verificado con una prueba real del canal de soporte definido para esta etapa.
+
+**Decisión operativa (ya registrada al implementarlo, commit `05041a6`):** durante la beta, el soporte de Ahorita es atendido directamente por una persona responsable a través de un correo real — no un sistema de tickets automatizado, consistente con el principio explícito de `ETAPA_PRODUCTO_VIVO.md` §5 ("una persona respondiendo, no un sistema de tickets... que esta etapa no necesita ni debe construir"). El canal quedó visible en "Ajustes" (`SupportSection.jsx`), con un enlace `mailto:` real, sin formularios, tablas ni Edge Functions.
+
+**Prueba real ejecutada:** se envió un correo real de prueba ("PRUEBA A19 — mensaje de prueba del canal de soporte de Ahorita. Solo necesito confirmar recepción y respuesta.") a través de ese canal. El mensaje llegó realmente a la persona responsable, quien respondió realmente. Hora de envío observada: 18:13. Hora de respuesta observada: 18:14. Tiempo de respuesta registrado: aproximadamente 1 minuto. Capturas reales conservadas tanto del envío como de la respuesta — no se documenta aquí la dirección de correo en sí, por no ser necesaria para esta evidencia (ya vive, intencionalmente, en el código de la aplicación).
+
+### Estado final
+
+**A19 queda Hecho.** El criterio literal ("un mensaje real... llega a una persona responsable") y su evidencia exigida ("prueba real del canal, con tiempo de respuesta registrado") quedan demostrados con un envío y una respuesta reales, sin construir ninguna funcionalidad nueva.
+
+---

@@ -2,6 +2,16 @@
 
 Registro de cambios notables de Ahorita (Cuenca Viva). Formato libre, en español, más cercano a un registro de fases de producto que a versiones semánticas — ver `PROJECT.md` para el plan completo y el estado real de la implementación.
 
+## 2026-08-15 — A19 cerrado: canal de soporte visible y probado
+
+Ítem A19 de `BETA_READINESS_CHECKLIST.md` verificado con una prueba real del canal de soporte de la beta (correo real de la persona responsable, visible en "Ajustes" desde el commit `05041a6`).
+
+### Verificado
+- Correo real de prueba enviado a través del canal, recibido por la persona responsable, con respuesta real.
+- Tiempo de respuesta registrado: aproximadamente 1 minuto (envío 18:13, respuesta 18:14).
+- Capturas reales conservadas del envío y de la respuesta.
+- Decisión operativa consistente con `ETAPA_PRODUCTO_VIVO.md` §5: soporte atendido por una persona real, sin sistema de tickets.
+
 ## 2026-08-15 — A20 cerrado: inventario de datos operativos/semillas verificado
 
 Ítem A20 de `BETA_READINESS_CHECKLIST.md` verificado con una consulta de solo lectura contra `ahorita-production`, comprobando uno a uno cada semilla exigida por el criterio literal.
