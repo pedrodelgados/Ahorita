@@ -3275,3 +3275,19 @@ A partir del 15 de agosto de 2026, cualquier persona que se registre **de ahora 
 **A13 queda "Hecho, con desviación histórica documentada"** — no un cumplimiento íntegro del criterio original. Dos de sus tres cláusulas (documento real, accesible desde la app) están demostradas con evidencia real de producción; la cláusula de orden temporal respecto al primer registro no se cumplió y es, por naturaleza, irreversible.
 
 ---
+
+## A17 — ensayo real de rollback de frontend (en progreso, no cierra el ítem) (2026-08-15)
+
+Ítem A17 de `BETA_READINESS_CHECKLIST.md` (plan de reversión del despliegue) avanzó con un ensayo real, pero **permanece Pendiente** — se documenta aquí exactamente lo que se probó y lo que sigue faltando, sin presentarlo como un cierre.
+
+**Ensayo real ejecutado**: con producción en `1bfd3ed` (commit más reciente en el momento del ensayo), se usó `Promote` en el Dashboard de Vercel para llevar temporalmente a Producción el deployment correspondiente a `05041a6` — un commit real, anterior, ya construido por Vercel (sin necesidad de reconstruir nada). Se verificó `https://ahorita-five.vercel.app/ajustes` y se confirmó que el enlace "Términos de Servicio y Política de Privacidad" —introducido recién en `5405afb`/`1bfd3ed`, posterior a `05041a6`— **no aparecía**, confirmando de forma observable que el rollback del artefacto frontend surtió efecto real, no solo teórico. Inmediatamente después se volvió a promover `1bfd3ed` a Producción, y se confirmó la reaparición del enlace, verificando la restauración completa. Capturas reales conservadas de ambos estados.
+
+**Alcance del ensayo, explícito**: exclusivamente el artefacto estático del frontend en Vercel. En ningún momento se tocó Supabase, la base de datos, RLS, ninguna migración, ni ningún dato de personas reales — consistente con la cláusula del criterio "nunca revierte destructivamente datos ya creados por personas reales", aunque esta confirmación aplica únicamente al caso probado (rollback de frontend), no a un escenario que involucre Edge Functions o migraciones.
+
+**Qué sigue faltando, sin reinterpretar el criterio**: la reversibilidad de las Edge Functions (`ai-guide`, `send-push`, `export-user-data`, `process-account-deletions`, `process-verification-lifecycle`) no puede ensayarse mientras ninguna esté desplegada contra `ahorita-production` — mismo hallazgo estructural ya registrado en el cierre de A3 y en A8-A11/A16-bis. Sin esa pieza, "el procedimiento" completo que exige el criterio (frontend **y** Edge Functions) no queda demostrado en su totalidad.
+
+### Estado
+
+**A17 sigue Pendiente.** De sus seis cláusulas atómicas, tres cuentan ahora con evidencia real (versión estable identificada, frontend revertible, no-destructividad confirmada para el caso probado); la política de migraciones de avance/reparación ya estaba satisfecha desde antes; la reversibilidad de Edge Functions permanece bloqueada, y el "procedimiento" en su conjunto no puede darse por ensayado hasta que esa pieza exista.
+
+---

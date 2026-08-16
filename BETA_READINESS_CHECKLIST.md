@@ -98,6 +98,12 @@ Un diagnóstico previo a cualquier implementación (2026-08-09) trazó el origen
 
 **Estado**: A13 queda **"Hecho, con desviación histórica documentada"** — no un "Hecho" limpio. Dos de las tres cláusulas del criterio (documento real, accesible desde la app) están demostradas con evidencia real de producción; la tercera (orden temporal respecto al primer registro) no se cumplió y no puede corregirse retroactivamente.
 
+## Nota — ensayo real de rollback de frontend para A17 (en progreso, A17 permanece Pendiente)
+
+Se ejecutó un ensayo real de rollback exclusivamente del frontend en Vercel: producción estaba en `1bfd3ed`; se promovió temporalmente el deployment de `05041a6` a Producción; se confirmó de forma observable (ausencia real del enlace "Términos de Servicio y Política de Privacidad" en `/ajustes`, que solo existe desde `1bfd3ed`) que el rollback surtió efecto real; se restauró inmediatamente `1bfd3ed` y se confirmó la reaparición del enlace. En ningún momento se tocó Supabase, la base de datos, RLS, migraciones ni datos de personas reales — el ensayo fue exclusivamente sobre el artefacto estático de Vercel. Capturas reales conservadas de ambos estados (durante el rollback y tras la restauración).
+
+**Esto no cierra A17.** La reversibilidad de las Edge Functions (`ai-guide`, `send-push`, `export-user-data`, `process-account-deletions`, `process-verification-lifecycle`) sigue sin poder probarse mientras ninguna esté desplegada contra `ahorita-production` — misma causa ya registrada en el cierre de A3 y en los ítems A8-A11/A16-bis. Ver el detalle completo en `PROJECT.md`.
+
 ## B. Verificaciones obligatorias durante la primera semana de beta
 
 | # | Objetivo | Criterio objetivo | Evidencia a conservar | Estado |

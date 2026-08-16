@@ -2,6 +2,18 @@
 
 Registro de cambios notables de Ahorita (Cuenca Viva). Formato libre, en español, más cercano a un registro de fases de producto que a versiones semánticas — ver `PROJECT.md` para el plan completo y el estado real de la implementación.
 
+## 2026-08-15 — A17: ensayo real de rollback de frontend (en progreso, no cierra el ítem)
+
+Ítem A17 de `BETA_READINESS_CHECKLIST.md` (plan de reversión del despliegue) avanzó con un ensayo real de rollback exclusivamente del frontend en Vercel — el ítem permanece **Pendiente**.
+
+### Verificado
+- Rollback real: producción (`1bfd3ed`) → `Promote` del deployment de `05041a6` → confirmado observablemente (ausencia real del enlace de Términos en `/ajustes`).
+- Restauración real: `Promote` de vuelta a `1bfd3ed` → confirmada (reaparición del enlace).
+- Ningún cambio en Supabase, base de datos, RLS, migraciones ni datos de personas reales durante el ensayo.
+
+### Pendiente
+- Reversibilidad de Edge Functions: bloqueada, ninguna desplegada todavía contra `ahorita-production` (misma causa de A8-A11/A16-bis).
+
 ## 2026-08-15 — A13 cerrado, con desviación histórica documentada: Términos de Servicio y Política de Privacidad
 
 Ítem A13 de `BETA_READINESS_CHECKLIST.md` implementado y publicado en producción (`/legal`, ruta pública). Se registra explícitamente por separado el resultado actual y una desviación histórica real del criterio original.
