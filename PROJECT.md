@@ -3291,3 +3291,23 @@ A partir del 15 de agosto de 2026, cualquier persona que se registre **de ahora 
 **A17 sigue Pendiente.** De sus seis cláusulas atómicas, tres cuentan ahora con evidencia real (versión estable identificada, frontend revertible, no-destructividad confirmada para el caso probado); la política de migraciones de avance/reparación ya estaba satisfecha desde antes; la reversibilidad de Edge Functions permanece bloqueada, y el "procedimiento" en su conjunto no puede darse por ensayado hasta que esa pieza exista.
 
 ---
+
+## A10 CERRADO — `export-user-data` contra producción real (2026-08-16)
+
+Ítem A10 de `BETA_READINESS_CHECKLIST.md` verificado con evidencia real contra `ahorita-production`, incluyendo un defecto real encontrado y corregido durante la propia verificación — documentado aquí explícitamente, no ocultado.
+
+**Primera exportación real (defecto encontrado):** tras desplegar `export-user-data` por primera vez (VERSION 2), se ejecutó una exportación real desde la cuenta de Pedro. El JSON contenía correctamente su `profile` (`id`, `username`, `is_admin`), sin ningún dato de otra cuenta — pero las colecciones `saved_places`, `saved_events`, `follows` y `post_likes` venían vacías, y no existía ninguna clave `interactions`. Una consulta de solo lectura directa contra producción confirmó `interactions_pedro = 1` (su guardado real de "Parque Calderón"), demostrando que la exportación omitía un dato real y propio.
+
+**Causa raíz, confirmada contra el código y las migraciones:** `export-user-data` (escrita en la Fase 1, Bloque 5) seguía consultando exclusivamente las cuatro tablas legacy — pero desde la migración `0032_fase5b_bloque1_fuente_de_verdad_interacciones.sql` ("Eventos y Lugares migran a `interactions` como fuente de verdad para 'me gusta' y 'guardado'") y la Entrega 6 de Fase 3 (seguimiento unificado), el frontend real ya no escribe en esas tablas — confirmado por grep exhaustivo: `src/lib/savedPlaces.js`, `src/lib/savedEvents.js` y `src/lib/postLikes.js` no tienen ningún importador real en `src/`, y `follows` no tiene ni un módulo de acceso. La función de exportación nunca se actualizó cuando el modelo de datos cambió.
+
+**Corrección aplicada (commit `f0143b4`, "fix(export): include current interactions in user data"):** se agregó una consulta a `public.interactions`, filtrada exclusivamente por el `actor_id` propio ya resuelto a partir del `userId` verificado por `auth.getUser()` — nunca por un valor que el cliente pueda enviar. Las cuatro tablas legacy se mantuvieron intactas en el JSON, sin eliminarlas ni migrarlas, por si alguna cuenta antigua conservara datos ahí.
+
+**Incidente de despliegue, también documentado sin ocultarlo:** el primer redeploy tras el commit (VERSION 3) no reflejó la corrección — confirmado descargando el ZIP de la función realmente desplegada desde el Dashboard de Supabase y verificando que no contenía la palabra `interactions`. Se diagnosticó como un desfase entre el checkout local usado para ejecutar `supabase functions deploy` y el commit real `f0143b4` ya empujado a `origin`. Tras sincronizar la copia local, un segundo despliegue (VERSION 4) sí incorporó la corrección.
+
+**Exportación real posterior, confirmando la corrección:** una nueva exportación real de Pedro contra `export-user-data` VERSION 4 devolvió `interactions` con exactamente 1 fila (`type: "guardado"`, `target_type: "place"`, `target_id: "8e9c439f-0aed-4b9f-97df-e619a880983b"`), coincidiendo exactamente con la interacción real ya conocida y con la consulta directa a producción. Las cuatro tablas legacy siguieron vacías (comportamiento correcto, no un defecto). Ningún dato de otra cuenta apareció en el archivo — todos los `consent_records` exportados corresponden al mismo `user_id` de Pedro.
+
+### Estado final
+
+**A10 queda Hecho.** El criterio literal ("exportación real de una cuenta de prueba contiene exactamente sus datos, sin fuga de otra persona") queda demostrado con evidencia real de producción, incluyendo el proceso completo de encontrar, diagnosticar y corregir un defecto real antes del cierre — no una prueba superficial que se conformó con "la descarga funcionó".
+
+---

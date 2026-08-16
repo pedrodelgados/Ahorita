@@ -2,6 +2,19 @@
 
 Registro de cambios notables de Ahorita (Cuenca Viva). Formato libre, en español, más cercano a un registro de fases de producto que a versiones semánticas — ver `PROJECT.md` para el plan completo y el estado real de la implementación.
 
+## 2026-08-16 — A10 cerrado: `export-user-data` contra producción real
+
+Ítem A10 de `BETA_READINESS_CHECKLIST.md` verificado con evidencia real contra `ahorita-production`, incluyendo un defecto real encontrado y corregido durante la propia verificación.
+
+### Corregido
+- `export-user-data` omitía `public.interactions` — desactualizada desde la migración `0032` (Fase 5B), que convirtió a `interactions` en la fuente de verdad real de guardados/reacciones, reemplazando a `saved_places`/`saved_events`/`follows`/`post_likes` (confirmado sin ningún importador real de esas tablas legacy en `src/`).
+- Commit `f0143b4`: se agregó `interactions` a la exportación, filtrada exclusivamente por el `actor_id` propio ya verificado — sin tocar las cuatro tablas legacy, sin aceptar ningún valor del cliente.
+- Incidente de despliegue documentado: un primer redeploy (VERSION 3) no reflejó la corrección por un desfase entre el checkout local y el commit real; un segundo despliegue (VERSION 4) sí la incorporó, confirmado descargando el ZIP de la función real desde el Dashboard.
+
+### Verificado
+- Exportación real de Pedro contra VERSION 4: `interactions` con exactamente 1 fila, coincidiendo con la interacción real conocida y con una consulta directa a producción.
+- Sin ningún dato de otra cuenta en el archivo exportado.
+
 ## 2026-08-15 — A17: ensayo real de rollback de frontend (en progreso, no cierra el ítem)
 
 Ítem A17 de `BETA_READINESS_CHECKLIST.md` (plan de reversión del despliegue) avanzó con un ensayo real de rollback exclusivamente del frontend en Vercel — el ítem permanece **Pendiente**.
