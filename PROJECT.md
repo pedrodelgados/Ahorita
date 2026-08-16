@@ -3251,3 +3251,27 @@ Séptimo ítem bloqueante de `BETA_READINESS_CHECKLIST.md` verificado con una co
 **A19 queda Hecho.** El criterio literal ("un mensaje real... llega a una persona responsable") y su evidencia exigida ("prueba real del canal, con tiempo de respuesta registrado") quedan demostrados con un envío y una respuesta reales, sin construir ninguna funcionalidad nueva.
 
 ---
+
+## A13 CERRADO, con desviación histórica documentada — Términos de Servicio y Política de Privacidad (2026-08-15)
+
+Ítem A13 de `BETA_READINESS_CHECKLIST.md` implementado y publicado en producción. Se documenta aquí, deliberadamente separado, el resultado actual y la desviación histórica del criterio original — sin mezclar ambos como si el criterio se hubiera cumplido íntegramente.
+
+### Resultado actual (evidencia real de producción)
+
+El documento "Términos de Servicio y Política de Privacidad de Ahorita" (`src/pages/LegalPage.jsx`) contiene texto real, revisado sección por sección contra el código actual — ceñido deliberadamente a lo que está realmente desplegado: describe registro/autenticación, contenido publicado por personas usuarias, negocios/eventos, datos tratados, el aprendizaje real de afinidad (`affinity_profile()`, ya desplegado con las 46 migraciones), ubicación solo con permiso del navegador, ausencia de cookies de seguimiento, y un canal de contacto real (mismo correo ya cerrado en A19). **Omite deliberadamente** cualquier afirmación de que la Guía IA procesa conversaciones reales en producción hoy, y describe la exportación/eliminación de datos con lenguaje prudente (controles existentes en Ajustes, automatización en curso, solicitudes atendibles por el canal de contacto) — porque las Edge Functions correspondientes (`ai-guide`, `export-user-data`, `process-account-deletions`) no están confirmadas como desplegadas contra `ahorita-production` (mismo hallazgo ya registrado en el cierre de A3).
+
+Verificación real ejecutada: `https://ahorita-five.vercel.app/legal` cargó correctamente en una ventana sin sesión (InPrivate) — ruta pública, fuera de `RequireAuth`/`RequireAccess`. Enlace verificado desde "Ajustes" (junto a "Ayuda y soporte") y desde `LoginPage.jsx`, visible antes de pulsar "Crear cuenta", sin checkbox de aceptación (decisión de producto explícita para esta beta).
+
+### Desviación histórica del criterio original, no oculta
+
+El criterio literal exige el documento "publicado antes del primer registro real". Eso **no ocurrió**: existieron registros reales completos (Moisés — cuenta administrativa —, Pedro y Ana — cuentas self-service reales de A5/A6 —, y las cuentas de prueba usadas durante esas validaciones) **antes** de que este documento existiera. La publicación real ocurrió el **15 de agosto de 2026**. No se altera esta fecha, no se reinterpreta el criterio, no se presenta este hecho como cumplido.
+
+### Corrección prospectiva
+
+A partir del 15 de agosto de 2026, cualquier persona que se registre **de ahora en adelante** encuentra el documento ya publicado y accesible antes de crear su cuenta — la condición queda corregida hacia el futuro, sin que eso subsane retroactivamente los registros que ya existían antes de esta fecha.
+
+### Estado final
+
+**A13 queda "Hecho, con desviación histórica documentada"** — no un cumplimiento íntegro del criterio original. Dos de sus tres cláusulas (documento real, accesible desde la app) están demostradas con evidencia real de producción; la cláusula de orden temporal respecto al primer registro no se cumplió y es, por naturaleza, irreversible.
+
+---

@@ -2,6 +2,21 @@
 
 Registro de cambios notables de Ahorita (Cuenca Viva). Formato libre, en español, más cercano a un registro de fases de producto que a versiones semánticas — ver `PROJECT.md` para el plan completo y el estado real de la implementación.
 
+## 2026-08-15 — A13 cerrado, con desviación histórica documentada: Términos de Servicio y Política de Privacidad
+
+Ítem A13 de `BETA_READINESS_CHECKLIST.md` implementado y publicado en producción (`/legal`, ruta pública). Se registra explícitamente por separado el resultado actual y una desviación histórica real del criterio original.
+
+### Publicado
+- Documento real "Términos de Servicio y Política de Privacidad de Ahorita", ceñido a funcionalidades realmente desplegadas (omite deliberadamente afirmaciones sobre la Guía IA y la automatización completa de exportación/eliminación de datos, cuyas Edge Functions no están confirmadas como desplegadas).
+- Ruta pública `/legal`, verificada real en producción sin sesión (ventana InPrivate).
+- Enlace visible desde "Ajustes" y desde el flujo de registro (`LoginPage.jsx`), antes de crear una cuenta.
+- Reutiliza el correo de soporte ya cerrado en A19, sin duplicarlo.
+
+### Desviación histórica (no oculta)
+- El criterio exigía publicación "antes del primer registro real". Eso no ocurrió: existieron registros reales (Moisés, Pedro, Ana, cuentas de prueba de A5/A6) antes de la publicación real del 15 de agosto de 2026.
+- Corrección prospectiva: desde esa fecha, todo registro nuevo sí encuentra el documento ya publicado — la condición queda corregida hacia adelante, no retroactivamente.
+- Estado registrado: "Hecho, con desviación histórica documentada", no un cumplimiento íntegro del criterio original.
+
 ## 2026-08-15 — A19 cerrado: canal de soporte visible y probado
 
 Ítem A19 de `BETA_READINESS_CHECKLIST.md` verificado con una prueba real del canal de soporte de la beta (correo real de la persona responsable, visible en "Ajustes" desde el commit `05041a6`).
