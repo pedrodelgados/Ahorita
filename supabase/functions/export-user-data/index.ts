@@ -85,6 +85,7 @@ Deno.serve(async (req) => {
       savedEvents,
       follows,
       postLikes,
+      interactions,
       consentRecords,
       dataRequests,
       aiActiveConversation,
@@ -105,6 +106,23 @@ Deno.serve(async (req) => {
       db.from("saved_events").select("event_id, created_at").eq("user_id", userId),
       db.from("follows").select("followed_id, created_at").eq("follower_id", userId),
       db.from("post_likes").select("target_type, target_id, created_at").eq("user_id", userId),
+      // A10 (BETA_READINESS_CHECKLIST.md): saved_places/saved_events/
+      // follows/post_likes ya no son la fuente de verdad de guardados,
+      // seguimientos ni reacciones -- desde la migración 0032 (Fase 5B) y
+      // la Entrega 6 de Fase 3, el frontend real escribe en
+      // `public.interactions` (ver lib/interactions.js). Se mantienen las
+      // cuatro tablas legacy arriba por si alguna cuenta antigua conserva
+      // datos ahí, y se añade esta consulta para no seguir omitiendo la
+      // actividad real. Filtrada exclusivamente por `ownActorId`, resuelto
+      // arriba a partir del `userId` ya verificado -- nunca por un valor
+      // que mande el cliente.
+      ownActorId
+        ? db
+            .from("interactions")
+            .select("type, target_type, target_id, created_at")
+            .eq("actor_id", ownActorId)
+            .order("created_at")
+        : Promise.resolve({ data: [], error: null }),
       db.from("consent_records").select("*").eq("user_id", userId).order("created_at"),
       db.from("data_requests").select("*").eq("user_id", userId).order("requested_at"),
       // Fase 7, Bloque 2 (Memoria de Sesión): nace exportable desde el
@@ -157,6 +175,7 @@ Deno.serve(async (req) => {
       savedEvents,
       follows,
       postLikes,
+      interactions,
       consentRecords,
       dataRequests,
       aiActiveConversation,
@@ -181,6 +200,7 @@ Deno.serve(async (req) => {
       saved_events: savedEvents.data,
       follows: follows.data,
       post_likes: postLikes.data,
+      interactions: interactions.data,
       consent_records: consentRecords.data,
       data_requests: dataRequests.data,
       ai_guide_active_conversation: aiActiveConversation.data,
