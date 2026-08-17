@@ -2,6 +2,20 @@
 
 Registro de cambios notables de Ahorita (Cuenca Viva). Formato libre, en español, más cercano a un registro de fases de producto que a versiones semánticas — ver `PROJECT.md` para el plan completo y el estado real de la implementación.
 
+## 2026-08-17 — A17: ensayo real de rollback de Edge Function (`export-user-data`) (en progreso, no cierra el ítem)
+
+Ítem A17 de `BETA_READINESS_CHECKLIST.md` avanzó con un ensayo real de eliminación y restauración de una Edge Function contra `ahorita-production` — el ítem permanece **Pendiente**.
+
+### Verificado
+- Ciclo real completo sobre `export-user-data`: desplegada y funcional (`VERSION 4`) → eliminada → `functions list` confirmó su ausencia total → sin exportación verificable durante la ausencia → redesplegada (identificador nuevo, `VERSION 1`) → `ACTIVE` → nueva exportación real correcta, posterior a la restauración (`generated_at = 2026-08-17T14:49:27.832Z`), con la interacción real de Pedro intacta.
+- Segunda fuente independiente: `consent_record` de exportación con `created_at = 2026-08-16T23:49:07.300664+00:00`, también posterior a la restauración (`23:47:34 UTC`).
+
+### Corregido
+- Un archivo JSON descargado se atribuyó inicialmente, por error, a la ventana de ausencia de la función. Su `generated_at` (`2026-08-16T23:30:38.847Z`) confirma que era anterior al `delete` — no hay evidencia de que la función respondiera durante su ausencia real.
+
+### Pendiente
+- Reversibilidad de las otras cuatro Edge Functions (`ai-guide`, `send-push`, `process-account-deletions`, `process-verification-lifecycle`): sigue bloqueada, ninguna desplegada todavía contra `ahorita-production` (misma causa de A8-A11/A16-bis). Candidata más natural para ampliar esta evidencia: `process-account-deletions`, al avanzar A11.
+
 ## 2026-08-16 — A10 cerrado: `export-user-data` contra producción real
 
 Ítem A10 de `BETA_READINESS_CHECKLIST.md` verificado con evidencia real contra `ahorita-production`, incluyendo un defecto real encontrado y corregido durante la propia verificación.

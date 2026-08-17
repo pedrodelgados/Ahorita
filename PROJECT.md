@@ -3311,3 +3311,27 @@ A partir del 15 de agosto de 2026, cualquier persona que se registre **de ahora 
 **A10 queda Hecho.** El criterio literal ("exportación real de una cuenta de prueba contiene exactamente sus datos, sin fuga de otra persona") queda demostrado con evidencia real de producción, incluyendo el proceso completo de encontrar, diagnosticar y corregir un defecto real antes del cierre — no una prueba superficial que se conformó con "la descarga funcionó".
 
 ---
+
+## A17 — ensayo real de rollback de Edge Function (`export-user-data`), en progreso, no cierra el ítem (2026-08-17)
+
+Continuación del ensayo de A17 registrado el 2026-08-15 (rollback de frontend, exclusivamente sobre el artefacto estático de Vercel). Este ensayo cubre, por primera vez, la reversibilidad real de una Edge Function contra `ahorita-production`.
+
+**Ciclo real ejecutado, `export-user-data`:**
+1. La función estaba desplegada y funcional (`VERSION 4`, ya confirmada en el cierre de A10).
+2. Se ejecutó `supabase functions delete export-user-data --project-ref itbycfshmvxpytdhzrtx` contra producción real.
+3. `supabase functions list --project-ref itbycfshmvxpytdhzrtx` devolvió una lista completamente vacía, confirmando la ausencia real de la función, no solo una desactivación temporal.
+4. Durante esa ausencia, un intento real desde la app (Ajustes → "Exportar mis datos") no produjo una nueva exportación verificable.
+5. Se ejecutó `supabase functions deploy export-user-data --project-ref itbycfshmvxpytdhzrtx`, que restauró la función con un identificador nuevo y `VERSION 1` — evidencia adicional de que el `delete` había sido una eliminación real y completa del objeto función, no una pausa (de haber sido una pausa, el redeploy habría continuado desde `VERSION 5`).
+6. La función volvió a estado `ACTIVE`.
+7. Una nueva exportación real, posterior a la restauración (`generated_at = 2026-08-17T14:49:27.832Z`, frente a la restauración registrada el `2026-08-16` a las `23:47:34 UTC`), devolvió correctamente `interactions` con la interacción real y ya conocida de Pedro (`type: "guardado"`, `target_type: "place"`, `target_id: "8e9c439f-0aed-4b9f-97df-e619a880983b"`, `created_at: "2026-08-15T19:37:13.557036+00:00"`), sin ninguna alteración respecto a lo ya verificado en el cierre de A10.
+8. Existe además un `consent_record` de exportación (`event_type: "exportacion_solicitada"`) con `created_at = 2026-08-16T23:49:07.300664+00:00`, también posterior a la restauración — segunda fuente independiente, escrita por el propio servidor, que corrobora que la invocación exitosa ocurrió después del ciclo completo de eliminación y restauración, no antes.
+
+**Corrección de un hallazgo inicial mal atribuido (no ocultada):** durante el ensayo se examinó un archivo JSON descargado que inicialmente se interpretó como posible evidencia de que la función seguía respondiendo durante la ventana de ausencia (`functions list` vacío) — lo cual, de ser cierto, habría sido una anomalía real que contradecía la premisa de que "eliminar" implica "indisponible de inmediato". Al revisar su campo `generated_at` (`2026-08-16T23:30:38.847Z`) contra la hora real del `delete` (ejecutado inmediatamente antes de la restauración de las `23:47:34 UTC`), se confirmó que ese archivo correspondía a una exportación **anterior** al `delete`, no a una generada durante la ausencia. Se corrige aquí explícitamente: no existe evidencia de que la función respondiera durante su ausencia real; el intento de exportación efectivamente realizado durante esa ventana (paso 4 arriba) no produjo resultado verificable, consistente con una eliminación real y efectiva, sin ninguna propagación anómala detectada.
+
+**Alcance de este ensayo, explícito:** cubre únicamente `export-user-data`, la más simple y de solo lectura de las cinco Edge Functions pendientes de despliegue. El ciclo completo (desplegada → eliminada → confirmada ausente → sin respuesta durante la ausencia → redesplegada → `ACTIVE` → exportación real correcta → datos de Pedro intactos) queda demostrado con evidencia real de producción. En ningún momento se tocó la base de datos, RLS ni ninguna migración, y `export-user-data` no realiza ninguna escritura (confirmado por revisión de su código: sin `.insert`/`.update`/`.delete`/`.upsert`), por lo que el ciclo no pudo alterar datos de personas reales.
+
+### Estado
+
+**A17 sigue Pendiente.** Queda demostrada la reversibilidad real, de punta a punta, para una de las cinco Edge Functions (`export-user-data`) — la primera con esta evidencia. Las otras cuatro (`ai-guide`, `send-push`, `process-account-deletions`, `process-verification-lifecycle`) siguen sin desplegarse contra `ahorita-production`, y su reversibilidad sigue sin poder probarse — misma causa ya registrada en el cierre de A3 y en los ítems A8-A11/A16-bis. La candidata más natural para ampliar esta evidencia es `process-account-deletions`, al avanzar el ítem A11 (que de todos modos exige un ensayo real de creación/cancelación/ejecución de una solicitud de eliminación) — no antes, y no únicamente para efectos de A17.
+
+---
